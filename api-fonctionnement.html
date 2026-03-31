@@ -93,25 +93,6 @@ benign_fixation_pct</code></pre>
       </tbody>
     </table>
 
-
-    
-    
-    <h2>Formulaire de contact</h2>
-    <p>Payload de <code>POST /api/contact</code> :</p>
-    <pre><code>{
-<<<<<<< codex/move-calculations-to-backend-and-add-api
-  "name": "Prénom Nom",
-  "email": "adresse@exemple.fr",
-  "subject": "Demande",
-=======
-  "email": "adresse@exemple.fr",
->>>>>>> main
-  "message": "Votre message...",
-  "recaptcha_token": "token_google"
-}</code></pre>
-    <p>Réponse de succès :</p>
-    <pre><code>{ "ok": true }</code></pre>
-
     <h2>Exemple de retour de l'API</h2>
     <p>Réponse type de <code>GET /api/config</code> :</p>
     <pre><code>{
@@ -131,7 +112,7 @@ benign_fixation_pct</code></pre>
   "effective_hours": 16,
   "errors": [],
   "recommendations_days": {
-    "conjoint_plus_60": 0,
+   "conjoint_plus_60": 0, 
     "conjoint_moins_60": 0,
     "conjointe_enceinte": 0,
     "transport_commun": 0,

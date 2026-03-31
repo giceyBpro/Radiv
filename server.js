@@ -271,6 +271,9 @@ async function smtpSendMail({ replyTo, subject, html }) {
   if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom || !contactDest) {
     return { ok: false, error: 'Configuration SMTP incomplète (SMTP_* / CONTACT_DEST).' };
   }
+  const fromMatch = smtpFrom.match(/<([^>]+)>/);
+  const envelopeFrom = (fromMatch ? fromMatch[1] : smtpUser).trim();
+  const messageId = `<${Date.now()}.${Math.random().toString(16).slice(2)}@dosimetrie-riv.local>`;
 
   const connect = () => new Promise((resolve, reject) => {
     const onError = (err) => reject(err);
@@ -345,19 +348,24 @@ async function smtpSendMail({ replyTo, subject, html }) {
     await sendCmd(Buffer.from(smtpUser).toString('base64'), '3');
     await sendCmd(Buffer.from(smtpPass).toString('base64'), '2');
 
-    await sendCmd(`MAIL FROM:<${smtpUser}>`, '2');
+    await sendCmd(`MAIL FROM:<${envelopeFrom}>`, '2');
     await sendCmd(`RCPT TO:<${contactDest}>`, '2');
     await sendCmd('DATA', '3');
 
+    const htmlDotSafe = html.replace(/\r?\n\./g, '\n..');
     const message = [
       `From: ${smtpFrom}`,
       `To: <${contactDest}>`,
       `Reply-To: ${replyTo}`,
       `Subject: [Dosimetrie RIV] ${subject}`,
+      `Date: ${new Date().toUTCString()}`,
+      `Message-ID: ${messageId}`,
+      `Return-Path: <${envelopeFrom}>`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: 8bit',
       '',
-      html,
+      htmlDotSafe,
       '.',
       ''
     ].join('\r\n');
