@@ -470,6 +470,10 @@
       <div style="height: 24px;"></div>
     </div>
 
+    <div class="note no-print">
+      <strong>Contact :</strong> <a class="inline-link" href="contact.html">Accéder au formulaire de contact</a>
+    </div>
+
     <section class="section mandatory">
       <div class="section-title">Éléments obligatoires à préciser (en jaune)</div>
       <div class="mandatory-body">

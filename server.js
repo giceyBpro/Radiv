@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-
+const { spawnSync } = require('child_process');
 function loadDotEnv(filePath) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, 'utf8');
@@ -15,18 +15,18 @@ function loadDotEnv(filePath) {
     if (!process.env[key]) process.env[key] = value;
   });
 }
-
 loadDotEnv(path.join(__dirname, '.runtime.env'));
 loadDotEnv(path.join(__dirname, '.env'));
-
 const port = Number(process.env.PORT || 3000);
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 const adminToken = process.env.ADMIN_TOKEN || '';
 const logsDir = path.join(__dirname, 'logs');
 const logsFile = path.join(logsDir, 'measurements.jsonl');
-
+const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
+const recaptchaSiteKey = process.env.RECAPTCHA_SITE_KEY || '';
+const contactReceiverEmail = process.env.CONTACT_RECEIVER_EMAIL || '';
+const contactSenderEmail = process.env.CONTACT_SENDER_EMAIL || '';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
-
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
 const isotopes = [
@@ -45,56 +45,47 @@ const isotopes = [
   { api_code: 'mibg_131i', label: 'MIBG-131I', periodHours: 10.6, reference: 'Nucl. Med. Commun. 16 (1995) 767–772', remark: 'un peu plus longue chez l’adulte que chez l’enfant', situation: '' },
   { api_code: 'non_defini', label: 'Non défini', periodHours: null, reference: '-', remark: '-', situation: '' }
 ];
-
 // 2) scenarios: paramètres d'exposition ligne par ligne (heures, distance, facteur 1m spécifique)
 const scenarios = [
-  { label: 'Contact avec le (la) conjoint(e) > 60 ans', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 15, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
-  { label: 'Contact avec le (la) conjoint(e) < 60 ans', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 3, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
-  { label: 'Contact avec la conjointe enceinte', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv' },
-  { label: 'Transport en commun', exposures: [{ hours: 3, distance: 0.5, unit_factor_at_1m: false }], limit: 1, condition: '3 h à 0,5 m,\nlimite 1 mSv' },
-  { label: 'Contact avec un enfant (<3 ans) au retour à la maison', exposures: [{ hours: 9, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '9 h à 1 m,\nlimite 1 mSv' },
-  { label: 'Contact avec un enfant (entre 3 et 11 ans) au retour à la maison', exposures: [{ hours: 2, distance: 0.5, unit_factor_at_1m: false }, { hours: 2, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
-  { label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: false }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
+  { audience_code: 'conjoint_plus_60', label: 'Contact avec le (la) conjoint(e) > 60 ans', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 15, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
+  { audience_code: 'conjoint_moins_60', label: 'Contact avec le (la) conjoint(e) < 60 ans', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 3, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
+  { audience_code: 'conjointe_enceinte', label: 'Contact avec la conjointe enceinte', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv' },
+  { audience_code: 'transport_commun', label: 'Transport en commun', exposures: [{ hours: 3, distance: 0.5, unit_factor_at_1m: false }], limit: 1, condition: '3 h à 0,5 m,\nlimite 1 mSv' },
+  { audience_code: 'enfant_moins_3_ans', label: 'Contact avec un enfant (<3 ans) au retour à la maison', exposures: [{ hours: 9, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '9 h à 1 m,\nlimite 1 mSv' },
+  { audience_code: 'enfant_3_11_ans', label: 'Contact avec un enfant (entre 3 et 11 ans) au retour à la maison', exposures: [{ hours: 2, distance: 0.5, unit_factor_at_1m: false }, { hours: 2, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
+  { audience_code: 'collegues_travail', label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: false }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
 ];
-
 const toNumberOrNull = (value) => {
   if (value === '' || value === null || value === undefined) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 };
-
 const getIsotope = (apiCode) => isotopes.find((i) => i.api_code === apiCode) || isotopes[0];
 // 3) formules de calcul: décroissance, géométrie et calcul de durée de restriction
 const decayFraction = (hours, effectiveDays) => 1 - Math.exp(-((Math.log(2) / effectiveDays) * (hours / 24)));
 const geometryFactor = (distance, patientSizeCm) => Math.atan(patientSizeCm / (2 * distance * 100)) / (patientSizeCm * distance / 200);
 const commonFactor = (effectiveDays) => ((effectiveDays * 24) / Math.log(2)) / (1 - Math.exp(-(Math.log(2) / effectiveDays)));
-
 const exposureContribution = (exposure, effectiveDays, patientSizeCm) => {
   const geom = exposure.unit_factor_at_1m && exposure.distance === 1 ? 1 : geometryFactor(exposure.distance, patientSizeCm);
   return decayFraction(exposure.hours, effectiveDays) * geom;
 };
-
 const restrictionDays = (effectiveDays, doseRate, patientSizeCm, exposures, limit) => {
   const denominator = exposures
     .map((exposure) => exposureContribution(exposure, effectiveDays, patientSizeCm))
     .reduce((sum, value) => sum + value, 0) * commonFactor(effectiveDays);
-
   if (!(denominator > 0)) return null;
   const ratio = (limit * 1000) / denominator;
   const day = -(effectiveDays / Math.log(2)) * Math.log(ratio / doseRate);
   if (!Number.isFinite(day)) return null;
   return Math.max(0, Math.round(day));
 };
-
 const computeDoseRate = (selected, benignActivityMbq, benignFixationPct, doseRate) => {
   if (selected.api_code !== 'iode131_benin') return toNumberOrNull(doseRate);
   if (benignActivityMbq === null || benignFixationPct === null) return null;
   return 2.2 * benignActivityMbq * (benignFixationPct / 100) / 37;
 };
-
 function expectedPayloadByIsotope(selected) {
   const common = ['isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit'];
-
   if (selected.api_code === 'iode131_benin') {
     return {
       common,
@@ -102,7 +93,6 @@ function expectedPayloadByIsotope(selected) {
       isotope_specific_optional: ['dose_rate (ignore pour iode131_benin)']
     };
   }
-
   if (selected.api_code === 'non_defini') {
     return {
       common,
@@ -110,14 +100,12 @@ function expectedPayloadByIsotope(selected) {
       isotope_specific_optional: ['benign_activity_mbq', 'benign_fixation_pct (ignores hors iode131_benin)']
     };
   }
-
   return {
     common,
     isotope_specific_required: ['dose_rate'],
     isotope_specific_optional: ['benign_activity_mbq', 'benign_fixation_pct (ignores hors iode131_benin)']
   };
 }
-
 function calculate(payload) {
   const selected = getIsotope(payload.isotope_code);
   const userPeriodDays = toNumberOrNull(payload.user_period_days);
@@ -126,19 +114,16 @@ function calculate(payload) {
   const benignFixationPct = toNumberOrNull(payload.benign_fixation_pct);
   const doseRate = computeDoseRate(selected, benignActivityMbq, benignFixationPct, payload.dose_rate);
   const patientSizeCm = toNumberOrNull(payload.patient_size_cm);
-
   const user = {
     hours1: toNumberOrNull(payload.user_hours_1),
     distance1: toNumberOrNull(payload.user_distance_1),
     hours2: toNumberOrNull(payload.user_hours_2),
     limit: toNumberOrNull(payload.user_limit)
   };
-
   const userValues = [user.hours1, user.distance1, user.hours2, user.limit];
   const filledCount = userValues.filter((v) => v !== null).length;
   const userComplete = filledCount === userValues.length;
   const userEmpty = filledCount === 0;
-
   const errors = [];
   if (selected.api_code === 'iode131_benin') {
     if (!(benignActivityMbq > 0)) errors.push('Pour iode131_benin, benign_activity_mbq doit être strictement positif.');
@@ -156,23 +141,24 @@ function calculate(payload) {
     if (!(user.distance1 > 0)) errors.push('La distance X du scénario utilisateur doit être strictement positive.');
     if (!(user.limit > 0)) errors.push('La limite dosimétrique du scénario utilisateur doit être strictement positive.');
   }
-
   const rows = scenarios.map((scenario) => ({
+    audience_code: scenario.audience_code,
     label: scenario.label,
     condition: scenario.condition,
     value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, scenario.exposures, scenario.limit)
   }));
-
-  let userRow = { label: 'Scénario utilisateur', condition: '-', value: null };
+  let userRow = { audience_code: 'scenario_utilisateur', label: 'Scénario utilisateur', condition: '-', value: null };
   if (userComplete) {
     userRow = {
+      audience_code: 'scenario_utilisateur',
       label: 'Scénario utilisateur',
       condition: `${user.hours1} h à ${user.distance1} m et ${user.hours2} h à 1 m,\nlimite ${user.limit} mSv`,
       value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, [{ hours: user.hours1, distance: user.distance1, unit_factor_at_1m: false }, { hours: user.hours2, distance: 1, unit_factor_at_1m: true }], user.limit)
     };
   }
-
   const expected_payload = expectedPayloadByIsotope(selected);
+  const allRows = [...rows, userRow];
+  const recommendations_days = Object.fromEntries(allRows.map((row) => [row.audience_code, row.value]));
   if (errors.length) {
     return {
       ok: false,
@@ -191,10 +177,10 @@ function calculate(payload) {
       effective_days: effectiveDays,
       effective_hours: effectiveDays === null ? null : effectiveDays * 24,
       errors,
-      rows: [...rows, userRow]
+      rows: allRows,
+      recommendations_days
     };
   }
-
   return {
     ok: true,
     selected,
@@ -202,16 +188,15 @@ function calculate(payload) {
     effective_days: effectiveDays,
     effective_hours: effectiveDays === null ? null : effectiveDays * 24,
     errors: [],
-    rows: [...rows, userRow]
+    rows: allRows,
+    recommendations_days
   };
 }
-
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length) return forwarded.split(',')[0].trim();
   return req.socket?.remoteAddress || 'unknown';
 }
-
 function appendMeasurementLog(entry) {
   try {
     fs.appendFileSync(logsFile, `${JSON.stringify(entry)}\n`, 'utf8');
@@ -219,7 +204,6 @@ function appendMeasurementLog(entry) {
     console.error('Erreur log mesures:', error.message);
   }
 }
-
 function readMeasurementLogs(year) {
   if (!fs.existsSync(logsFile)) return [];
   const lines = fs.readFileSync(logsFile, 'utf8').split(/\r?\n/).filter(Boolean);
@@ -234,7 +218,6 @@ function readMeasurementLogs(year) {
       return Number.isFinite(y) && y === Number(year);
     });
 }
-
 function csvEscape(value) {
   const text = String(value ?? '');
   if (text.includes(',') || text.includes('"') || text.includes('\n')) {
@@ -242,7 +225,6 @@ function csvEscape(value) {
   }
   return text;
 }
-
 function toCsv(rows) {
   const headers = ['timestamp', 'ip', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'rows'];
   const body = rows.map((row) => [
@@ -258,14 +240,76 @@ function toCsv(rows) {
   ].map(csvEscape).join(','));
   return [headers.join(','), ...body].join('\n');
 }
-
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+async function verifyRecaptcha(token, ip) {
+  if (!recaptchaSecretKey) return false;
+  const params = new URLSearchParams();
+  params.set('secret', recaptchaSecretKey);
+  params.set('response', token || '');
+  if (ip) params.set('remoteip', ip);
+  const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  });
+  if (!response.ok) return false;
+  const data = await response.json();
+  return data.success === true;
+}
+function sendContactEmail({ name, email, subject, message, ip, timestamp }) {
+  if (!contactReceiverEmail || !contactSenderEmail) {
+    return { ok: false, error: 'CONTACT_RECEIVER_EMAIL ou CONTACT_SENDER_EMAIL non configuré.' };
+  }
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+  const safeIp = escapeHtml(ip);
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;background:#eef1f3;padding:20px;">
+    <div style="max-width:700px;margin:0 auto;background:#ffffff;border-radius:10px;padding:20px;border:1px solid #d5dde1;">
+      <h2 style="margin-top:0;color:#111;">Nouveau message - Dosimétrie RIV</h2>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Date</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${timestamp}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>IP</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeIp}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Nom</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeName}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Email</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeEmail}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Sujet</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeSubject}</td></tr>
+      </table>
+      <div style="margin-top:14px;padding:12px;background:#f4f7f8;border:1px solid #d5dde1;border-radius:6px;">
+        ${safeMessage}
+      </div>
+    </div>
+  </div>`;
+  const raw = [
+    `From: Dosimetrie RIV <${contactSenderEmail}>`,
+    `To: <${contactReceiverEmail}>`,
+    `Reply-To: ${email}`,
+    `Subject: [Dosimetrie RIV] ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=UTF-8',
+    '',
+    html
+  ].join('\n');
+  const proc = spawnSync('/usr/sbin/sendmail', ['-t', '-i'], { input: raw, encoding: 'utf8' });
+  if (proc.status !== 0) {
+    return { ok: false, error: proc.stderr || 'Échec sendmail.' };
+  }
+  return { ok: true };
+}
 function isAdminAuthorized(req, urlObj) {
   if (!adminToken) return true;
   const tokenFromHeader = req.headers['x-admin-token'];
   const tokenFromQuery = urlObj.searchParams.get('token');
   return tokenFromHeader === adminToken || tokenFromQuery === adminToken;
 }
-
 function sendJson(res, statusCode, data) {
   const origin = corsOrigin === '*' ? '*' : corsOrigin;
   res.writeHead(statusCode, {
@@ -276,22 +320,20 @@ function sendJson(res, statusCode, data) {
   });
   res.end(JSON.stringify(data));
 }
-
 function sendHtml(res, statusCode, html) {
   res.writeHead(statusCode, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(html);
 }
-
 const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') return sendJson(res, 200, { ok: true });
-
   const urlObj = new URL(req.url, `http://127.0.0.1:${port}`);
   const pathname = urlObj.pathname;
-
   if (req.method === 'GET' && pathname === '/api/config') {
     return sendJson(res, 200, { isotopes, default_isotope_code: 'iode131_25_fixation' });
   }
-
+  if (req.method === 'GET' && pathname === '/api/public-config') {
+    return sendJson(res, 200, { recaptcha_site_key: recaptchaSiteKey ? recaptchaSiteKey : '' });
+  }
   if (req.method === 'POST' && pathname === '/api/calculate') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
@@ -312,14 +354,49 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+  if (req.method === 'POST' && pathname === '/api/contact') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const name = String(payload.name || '').trim();
+        const email = String(payload.email || '').trim();
+        const subject = String(payload.subject || '').trim();
+        const message = String(payload.message || '').trim();
+        const recaptchaTokenValue = String(payload.recaptcha_token || '').trim();
+        const ip = getClientIp(req);
+        if (!name || !email || !subject || !message) {
+          return sendJson(res, 400, { ok: false, error: 'Tous les champs sont obligatoires.' });
+        }
+        const recaptchaOk = await verifyRecaptcha(recaptchaTokenValue, ip);
+        if (!recaptchaOk) {
+          return sendJson(res, 400, { ok: false, error: 'Échec vérification reCAPTCHA.' });
+        }
+        const sent = sendContactEmail({
+          name,
+          email,
+          subject,
+          message,
+          ip,
+          timestamp: new Date().toISOString()
+        });
+        if (!sent.ok) {
+          return sendJson(res, 500, { ok: false, error: sent.error || 'Échec envoi email.' });
+        }
+        return sendJson(res, 200, { ok: true });
+      } catch (error) {
+        return sendJson(res, 400, { ok: false, error: 'JSON invalide', details: error.message });
+      }
+    });
+    return;
+  }
   if (req.method === 'GET' && pathname === '/api/admin/measurements') {
     if (!isAdminAuthorized(req, urlObj)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
     const rows = readMeasurementLogs(year);
     return sendJson(res, 200, { rows, year: year || null, total: rows.length });
   }
-
   if (req.method === 'GET' && pathname === '/api/admin/measurements.csv') {
     if (!isAdminAuthorized(req, urlObj)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
@@ -331,20 +408,16 @@ const server = http.createServer((req, res) => {
     });
     return res.end(csv);
   }
-
   if (req.method === 'GET' && pathname === '/admin/mesures') {
     const adminPagePath = path.join(__dirname, 'admin-mesures.html');
     if (!fs.existsSync(adminPagePath)) return sendHtml(res, 404, 'Page admin introuvable');
     return sendHtml(res, 200, fs.readFileSync(adminPagePath, 'utf8'));
   }
-
   if (req.method === 'GET' && pathname === '/health') {
     return sendJson(res, 200, { ok: true, time: new Date().toISOString() });
   }
-
   sendJson(res, 404, { error: 'Not found' });
 });
-
 server.listen(port, () => {
   console.log(`Dosimetrie API listening on port ${port}`);
 });

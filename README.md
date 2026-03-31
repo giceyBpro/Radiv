@@ -4,6 +4,7 @@
 
 - `index.ml` : page principale utilisateur (visuel identique), sans formules métier.
 - `api-fonctionnement.html` : page explicative du contrat API.
+- `contact.html` : formulaire de contact protégé par Google reCAPTCHA, envoi email côté backend.
 - `server.js` : API Node.js qui contient toutes les formules de calcul.
 - `admin-mesures.html` : page de consultation/export des mesures collectées.
 - `deploy_update.sh` : script autonome et idempotent de déploiement/mise à jour.
@@ -35,9 +36,39 @@ Exemple de payload JSON :
 }
 ```
 Les valeurs possibles de `isotope_code` sont listées dans `api-fonctionnement.html`.
+Les champs à `null` peuvent être omis : les champs absents sont traités comme `null` par l'API.
 
 Cas particulier : pour `isotope_code=iode131_benin`, les champs obligatoires sont `benign_activity_mbq` et `benign_fixation_pct`; `dose_rate` est ignoré.
 Pour `isotope_code=non_defini`, `user_period_days` est aussi obligatoire et doit être strictement positif.
+
+La réponse contient aussi `recommendations_days` : dictionnaire des recommandations en jours par type de public (`conjoint_plus_60`, `conjoint_moins_60`, `conjointe_enceinte`, `transport_commun`, `enfant_moins_3_ans`, `enfant_3_11_ans`, `collegues_travail`, `scenario_utilisateur`).
+
+### Exemple de retour (`POST /api/calculate`)
+
+```json
+{
+  "ok": true,
+  "selected": { "api_code": "iode131_25_fixation", "label": "Iode-131-25%-fixation" },
+  "computed_dose_rate": 20,
+  "effective_days": 0.66,
+  "effective_hours": 16,
+  "errors": [],
+  "rows": [
+    { "audience_code": "conjoint_plus_60", "label": "Contact avec le (la) conjoint(e) > 60 ans", "value": 0 }
+  ],
+  "recommendations_days": {
+    "conjoint_plus_60": 0,
+    "conjoint_moins_60": 0,
+    "conjointe_enceinte": 0,
+    "transport_commun": 0,
+    "enfant_moins_3_ans": 0,
+    "enfant_3_11_ans": 0,
+    "collegues_travail": 0,
+    "scenario_utilisateur": null
+  }
+}
+```
+
 
 En cas d'erreur, l'API renvoie un objet explicite :
 - `ok: false`
@@ -45,6 +76,24 @@ En cas d'erreur, l'API renvoie un objet explicite :
 - `error.message`
 - `error.reason`
 - `error.expected_payload`
+
+
+## Formulaire de contact (backend)
+
+- Page : `contact.html` (lien depuis `index.ml`)
+- Endpoint config publique : `GET /api/public-config` (retourne `recaptcha_site_key`)
+- Endpoint envoi : `POST /api/contact`
+
+Sécurité / confidentialité :
+- adresse destinataire non exposée au frontend,
+- vérification reCAPTCHA faite côté backend,
+- envoi email réalisé côté backend.
+
+Variables `.env` requises :
+- `RECAPTCHA_SITE_KEY`
+- `RECAPTCHA_SECRET_KEY`
+- `CONTACT_RECEIVER_EMAIL`
+- `CONTACT_SENDER_EMAIL`
 
 ## Journal des mesures (backend)
 

@@ -63,6 +63,7 @@ fi
 
 cp index.ml "$FRONTEND_DIR/index.ml"
 cp api-fonctionnement.html "$FRONTEND_DIR/api-fonctionnement.html"
+cp contact.html "$FRONTEND_DIR/contact.html"
 
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.DOSIMETRIE_API_URL = "${API_PUBLIC_URL}";
@@ -73,6 +74,10 @@ cat > "$BACKEND_DIR/.runtime.env" <<RUNTIME
 PORT=${API_PORT}
 CORS_ORIGIN=${API_CORS_ORIGIN}
 ADMIN_TOKEN=${ADMIN_TOKEN:-}
+RECAPTCHA_SECRET_KEY=${RECAPTCHA_SECRET_KEY:-}
+RECAPTCHA_SITE_KEY=${RECAPTCHA_SITE_KEY:-}
+CONTACT_RECEIVER_EMAIL=${CONTACT_RECEIVER_EMAIL:-}
+CONTACT_SENDER_EMAIL=${CONTACT_SENDER_EMAIL:-}
 RUNTIME
 
 cat > "$BACKEND_DIR/monitor_node.sh" <<'MONITOR'
