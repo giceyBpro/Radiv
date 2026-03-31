@@ -51,6 +51,7 @@ git pull --ff-only origin "$GIT_BRANCH"
 npm install --omit=dev
 
 cp server.js "$BACKEND_DIR/server.js"
+cp admin-mesures.html "$BACKEND_DIR/admin-mesures.html"
 cp package.json "$BACKEND_DIR/package.json"
 if [[ -f package-lock.json ]]; then
   cp package-lock.json "$BACKEND_DIR/package-lock.json"
@@ -71,6 +72,7 @@ FRONTCFG
 cat > "$BACKEND_DIR/.runtime.env" <<RUNTIME
 PORT=${API_PORT}
 CORS_ORIGIN=${API_CORS_ORIGIN}
+ADMIN_TOKEN=${ADMIN_TOKEN:-}
 RUNTIME
 
 cat > "$BACKEND_DIR/monitor_node.sh" <<'MONITOR'
