@@ -50,20 +50,20 @@ git pull --ff-only origin "$GIT_BRANCH"
 
 npm install --omit=dev
 
-cp server.js "$BACKEND_DIR/server.js"
-cp admin-mesures.html "$BACKEND_DIR/admin-mesures.html"
-cp package.json "$BACKEND_DIR/package.json"
-if [[ -f package-lock.json ]]; then
-  cp package-lock.json "$BACKEND_DIR/package-lock.json"
-fi
+# Synchronisation backend avec suppression des fichiers supprimés du repo
+# tout en protégeant les fichiers de configuration/runtime locaux.
+rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P dosimetrie-api.log'   --filter='P dosimetrie-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
+
+chmod +x "$BACKEND_DIR/deploy_update.sh"
+
 mkdir -p "$BACKEND_DIR/node_modules"
 if [[ -d "$CHECKOUT_DIR/node_modules" ]]; then
-  rsync -a "$CHECKOUT_DIR/node_modules/" "$BACKEND_DIR/node_modules/"
+  rsync -a --delete "$CHECKOUT_DIR/node_modules/" "$BACKEND_DIR/node_modules/"
 fi
 
-cp index.ml "$FRONTEND_DIR/index.ml"
-cp api-fonctionnement.html "$FRONTEND_DIR/api-fonctionnement.html"
-cp contact.html "$FRONTEND_DIR/contact.html"
+# Synchronisation frontend avec suppression contrôlée des fichiers supprimés du repo,
+# sans supprimer les fichiers de configuration statiques du vhost.
+rsync -a --delete   --filter='P .htaccess'   --filter='P .user.ini'   --include='index.ml'   --include='api-fonctionnement.html'   --include='contact.html'   --exclude='*'   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.DOSIMETRIE_API_URL = "${API_PUBLIC_URL}";

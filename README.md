@@ -144,8 +144,10 @@ cd ~/dosimetrie
 
 Le script :
 - crée les dossiers nécessaires,
-- clone/met à jour le dépôt via token,
-- déploie le backend et les pages frontend (`index.ml` + `api-fonctionnement.html`),
+- fait un `git pull` sur la branche configurée,
+- synchronise backend/frontend vers les bons répertoires,
+- supprime localement les fichiers supprimés du repo,
+- protège les fichiers de configuration statiques locaux (`.env`, `.runtime.env`, `.htaccess`, etc.),
 - écrit `config.js` côté frontend avec l'URL API publique,
 - génère `monitor_node.sh` et le lance (contrôle santé + relance automatique).
 
