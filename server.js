@@ -183,7 +183,6 @@ function calculate(payload) {
       effective_days: effectiveDays,
       effective_hours: effectiveDays === null ? null : effectiveDays * 24,
       errors,
-      rows: allRows,
       recommendations_days
     };
   }
@@ -194,7 +193,6 @@ function calculate(payload) {
     effective_days: effectiveDays,
     effective_hours: effectiveDays === null ? null : effectiveDays * 24,
     errors: [],
-    rows: allRows,
     recommendations_days
   };
 }

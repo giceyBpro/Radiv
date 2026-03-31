@@ -53,9 +53,6 @@ La réponse contient aussi `recommendations_days` : dictionnaire des recommandat
   "effective_days": 0.66,
   "effective_hours": 16,
   "errors": [],
-  "rows": [
-    { "audience_code": "conjoint_plus_60", "label": "Contact avec le (la) conjoint(e) > 60 ans", "value": 0 }
-  ],
   "recommendations_days": {
     "conjoint_plus_60": 0,
     "conjoint_moins_60": 0,

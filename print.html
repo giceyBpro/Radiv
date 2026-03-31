@@ -117,7 +117,23 @@
       const effHours = result.effective_hours ?? '-';
       document.getElementById('effectiveText').innerHTML = `<strong>Période effective :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
 
-      const rows = Array.isArray(result.rows) ? result.rows : [];
+      const audienceMeta = {
+        conjoint_plus_60: 'Contact avec le (la) conjoint(e) > 60 ans',
+        conjoint_moins_60: 'Contact avec le (la) conjoint(e) < 60 ans',
+        conjointe_enceinte: 'Contact avec une femme enceinte',
+        transport_commun: 'Transport en commun',
+        enfant_moins_3_ans: 'Contact avec enfant < 3 ans',
+        enfant_3_11_ans: 'Contact avec enfant 3–11 ans',
+        collegues_travail: 'Collègues de travail',
+        scenario_utilisateur: 'Scénario utilisateur'
+      };
+      const rows = Array.isArray(result.rows) && result.rows.length
+        ? result.rows
+        : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => ({
+            label: audienceMeta[audienceCode] || audienceCode,
+            condition: '-',
+            value
+          }));
       document.getElementById('resultRows').innerHTML = rows.map((r) => `
         <tr>
           <td>${safe(r.label)}</td>
