@@ -3,8 +3,9 @@
 ## Architecture
 
 - `index.ml` : page principale utilisateur (visuel identique), sans formules métier.
-- `api-fonctionnement.html` : page explicative du fonctionnement de l'API, reliée à la page principale.
+- `api-fonctionnement.html` : page explicative du contrat API.
 - `server.js` : API Node.js qui contient toutes les formules de calcul.
+- `admin-mesures.html` : page de consultation/export des mesures collectées.
 - `deploy_update.sh` : script autonome et idempotent de déploiement/mise à jour.
 - `monitor_node.sh` : script généré automatiquement dans le backend pour superviser l'API et la relancer si elle tombe.
 - `.env.example` : modèle de configuration pour le déploiement.
@@ -45,6 +46,28 @@ En cas d'erreur, l'API renvoie un objet explicite :
 - `error.reason`
 - `error.expected_payload`
 
+## Journal des mesures (backend)
+
+Chaque appel `POST /api/calculate` est journalisé côté backend dans :
+- `logs/measurements.jsonl`
+
+Champs loggés :
+- date/heure (`timestamp`),
+- IP demandeur (`ip`),
+- données d'entrée (`input`),
+- résultats (`result`).
+
+## Consultation des mesures (backend)
+
+- Page web : `GET /admin/mesures`
+- API JSON : `GET /api/admin/measurements?year=2026`
+- Export CSV : `GET /api/admin/measurements.csv?year=2026`
+
+Le filtre année est appliqué côté backend (non traité côté frontend).
+
+Si `ADMIN_TOKEN` est défini, fournir le token :
+- header `X-Admin-Token`, ou
+- query string `?token=...`
 
 ## Lancement local
 
@@ -62,6 +85,7 @@ npm start
    - `FRONTEND_DIR`
    - `SITE_PUBLIC_URL`
    - `API_PUBLIC_URL`
+   - `ADMIN_TOKEN` (recommandé)
 3. Lancer :
 
 ```bash
