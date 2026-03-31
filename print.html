@@ -84,7 +84,7 @@
     }
 
     (function bootstrap() {
-      const raw = sessionStorage.getItem('dosimetrie_print_payload');
+      const raw = localStorage.getItem('dosimetrie_print_payload') || sessionStorage.getItem('dosimetrie_print_payload');
       if (!raw) {
         document.getElementById('inputGrid').innerHTML = '<div>Aucune donnée disponible.</div>';
         return;

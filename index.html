@@ -359,10 +359,12 @@
       cursor: default;
     }
 
-    .print-actions {
+    .quick-actions {
       margin-top: 12px;
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .print-btn {
@@ -423,12 +425,10 @@
       — version 1.4.5 du 30/01/2024
     </div>
 
-    <div class="print-actions no-print">
+    <div class="quick-actions no-print">
       <button type="button" class="print-btn" id="printBtn">Ouvrir la version imprimable (A4)</button>
-    </div>
-
-    <div class="note no-print">
-      <strong>Contact :</strong> <a class="inline-link" href="contact.html">Accéder au formulaire de contact</a>
+      <a class="inline-link" href="contact.html"><strong>Contact</strong></a>
+      <a class="inline-link" href="api-fonctionnement.html"><strong>Info API</strong></a>
     </div>
 
     <section class="section mandatory">
@@ -812,8 +812,8 @@
         },
         result: lastResult
       };
-      sessionStorage.setItem('dosimetrie_print_payload', JSON.stringify(payload));
-      window.open('print.html', '_blank', 'noopener');
+      localStorage.setItem('dosimetrie_print_payload', JSON.stringify(payload));
+      window.open('print.html', '_blank');
     }
 
     $('printBtn').addEventListener('click', openPrintableVersion);
