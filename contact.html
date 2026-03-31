@@ -44,7 +44,9 @@
     </form>
   </main>
 
+  <script src="config.js"></script>
   <script>
+    const API_BASE = (window.DOSIMETRIE_API_URL || 'api').replace(/\/+$/, '');
     let recaptchaSiteKey = '';
     let recaptchaToken = '';
 
@@ -55,7 +57,7 @@
     }
 
     async function loadPublicConfig() {
-      const res = await fetch('/api/public-config');
+      const res = await fetch(`${API_BASE}/public-config`);
       if (!res.ok) throw new Error('Impossible de charger la configuration publique');
       const data = await res.json();
       recaptchaSiteKey = data.recaptcha_site_key || '';
@@ -71,7 +73,7 @@
     }
 
     async function sendContact(payload) {
-      const res = await fetch('/api/contact', {
+      const res = await fetch(`${API_BASE}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

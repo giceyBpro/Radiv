@@ -374,44 +374,6 @@
       cursor: pointer;
     }
 
-    .patient-label-box {
-      margin-top: 10px;
-      border: 2px dashed #333;
-      padding: 10px;
-      min-height: 54px;
-      font-size: 14px;
-    }
-
-    .print-date-big {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: .3px;
-    }
-
-    @media print {
-      @page { size: A4 portrait; margin: 8mm; }
-      body { background: white; padding: 0; font-size: 11px; }
-      .page { box-shadow: none; border-radius: 0; max-width: none; padding: 8px; }
-      .optional,
-      .source-box,
-      .meta,
-      .no-print,
-      .note.long-ref,
-      .summary-caption { display: none !important; }
-      h1 { font-size: 18px; }
-      .subtitle { margin-top: 2px; font-size: 11px; }
-      .section { margin-top: 6px; }
-      .section-title { padding: 4px 6px; font-size: 12px; }
-      .mandatory-body > div { padding: 6px; }
-      table.results th, table.results td { padding: 4px 6px; font-size: 11px; }
-      table.results td.value { font-size: 14px; }
-      .effective-box { margin-top: 6px; padding: 6px; font-size: 12px; }
-      .print-date-big { font-size: 20px; margin: 4px 0; }
-      .patient-label-box { min-height: 40px; margin-top: 6px; }
-    }
-
     @media (max-width: 900px) {
       .mandatory-body {
         grid-template-columns: 1fr;
@@ -462,13 +424,7 @@
     </div>
 
     <div class="print-actions no-print">
-      <button type="button" class="print-btn" id="printBtn">Version imprimable (A4)</button>
-    </div>
-
-    <div class="print-date-big" id="printDateBig">-</div>
-    <div class="patient-label-box">
-      <strong>Identité patient / étiquette :</strong>
-      <div style="height: 24px;"></div>
+      <button type="button" class="print-btn" id="printBtn">Ouvrir la version imprimable (A4)</button>
     </div>
 
     <div class="note no-print">
@@ -659,16 +615,16 @@
 
     <div class="meta">
       <div>Version web pour le calcul des durées de restriction RIV.</div>
-      <div id="printTime"></div>
     </div>
   </main>
 
     <script src="config.js"></script>
   <script>
-    const API_BASE = window.DOSIMETRIE_API_URL || '/api';
+    const API_BASE = (window.DOSIMETRIE_API_URL || 'api').replace(/\/+$/, '');
     const $ = (id) => document.getElementById(id);
 
     let isotopes = [];
+    let lastResult = null;
 
     function formatNumber(value, decimals = 2) {
       if (value === null || value === undefined || Number.isNaN(value)) return '-';
@@ -678,8 +634,6 @@
     function setToday() {
       const now = new Date();
       $('todayLabel').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      $('printTime').textContent = `Heure d'impression : ${now.getHours()} h ${String(now.getMinutes()).padStart(2, '0')}`;
-      $('printDateBig').textContent = `Date : ${now.toLocaleDateString('fr-FR')}`;
     }
 
     function getNumberOrNull(id) {
@@ -767,6 +721,7 @@
     }
 
     function renderFromResult(result) {
+      lastResult = result;
       const selected = result.selected;
       const isBenign = selected.api_code === 'iode131_benin';
       toggleBenignRows(isBenign);
@@ -839,7 +794,29 @@
       renderResults();
     }
 
-    $('printBtn').addEventListener('click', () => window.print());
+    function openPrintableVersion() {
+      if (!lastResult) return;
+      const payload = {
+        generated_at: new Date().toISOString(),
+        form: {
+          isotope_label: $('selectedIsotopeText').textContent,
+          dose_rate: $('doseRate').value,
+          patient_size_cm: $('patientSize').value,
+          benign_activity_mbq: $('benignActivityMbq').value,
+          benign_fixation_pct: $('benignFixation').value,
+          user_period_days: $('userPeriodDays').value,
+          user_hours_1: $('userHours1').value,
+          user_distance_1: $('userDistance1').value,
+          user_hours_2: $('userHours2').value,
+          user_limit: $('userLimit').value
+        },
+        result: lastResult
+      };
+      sessionStorage.setItem('dosimetrie_print_payload', JSON.stringify(payload));
+      window.open('print.html', '_blank', 'noopener');
+    }
+
+    $('printBtn').addEventListener('click', openPrintableVersion);
 
     bootstrap().catch((error) => {
       $('errorBox').style.display = 'block';

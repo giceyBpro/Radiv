@@ -160,6 +160,8 @@ cd ~/dosimetrie
 ./deploy_update.sh
 ```
 
+> Si votre hébergement ne route pas automatiquement `/api` vers Node.js, définissez `API_PUBLIC_URL` avec une URL absolue joignable (ex: `https://api.votre-domaine.tld/api`).
+
 Le script :
 - crée les dossiers nécessaires,
 - fait un `git pull` sur la branche configurée,

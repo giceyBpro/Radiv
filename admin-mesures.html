@@ -41,7 +41,9 @@
     </table>
   </main>
 
+  <script src="config.js"></script>
   <script>
+    const API_BASE = (window.DOSIMETRIE_API_URL || 'api').replace(/\/+$/, '');
     const rowsEl = document.getElementById('rows');
     const statusEl = document.getElementById('status');
 
@@ -55,7 +57,7 @@
     }
 
     async function loadRows() {
-      const resp = await fetch(`/api/admin/measurements${q()}`);
+      const resp = await fetch(`${API_BASE}/admin/measurements${q()}`);
       if (!resp.ok) {
         statusEl.textContent = `Erreur ${resp.status} lors du chargement.`;
         rowsEl.innerHTML = '';
@@ -76,7 +78,7 @@
     }
 
     function exportCsv() {
-      window.location.href = `/api/admin/measurements.csv${q()}`;
+      window.location.href = `${API_BASE}/admin/measurements.csv${q()}`;
     }
 
     document.getElementById('loadBtn').addEventListener('click', loadRows);
