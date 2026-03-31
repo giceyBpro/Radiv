@@ -377,10 +377,8 @@ async function smtpSendMail({ replyTo, subject, html }) {
   }
 }
 
-async function sendContactEmail({ name, email, subject, message, ip, timestamp }) {
-  const safeName = escapeHtml(name);
+async function sendContactEmail({ email, message, ip, timestamp }) {
   const safeEmail = escapeHtml(email);
-  const safeSubject = escapeHtml(subject);
   const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
   const safeIp = escapeHtml(ip);
 
@@ -391,15 +389,13 @@ async function sendContactEmail({ name, email, subject, message, ip, timestamp }
       <table style="width:100%;border-collapse:collapse;">
         <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Date</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${timestamp}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>IP</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeIp}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Nom</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeName}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Email</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeEmail}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Sujet</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeSubject}</td></tr>
       </table>
       <div style="margin-top:14px;padding:12px;background:#f4f7f8;border:1px solid #d5dde1;border-radius:6px;">${safeMessage}</div>
     </div>
   </div>`;
 
-  return smtpSendMail({ replyTo: email, subject, html });
+  return smtpSendMail({ replyTo: email, subject: 'Contact formulaire web', html });
 }
 
 function isAdminAuthorized(req, urlObj) {
@@ -458,23 +454,19 @@ const server = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
-        const name = String(payload.name || '').trim();
         const email = String(payload.email || '').trim();
-        const subject = String(payload.subject || '').trim();
         const message = String(payload.message || '').trim();
         const recaptchaTokenValue = String(payload.recaptcha_token || '').trim();
         const ip = getClientIp(req);
-        if (!name || !email || !subject || !message) {
-          return sendJson(res, 400, { ok: false, error: 'Tous les champs sont obligatoires.' });
+        if (!email || !message) {
+          return sendJson(res, 400, { ok: false, error: 'email et message sont obligatoires.' });
         }
         const recaptchaOk = await verifyRecaptcha(recaptchaTokenValue, ip);
         if (!recaptchaOk) {
           return sendJson(res, 400, { ok: false, error: 'Échec vérification reCAPTCHA.' });
         }
         const sent = await sendContactEmail({
-          name,
           email,
-          subject,
           message,
           ip,
           timestamp: new Date().toISOString()
