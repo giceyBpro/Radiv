@@ -413,6 +413,11 @@
       — version 1.4.5 du 30/12/2024
     </div>
 
+    <div class="note">
+      <strong>Documentation technique :</strong>
+      <a class="inline-link" href="api-fonctionnement.html">Comprendre le fonctionnement de l'API</a>
+    </div>
+
     <section class="section mandatory">
       <div class="section-title">Éléments obligatoires à préciser (en jaune)</div>
       <div class="mandatory-body">
@@ -601,68 +606,22 @@
     </div>
   </main>
 
+    <script src="config.js"></script>
   <script>
-    const isotopes = [
-      { label: 'Iode-131-0%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: '-', situation: 'Cancer opéré' },
-      { label: 'Iode-131-5%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Cancer oligo-métastasé' },
-      { label: 'Iode-131-25%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Cancer poly-métastasé' },
-      { label: 'Iode-131-Bénin', periodHours: 122.4, reference: 'Nuclear Medicine Communications 2006, 27:559–566', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Pathologie bénigne' },
-      { label: 'Radium-223', periodHours: 11.43 * 24, reference: '-', remark: 'Demi vie physique', situation: '' },
-      { label: 'PSMA-177Lu', periodHours: 40, reference: 'EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019', remark: 'Valeur la plus longue proposée', situation: '' },
-      { label: 'Synovectomie-90Y', periodHours: 2.67 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-      { label: 'Synovectomie-186Re', periodHours: 3.7 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-      { label: 'Synovectomie-169Er', periodHours: 9.4 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-      { label: 'Microsphères-90Y', periodHours: 64.2, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
-      { label: 'Lipiodol-131I', periodHours: 8.04 * 24, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
-      { label: 'Lutétium-177 NET', periodHours: 100, reference: 'Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019', remark: 'Demi vie effective', situation: '' },
-      { label: 'MIBG-131I', periodHours: 10.6, reference: 'Nucl. Med. Commun. 16 (1995) 767–772', remark: 'un peu plus longue chez l’adulte que chez l’enfant', situation: '' },
-      { label: 'Non défini', periodHours: null, reference: '-', remark: '-', situation: '' }
-    ];
-
-    const scenarios = [
-      { label: 'Contact avec le (la) conjoint(e) > 60 ans', exposures: [[8, 0.3], [3, 1]], limit: 15, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
-      { label: 'Contact avec le (la) conjoint(e) < 60 ans', exposures: [[8, 0.3], [3, 1]], limit: 3, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
-      { label: 'Contact avec la conjointe enceinte', exposures: [[8, 0.3], [3, 1]], limit: 1, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv' },
-      { label: 'Transport en commun', exposures: [[3, 0.5]], limit: 1, condition: '3 h à 0,5 m,\nlimite 1 mSv' },
-      { label: 'Contact avec un enfant (<3 ans) au retour à la maison', exposures: [[9, 1]], limit: 1, condition: '9 h à 1 m,\nlimite 1 mSv' },
-      { label: 'Contact avec un enfant (entre 3 et 11 ans) au retour à la maison', exposures: [[2, 0.5], [2, 1]], limit: 1, condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
-      { label: 'Contact avec des collègues de travail', exposures: [[6, 1]], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
-    ];
-
+    const API_BASE = window.DOSIMETRIE_API_URL || '/api';
     const $ = (id) => document.getElementById(id);
+
+    let isotopes = [];
 
     function formatNumber(value, decimals = 2) {
       if (value === null || value === undefined || Number.isNaN(value)) return '-';
-      return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: decimals
-      }).format(value);
-    }
-
-    function formatMaybe(value, decimals = 2) {
-      return value === null ? '-' : `${formatNumber(value, decimals)}`;
+      return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(value);
     }
 
     function setToday() {
       const now = new Date();
-      $('todayLabel').textContent = now.toLocaleDateString('fr-FR', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      });
+      $('todayLabel').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       $('printTime').textContent = `Heure d'impression : ${now.getHours()} h ${String(now.getMinutes()).padStart(2, '0')}`;
-    }
-
-    function populateIsotopes() {
-      isotopes.forEach((iso) => {
-        const option = document.createElement('option');
-        option.value = iso.label;
-        option.textContent = iso.label;
-        if (iso.label === 'Iode-131-25%-fixation') option.selected = true;
-        $('isotope').appendChild(option);
-      });
-    }
-
-    function getSelectedIsotope() {
-      return isotopes.find((x) => x.label === $('isotope').value) || isotopes[0];
     }
 
     function getNumberOrNull(id) {
@@ -698,46 +657,31 @@
       renderResults();
     }
 
-    function decayFraction(hours, effectiveDays) {
-      return 1 - Math.exp(-((Math.log(2) / effectiveDays) * (hours / 24)));
+    async function fetchConfig() {
+      const response = await fetch(`${API_BASE}/config`);
+      if (!response.ok) throw new Error('Impossible de charger la configuration');
+      return response.json();
     }
 
-    function geometryFactor(distance, patientSizeCm) {
-      return Math.atan(patientSizeCm / (2 * distance * 100)) / (patientSizeCm * distance / 200);
+    async function fetchCalculation(payload) {
+      const response = await fetch(`${API_BASE}/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Erreur lors du calcul serveur');
+      return response.json();
     }
 
-    function commonFactor(effectiveDays) {
-      return ((effectiveDays * 24) / Math.log(2)) / (1 - Math.exp(-(Math.log(2) / effectiveDays)));
-    }
-
-    function restrictionDays(effectiveDays, doseRate, patientSizeCm, exposures, limit) {
-      const denominator = exposures
-        .map(([hours, distance]) => decayFraction(hours, effectiveDays) * geometryFactor(distance, patientSizeCm))
-        .reduce((sum, value) => sum + value, 0) * commonFactor(effectiveDays);
-
-      if (!(denominator > 0)) return null;
-
-      const ratio = (limit * 1000) / denominator;
-      const day = -(effectiveDays / Math.log(2)) * Math.log(ratio / doseRate);
-      if (!Number.isFinite(day)) return null;
-      return Math.max(0, Math.round(day));
-    }
-
-    function computeEffectiveDays(selected) {
-      const userPeriod = getNumberOrNull('userPeriodDays');
-      if (userPeriod !== null) return userPeriod;
-      if (selected.label === 'Non défini') return null;
-      return selected.periodHours / 24;
-    }
-
-    function computeDoseRate(selected) {
-      if (selected.label !== 'Iode-131-Bénin') {
-        return Number($('doseRate').value);
-      }
-      const activity = getNumberOrNull('benignActivityMbq');
-      const fixation = getNumberOrNull('benignFixation');
-      if (activity === null || fixation === null) return null;
-      return 2.2 * activity * (fixation / 100) / 37;
+    function populateIsotopes(defaultIsotopeCode) {
+      $('isotope').innerHTML = '';
+      isotopes.forEach((iso) => {
+        const option = document.createElement('option');
+        option.value = iso.api_code;
+        option.textContent = iso.label;
+        if (iso.api_code === defaultIsotopeCode) option.selected = true;
+        $('isotope').appendChild(option);
+      });
     }
 
     function toggleBenignRows(isBenign) {
@@ -749,146 +693,75 @@
         : 'Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.';
     }
 
-    function getUserScenario() {
+    function buildPayload() {
       return {
-        hours1: getNumberOrNull('userHours1'),
-        distance1: getNumberOrNull('userDistance1'),
-        hours2: getNumberOrNull('userHours2'),
-        limit: getNumberOrNull('userLimit')
+        isotope_code: $('isotope').value,
+        dose_rate: getNumberOrNull('doseRate'),
+        patient_size_cm: getNumberOrNull('patientSize'),
+        user_period_days: getNumberOrNull('userPeriodDays'),
+        user_hours_1: getNumberOrNull('userHours1'),
+        user_distance_1: getNumberOrNull('userDistance1'),
+        user_hours_2: getNumberOrNull('userHours2'),
+        user_limit: getNumberOrNull('userLimit'),
+        benign_activity_mbq: getNumberOrNull('benignActivityMbq'),
+        benign_fixation_pct: getNumberOrNull('benignFixation')
       };
     }
 
-    function userScenarioState(user) {
-      const values = [user.hours1, user.distance1, user.hours2, user.limit];
-      const filledCount = values.filter(v => v !== null).length;
-      const isComplete = filledCount === values.length;
-      const isEmpty = filledCount === 0;
-      return { filledCount, isComplete, isEmpty };
-    }
+    function renderFromResult(result) {
+      const selected = result.selected;
+      const isBenign = selected.api_code === 'iode131_benin';
+      toggleBenignRows(isBenign);
 
-    function validate(selected, effectiveDays) {
-      const doseRate = computeDoseRate(selected);
-      const patientSize = Number($('patientSize').value);
-      const user = getUserScenario();
-      const userState = userScenarioState(user);
-      const errors = [];
-
-      if (selected.label === 'Iode-131-Bénin') {
-        const activity = getNumberOrNull('benignActivityMbq');
-        const fixation = getNumberOrNull('benignFixation');
-        if (!(activity > 0)) errors.push('Pour Iode-131-Bénin, l’activité administrée (MBq) doit être strictement positive.');
-        if (!(fixation > 0)) errors.push('Pour Iode-131-Bénin, le taux de fixation (%) doit être strictement positif.');
-      }
-
-      if (!(doseRate > 0)) errors.push('Le débit de dose à 1 m doit être strictement positif.');
-      if (!(patientSize > 0)) errors.push('La taille du patient doit être strictement positive.');
-      if (selected.label === 'Non défini' && !(effectiveDays > 0)) {
-        errors.push('Avec le radiopharmaceutique "Non défini", la période effective (jours) devient obligatoire.');
-      }
-      if (effectiveDays !== null && !(effectiveDays > 0)) {
-        errors.push('La période effective retenue doit être strictement positive.');
-      }
-
-      if (!userState.isEmpty && !userState.isComplete) {
-        errors.push('Pour calculer le scénario utilisateur, renseignez les 5 champs bleus du scénario personnalisé, ou laissez-les tous vides.');
-      }
-
-      if (userState.isComplete) {
-        if (!(user.hours1 >= 0) || !(user.hours2 > 0)) {
-          errors.push('Les durées du scénario utilisateur doivent être valides et la durée n°2 doit être strictement positive.');
-        }
-        if (!(user.distance1 > 0)) {
-          errors.push('La distance X du scénario utilisateur doit être strictement positive.');
-        }
-        if (!(user.limit > 0)) {
-          errors.push('La limite dosimétrique du scénario utilisateur doit être strictement positive.');
-        }
-      }
-
-      return errors;
-    }
-
-    function refreshHeader(selected) {
-      toggleBenignRows(selected.label === 'Iode-131-Bénin');
       $('clinicalSituation').textContent = selected.situation || '-';
       $('selectedIsotopeText').textContent = selected.label;
-      const displayedDoseRate = computeDoseRate(selected);
-      $('dosePreview').textContent = formatNumber(displayedDoseRate, 2);
-      if (selected.label === 'Iode-131-Bénin') {
-        $('doseRate').value = displayedDoseRate === null ? '' : String(Number(displayedDoseRate.toFixed(4)));
+      $('dosePreview').textContent = formatNumber(result.computed_dose_rate, 2);
+      if (isBenign) {
+        $('doseRate').value = result.computed_dose_rate === null ? '' : String(Number(result.computed_dose_rate.toFixed(4)));
       }
       $('sizePreview').textContent = formatNumber(Number($('patientSize').value), 0);
       $('referenceText').textContent = selected.reference || '-';
       $('remarkText').textContent = selected.remark || '-';
-      $('effectivePeriodLabel').textContent = selected.label === 'Non défini'
+
+      $('effectivePeriodLabel').textContent = selected.api_code === 'non_defini'
         ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
         : 'Période effective (j) imposée par l’utilisateur (laisser vide sinon)';
-    }
 
-    function renderResults() {
-      const selected = getSelectedIsotope();
-      const effectiveDays = computeEffectiveDays(selected);
-      const errors = validate(selected, effectiveDays);
-      const errorBox = $('errorBox');
-      const resultsBody = $('resultsBody');
-      const doseRate = computeDoseRate(selected);
-      const patientSize = Number($('patientSize').value);
-      const user = getUserScenario();
-      const userState = userScenarioState(user);
-
-      refreshHeader(selected);
-
-      if (effectiveDays && Number.isFinite(effectiveDays)) {
-        $('effectiveDaysText').textContent = `Période effective retenue en jours : ${formatNumber(effectiveDays, 2)}`;
-        $('effectiveHoursText').textContent = `Période effective retenue en heures : ${formatNumber(effectiveDays * 24, 2)}`;
+      if (result.effective_days !== null && Number.isFinite(result.effective_days)) {
+        $('effectiveDaysText').textContent = `Période effective retenue en jours : ${formatNumber(result.effective_days, 2)}`;
+        $('effectiveHoursText').textContent = `Période effective retenue en heures : ${formatNumber(result.effective_hours, 2)}`;
       } else {
         $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
         $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
       }
 
-      if (errors.length) {
+      const errorBox = $('errorBox');
+      if (result.errors.length) {
+        const apiReason = result.error?.reason ? `<br><strong>Raison API :</strong> ${result.error.reason}` : '';
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${errors.map(e => `- ${e}`).join('<br>')}`;
+        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${result.errors.map((e) => `- ${e}`).join('<br>')}${apiReason}`;
       } else {
         errorBox.style.display = 'none';
         errorBox.textContent = '';
       }
 
-      const rows = scenarios.map((scenario) => {
-        let value = '-';
-        if (!errors.length) {
-          const computed = restrictionDays(effectiveDays, doseRate, patientSize, scenario.exposures, scenario.limit);
-          value = computed === null ? '-' : String(computed);
-        }
-        return { label: scenario.label, value, condition: scenario.condition };
-      });
-
-      let userScenarioValue = '-';
-      let userCondition = '-';
-
-      if (userState.isComplete) {
-        userCondition = `${formatMaybe(user.hours1, 1)} h à ${formatMaybe(user.distance1, 2)} m et ${formatMaybe(user.hours2, 1)} h à ${formatMaybe(user.distance2, 2)} m,\nlimite ${formatMaybe(user.limit, 2)} mSv`;
-        if (!errors.length) {
-          const computed = restrictionDays(
-            effectiveDays,
-            doseRate,
-            patientSize,
-            [[user.hours1, user.distance1], [user.hours2, 1]],
-            user.limit
-          );
-          userScenarioValue = computed === null ? '-' : String(computed);
-        }
-      }
-
-      rows.push({ label: 'Scénario utilisateur', value: userScenarioValue, condition: userCondition });
-
-      resultsBody.innerHTML = rows.map((row) => `
+      $('resultsBody').innerHTML = result.rows.map((row) => `
         <tr>
           <td class="scenario">${row.label}</td>
-          <td class="value">${row.value}</td>
+          <td class="value">${row.value === null ? '-' : row.value}</td>
           <td class="conditions">${row.condition}</td>
         </tr>
       `).join('');
+    }
+
+    async function renderResults() {
+      try {
+        const result = await fetchCalculation(buildPayload());
+        renderFromResult(result);
+      } catch (error) {
+        $('errorBox').style.display = 'block';
+        $('errorBox').innerHTML = `<strong>Erreur réseau/API :</strong><br>- ${error.message}`;
+      }
     }
 
     function bindEvents() {
@@ -899,10 +772,19 @@
       $('benignActivityMci').addEventListener('input', syncActivityFromMci);
     }
 
-    setToday();
-    populateIsotopes();
-    bindEvents();
-    renderResults();
+    async function bootstrap() {
+      setToday();
+      const config = await fetchConfig();
+      isotopes = config.isotopes || [];
+      populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
+      bindEvents();
+      renderResults();
+    }
+
+    bootstrap().catch((error) => {
+      $('errorBox').style.display = 'block';
+      $('errorBox').innerHTML = `<strong>Initialisation impossible :</strong><br>- ${error.message}`;
+    });
   </script>
 </body>
 </html>
