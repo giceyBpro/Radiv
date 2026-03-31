@@ -98,7 +98,9 @@
         return;
       }
       const payload = {
+        name: 'Formulaire web',
         email: document.getElementById('email').value.trim(),
+        subject: 'Contact formulaire web',
         message: document.getElementById('message').value.trim(),
         recaptcha_token: await getRecaptchaToken()
       };
