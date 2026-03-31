@@ -25,6 +25,7 @@ API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://dosimetrie.fr}"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-false}"
 
+echo "[DEPLOY] Initialisation des répertoires..."
 mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
 
 AUTH_REPO="$GIT_REPO"
@@ -33,6 +34,7 @@ if [[ "$GIT_REPO" == https://* ]]; then
 fi
 
 if [[ ! -d "$CHECKOUT_DIR/.git" ]]; then
+  echo "[DEPLOY] Clone initial du dépôt..."
   git clone "$AUTH_REPO" "$CHECKOUT_DIR"
 fi
 
@@ -43,43 +45,59 @@ if [[ -n "$(git status --porcelain)" ]]; then
   git reset --hard
 fi
 
+echo "[DEPLOY] Mise à jour git (${GIT_BRANCH})..."
 git remote set-url origin "$AUTH_REPO"
 git fetch --all --prune
 git checkout "$GIT_BRANCH"
 git pull --ff-only origin "$GIT_BRANCH"
 
+echo "[DEPLOY] Installation des dépendances backend..."
 npm install --omit=dev
 
 # Synchronisation backend avec suppression des fichiers supprimés du repo
 # tout en protégeant les fichiers de configuration/runtime locaux.
+echo "[DEPLOY] Synchronisation backend..."
 rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P dosimetrie-api.log'   --filter='P dosimetrie-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
 
+echo "[DEPLOY] Mise à jour du script deploy_update.sh sur backend..."
 chmod +x "$BACKEND_DIR/deploy_update.sh"
 
 mkdir -p "$BACKEND_DIR/node_modules"
 if [[ -d "$CHECKOUT_DIR/node_modules" ]]; then
+  echo "[DEPLOY] Synchronisation node_modules..."
   rsync -a --delete "$CHECKOUT_DIR/node_modules/" "$BACKEND_DIR/node_modules/"
 fi
 
 # Synchronisation frontend avec suppression contrôlée des fichiers supprimés du repo,
 # sans supprimer les fichiers de configuration statiques du vhost.
-rsync -a --delete   --filter='P .htaccess'   --filter='P .user.ini'   --include='index.ml'   --include='api-fonctionnement.html'   --include='contact.html'   --exclude='*'   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
+echo "[DEPLOY] Synchronisation frontend..."
+rsync -a --delete   --filter='P .htaccess'   --filter='P .user.ini'   --include='*/'   --include='index.html'   --include='api-fonctionnement.html'   --include='contact.html'   --exclude='*'   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
+echo "[DEPLOY] Frontend synchronisé vers $FRONTEND_DIR"
+
+echo "[DEPLOY] Génération config.js frontend..."
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.DOSIMETRIE_API_URL = "${API_PUBLIC_URL}";
 window.DOSIMETRIE_SITE_URL = "${SITE_PUBLIC_URL}";
 FRONTCFG
 
+echo "[DEPLOY] Écriture .runtime.env backend..."
 cat > "$BACKEND_DIR/.runtime.env" <<RUNTIME
 PORT=${API_PORT}
 CORS_ORIGIN=${API_CORS_ORIGIN}
 ADMIN_TOKEN=${ADMIN_TOKEN:-}
 RECAPTCHA_SECRET_KEY=${RECAPTCHA_SECRET_KEY:-}
 RECAPTCHA_SITE_KEY=${RECAPTCHA_SITE_KEY:-}
-CONTACT_RECEIVER_EMAIL=${CONTACT_RECEIVER_EMAIL:-}
-CONTACT_SENDER_EMAIL=${CONTACT_SENDER_EMAIL:-}
+SMTP_HOST=${SMTP_HOST:-}
+SMTP_PORT=${SMTP_PORT:-587}
+SMTP_SECURE=${SMTP_SECURE:-false}
+SMTP_USER=${SMTP_USER:-}
+SMTP_PASS=${SMTP_PASS:-}
+SMTP_FROM=${SMTP_FROM:-}
+CONTACT_DEST=${CONTACT_DEST:-}
 RUNTIME
 
+echo "[DEPLOY] Génération script de supervision monitor_node.sh..."
 cat > "$BACKEND_DIR/monitor_node.sh" <<'MONITOR'
 #!/usr/bin/env bash
 set -euo pipefail

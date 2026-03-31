@@ -2,7 +2,7 @@
 
 ## Architecture
 
-- `index.ml` : page principale utilisateur (visuel identique), sans formules métier.
+- `index.html` : page principale utilisateur (visuel identique), sans formules métier.
 - `api-fonctionnement.html` : page explicative du contrat API.
 - `contact.html` : formulaire de contact protégé par Google reCAPTCHA, envoi email côté backend.
 - `server.js` : API Node.js qui contient toutes les formules de calcul.
@@ -80,7 +80,7 @@ En cas d'erreur, l'API renvoie un objet explicite :
 
 ## Formulaire de contact (backend)
 
-- Page : `contact.html` (lien depuis `index.ml`)
+- Page : `contact.html` (lien depuis `index.html`)
 - Endpoint config publique : `GET /api/public-config` (retourne `recaptcha_site_key`)
 - Endpoint envoi : `POST /api/contact`
 
@@ -90,10 +90,28 @@ Sécurité / confidentialité :
 - envoi email réalisé côté backend.
 
 Variables `.env` requises :
+
+### Configuration Google reCAPTCHA (v2 Checkbox)
+
+1. Ouvrir Google reCAPTCHA Admin : https://www.google.com/recaptcha/admin/create
+2. Type recommandé : **reCAPTCHA v2** puis **"Je ne suis pas un robot" (Checkbox)**.
+3. Ajouter votre/vos domaine(s) (ex: `dosimetrie.fr`).
+4. Récupérer :
+   - **Site key** → `RECAPTCHA_SITE_KEY`
+   - **Secret key** → `RECAPTCHA_SECRET_KEY`
+5. Redéployer (`./deploy_update.sh`) pour injecter les clés côté backend.
+
+Documentation Google : https://developers.google.com/recaptcha/docs/display
+
 - `RECAPTCHA_SITE_KEY`
 - `RECAPTCHA_SECRET_KEY`
-- `CONTACT_RECEIVER_EMAIL`
-- `CONTACT_SENDER_EMAIL`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `CONTACT_DEST`
 
 ## Journal des mesures (backend)
 
@@ -149,7 +167,8 @@ Le script :
 - supprime localement les fichiers supprimés du repo,
 - protège les fichiers de configuration statiques locaux (`.env`, `.runtime.env`, `.htaccess`, etc.),
 - écrit `config.js` côté frontend avec l'URL API publique,
-- génère `monitor_node.sh` et le lance (contrôle santé + relance automatique).
+- génère `monitor_node.sh` et le lance (contrôle santé + relance automatique),
+- affiche des messages `[DEPLOY]` pendant l’exécution pour suivre chaque étape.
 
 ## Supervision Node.js (site toujours actif)
 

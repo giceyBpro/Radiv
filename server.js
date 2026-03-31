@@ -1,7 +1,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const net = require('net');
+const tls = require('tls');
 function loadDotEnv(filePath) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, 'utf8');
@@ -24,8 +25,13 @@ const logsDir = path.join(__dirname, 'logs');
 const logsFile = path.join(logsDir, 'measurements.jsonl');
 const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
 const recaptchaSiteKey = process.env.RECAPTCHA_SITE_KEY || '';
-const contactReceiverEmail = process.env.CONTACT_RECEIVER_EMAIL || '';
-const contactSenderEmail = process.env.CONTACT_SENDER_EMAIL || '';
+const smtpHost = process.env.SMTP_HOST || '';
+const smtpPort = Number(process.env.SMTP_PORT || 587);
+const smtpSecure = String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
+const smtpUser = process.env.SMTP_USER || '';
+const smtpPass = process.env.SMTP_PASS || '';
+const smtpFrom = process.env.SMTP_FROM || '';
+const contactDest = process.env.CONTACT_DEST || '';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
@@ -263,15 +269,123 @@ async function verifyRecaptcha(token, ip) {
   const data = await response.json();
   return data.success === true;
 }
-function sendContactEmail({ name, email, subject, message, ip, timestamp }) {
-  if (!contactReceiverEmail || !contactSenderEmail) {
-    return { ok: false, error: 'CONTACT_RECEIVER_EMAIL ou CONTACT_SENDER_EMAIL non configuré.' };
+async function smtpSendMail({ replyTo, subject, html }) {
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom || !contactDest) {
+    return { ok: false, error: 'Configuration SMTP incomplète (SMTP_* / CONTACT_DEST).' };
   }
+
+  const connect = () => new Promise((resolve, reject) => {
+    const onError = (err) => reject(err);
+    if (smtpSecure) {
+      const sock = tls.connect({ host: smtpHost, port: smtpPort, servername: smtpHost }, () => resolve(sock));
+      sock.once('error', onError);
+      return;
+    }
+    const sock = net.connect({ host: smtpHost, port: smtpPort }, () => resolve(sock));
+    sock.once('error', onError);
+  });
+
+  const socket = await connect();
+  socket.setEncoding('utf8');
+
+  const readResponse = () => new Promise((resolve, reject) => {
+    let buffer = '';
+    const onData = (chunk) => {
+      buffer += chunk;
+      const lines = buffer.split(/\r?\n/).filter(Boolean);
+      const last = lines[lines.length - 1] || '';
+      if (/^\d{3} /.test(last)) {
+        cleanup();
+        resolve(lines);
+      }
+    };
+    const onErr = (err) => { cleanup(); reject(err); };
+    const onEnd = () => { cleanup(); reject(new Error('Connexion SMTP fermée')); };
+    const cleanup = () => {
+      socket.off('data', onData);
+      socket.off('error', onErr);
+      socket.off('end', onEnd);
+    };
+    socket.on('data', onData);
+    socket.on('error', onErr);
+    socket.on('end', onEnd);
+  });
+
+  const sendCmd = async (cmd, expectedPrefix = '2') => {
+    socket.write(`${cmd}
+`);
+    const lines = await readResponse();
+    const code = (lines[lines.length - 1] || '').slice(0, 1);
+    if (code !== expectedPrefix) {
+      throw new Error(`SMTP commande échouée (${cmd}): ${lines.join(' | ')}`);
+    }
+    return lines;
+  };
+
+  try {
+    const greet = await readResponse();
+    if (!(greet[greet.length - 1] || '').startsWith('2')) {
+      throw new Error(`SMTP greeting invalide: ${greet.join(' | ')}`);
+    }
+
+    const ehlo = await sendCmd('EHLO dosimetrie-riv.local', '2');
+
+    if (!smtpSecure && ehlo.join('\n').includes('STARTTLS')) {
+      await sendCmd('STARTTLS', '2');
+      const secureSocket = tls.connect({ socket, servername: smtpHost });
+      await new Promise((resolve, reject) => {
+        secureSocket.once('secureConnect', resolve);
+        secureSocket.once('error', reject);
+      });
+      secureSocket.setEncoding('utf8');
+      // eslint-disable-next-line no-param-reassign
+      Object.assign(socket, secureSocket);
+      await sendCmd('EHLO dosimetrie-riv.local', '2');
+    }
+
+    await sendCmd(`AUTH LOGIN`, '3');
+    await sendCmd(Buffer.from(smtpUser).toString('base64'), '3');
+    await sendCmd(Buffer.from(smtpPass).toString('base64'), '2');
+
+    await sendCmd(`MAIL FROM:<${smtpUser}>`, '2');
+    await sendCmd(`RCPT TO:<${contactDest}>`, '2');
+    await sendCmd('DATA', '3');
+
+    const message = [
+      `From: ${smtpFrom}`,
+      `To: <${contactDest}>`,
+      `Reply-To: ${replyTo}`,
+      `Subject: [Dosimetrie RIV] ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      '',
+      html,
+      '.',
+      ''
+    ].join('\r\n');
+
+    socket.write(message);
+    const dataResponse = await readResponse();
+    if (!(dataResponse[dataResponse.length - 1] || '').startsWith('2')) {
+      throw new Error(`SMTP DATA échoué: ${dataResponse.join(' | ')}`);
+    }
+
+    await sendCmd('QUIT', '2');
+    socket.end();
+    return { ok: true };
+  } catch (error) {
+    try { socket.end(); } catch {}
+    return { ok: false, error: error.message };
+  }
+}
+
+async function sendContactEmail({ name, email, subject, message, ip, timestamp }) {
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
   const safeSubject = escapeHtml(subject);
   const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
   const safeIp = escapeHtml(ip);
+
   const html = `
   <div style="font-family:Arial,Helvetica,sans-serif;background:#eef1f3;padding:20px;">
     <div style="max-width:700px;margin:0 auto;background:#ffffff;border-radius:10px;padding:20px;border:1px solid #d5dde1;">
@@ -283,27 +397,13 @@ function sendContactEmail({ name, email, subject, message, ip, timestamp }) {
         <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Email</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeEmail}</td></tr>
         <tr><td style="padding:8px;border:1px solid #e3e7ea;"><strong>Sujet</strong></td><td style="padding:8px;border:1px solid #e3e7ea;">${safeSubject}</td></tr>
       </table>
-      <div style="margin-top:14px;padding:12px;background:#f4f7f8;border:1px solid #d5dde1;border-radius:6px;">
-        ${safeMessage}
-      </div>
+      <div style="margin-top:14px;padding:12px;background:#f4f7f8;border:1px solid #d5dde1;border-radius:6px;">${safeMessage}</div>
     </div>
   </div>`;
-  const raw = [
-    `From: Dosimetrie RIV <${contactSenderEmail}>`,
-    `To: <${contactReceiverEmail}>`,
-    `Reply-To: ${email}`,
-    `Subject: [Dosimetrie RIV] ${subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/html; charset=UTF-8',
-    '',
-    html
-  ].join('\n');
-  const proc = spawnSync('/usr/sbin/sendmail', ['-t', '-i'], { input: raw, encoding: 'utf8' });
-  if (proc.status !== 0) {
-    return { ok: false, error: proc.stderr || 'Échec sendmail.' };
-  }
-  return { ok: true };
+
+  return smtpSendMail({ replyTo: email, subject, html });
 }
+
 function isAdminAuthorized(req, urlObj) {
   if (!adminToken) return true;
   const tokenFromHeader = req.headers['x-admin-token'];
@@ -373,7 +473,7 @@ const server = http.createServer((req, res) => {
         if (!recaptchaOk) {
           return sendJson(res, 400, { ok: false, error: 'Échec vérification reCAPTCHA.' });
         }
-        const sent = sendContactEmail({
+        const sent = await sendContactEmail({
           name,
           email,
           subject,
