@@ -358,10 +358,57 @@
       cursor: default;
     }
 
+    .print-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .print-btn {
+      border: 2px solid #1f1f1f;
+      background: #fff;
+      padding: 10px 14px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .patient-label-box {
+      margin-top: 10px;
+      border: 2px dashed #333;
+      padding: 10px;
+      min-height: 54px;
+      font-size: 14px;
+    }
+
+    .print-date-big {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+
     @media print {
-      body { background: white; padding: 0; }
-      .page { box-shadow: none; border-radius: 0; max-width: none; }
-      .optional details[open] > summary { border-bottom: 2px solid var(--border); }
+      @page { size: A4 portrait; margin: 8mm; }
+      body { background: white; padding: 0; font-size: 11px; }
+      .page { box-shadow: none; border-radius: 0; max-width: none; padding: 8px; }
+      .optional,
+      .source-box,
+      .meta,
+      .no-print,
+      .note.long-ref,
+      .summary-caption { display: none !important; }
+      h1 { font-size: 18px; }
+      .subtitle { margin-top: 2px; font-size: 11px; }
+      .section { margin-top: 6px; }
+      .section-title { padding: 4px 6px; font-size: 12px; }
+      .mandatory-body > div { padding: 6px; }
+      table.results th, table.results td { padding: 4px 6px; font-size: 11px; }
+      table.results td.value { font-size: 14px; }
+      .effective-box { margin-top: 6px; padding: 6px; font-size: 12px; }
+      .print-date-big { font-size: 20px; margin: 4px 0; }
+      .patient-label-box { min-height: 40px; margin-top: 6px; }
     }
 
     @media (max-width: 900px) {
@@ -411,6 +458,16 @@
       <strong>Source :</strong>
       <a class="inline-link" href="https://www.cnp-mn.fr/reco_riv/" target="_blank" rel="noopener noreferrer">https://www.cnp-mn.fr/reco_riv/</a>
       — version 1.4.5 du 30/01/2024
+    </div>
+
+    <div class="print-actions no-print">
+      <button type="button" class="print-btn" id="printBtn">Version imprimable (A4)</button>
+    </div>
+
+    <div class="print-date-big" id="printDateBig">-</div>
+    <div class="patient-label-box">
+      <strong>Identité patient / étiquette :</strong>
+      <div style="height: 24px;"></div>
     </div>
 
     <section class="section mandatory">
@@ -589,7 +646,7 @@
       <strong>Remarque :</strong> <span id="remarkText">-</span>
     </div>
 
-    <div class="note">
+    <div class="note long-ref">
       <strong>Références :</strong><br>
       [1] T. Carlier et al., <em>Recommandations pratiques concernant la sortie des patients après traitement du cancer différencié de la thyroïde à l’131I</em>, Radioprotection 39 (2004) 481-492.<br>
       [2] J.A. Siegel et al., <em>Calculating the absorbed dose from radioactive patients: The line-source versus point-source model</em>, J. Nucl. Med. 43 (2002) 1241-1244.
@@ -617,6 +674,7 @@
       const now = new Date();
       $('todayLabel').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       $('printTime').textContent = `Heure d'impression : ${now.getHours()} h ${String(now.getMinutes()).padStart(2, '0')}`;
+      $('printDateBig').textContent = `Date : ${now.toLocaleDateString('fr-FR')}`;
     }
 
     function getNumberOrNull(id) {
@@ -775,6 +833,8 @@
       bindEvents();
       renderResults();
     }
+
+    $('printBtn').addEventListener('click', () => window.print());
 
     bootstrap().catch((error) => {
       $('errorBox').style.display = 'block';
