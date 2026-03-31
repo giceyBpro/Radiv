@@ -410,7 +410,7 @@
     <div class="source-box">
       <strong>Source :</strong>
       <a class="inline-link" href="https://www.cnp-mn.fr/reco_riv/" target="_blank" rel="noopener noreferrer">https://www.cnp-mn.fr/reco_riv/</a>
-      — version 1.4.5 du 30/12/2024
+      — version 1.4.5 du 30/01/2024
     </div>
 
     <section class="section mandatory">
