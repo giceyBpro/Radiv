@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact - Dosimétrie RIV</title>
+  <style>
+    :root { --border:#1f1f1f; --paper:#fff; --bg:#eef1f3; --link:#1637b8; --ok:#1f7a3a; --err:#9b2c2c; }
+    body { margin:0; padding:24px; background:var(--bg); font-family:Arial, Helvetica, sans-serif; }
+    .page { max-width:900px; margin:0 auto; background:var(--paper); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.12); padding:24px; }
+    h1 { margin-top:0; }
+    .links { margin-bottom:14px; }
+    .links a { color:var(--link); }
+    label { display:block; font-weight:700; margin-top:10px; }
+    input, textarea { width:100%; padding:10px; border:2px solid #4a4a4a; border-radius:6px; box-sizing:border-box; }
+    textarea { min-height:140px; resize:vertical; }
+    button { margin-top:14px; border:2px solid var(--border); background:#fff; padding:10px 14px; font-weight:700; border-radius:6px; cursor:pointer; }
+    .status { margin-top:10px; font-weight:700; }
+    .status.ok { color:var(--ok); }
+    .status.err { color:var(--err); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="links"><a href="index.ml">← Retour à l'accueil</a></div>
+    <h1>Formulaire de contact</h1>
+    <form id="contactForm">
+      <label for="name">Nom</label>
+      <input id="name" name="name" type="text" required>
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required>
+
+      <label for="subject">Sujet</label>
+      <input id="subject" name="subject" type="text" required>
+
+      <label for="message">Message</label>
+      <textarea id="message" name="message" required></textarea>
+
+      <div id="recaptchaContainer" style="margin-top:12px;"></div>
+
+      <button type="submit">Envoyer</button>
+      <div id="status" class="status"></div>
+    </form>
+  </main>
+
+  <script>
+    let recaptchaSiteKey = '';
+    let recaptchaToken = '';
+
+    function setStatus(message, ok) {
+      const el = document.getElementById('status');
+      el.textContent = message;
+      el.className = `status ${ok ? 'ok' : 'err'}`;
+    }
+
+    async function loadPublicConfig() {
+      const res = await fetch('/api/public-config');
+      if (!res.ok) throw new Error('Impossible de charger la configuration publique');
+      const data = await res.json();
+      recaptchaSiteKey = data.recaptcha_site_key || '';
+      if (!recaptchaSiteKey) throw new Error('reCAPTCHA non configuré côté serveur');
+    }
+
+    function renderRecaptcha() {
+      window.grecaptcha.render('recaptchaContainer', {
+        sitekey: recaptchaSiteKey,
+        callback: (token) => { recaptchaToken = token; },
+        'expired-callback': () => { recaptchaToken = ''; }
+      });
+    }
+
+    async function sendContact(payload) {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return { ok: res.ok, data: await res.json() };
+    }
+
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!recaptchaToken) {
+        setStatus('Veuillez valider le reCAPTCHA.', false);
+        return;
+      }
+
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        subject: document.getElementById('subject').value.trim(),
+        message: document.getElementById('message').value.trim(),
+        recaptcha_token: recaptchaToken
+      };
+
+      const response = await sendContact(payload);
+      if (!response.ok || !response.data.ok) {
+        setStatus(response.data.error || 'Échec envoi du message.', false);
+        return;
+      }
+
+      setStatus('Message envoyé avec succès.', true);
+      document.getElementById('contactForm').reset();
+      recaptchaToken = '';
+      window.grecaptcha.reset();
+    });
+
+    (async () => {
+      try {
+        await loadPublicConfig();
+        const script = document.createElement('script');
+        script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = renderRecaptcha;
+        document.head.appendChild(script);
+      } catch (err) {
+        setStatus(err.message, false);
+      }
+    })();
+  </script>
+</body>
+</html>
