@@ -95,18 +95,22 @@
       document.getElementById('printDate').textContent = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR');
 
       const form = payload.form || {};
-      document.getElementById('inputGrid').innerHTML = [
-        row('Radiopharmaceutique', form.isotope_label),
-        row('Débit de dose à 1 m (µSv/h)', form.dose_rate),
-        row('Taille patient (cm)', form.patient_size_cm),
-        row('Activité bénin (MBq)', form.benign_activity_mbq),
-        row('Fixation bénin (%)', form.benign_fixation_pct),
-        row('Période effective utilisateur (j)', form.user_period_days),
-        row('Durée distance X (h)', form.user_hours_1),
-        row('Distance X (m)', form.user_distance_1),
-        row('Durée à 1 m (h)', form.user_hours_2),
-        row('Limite dosimétrique (mSv)', form.user_limit)
-      ].join('');
+      const inputEntries = [
+        ['Radiopharmaceutique', form.isotope_label],
+        ['Débit de dose à 1 m (µSv/h)', form.dose_rate],
+        ['Taille patient (cm)', form.patient_size_cm],
+        ['Activité bénin (MBq)', form.benign_activity_mbq],
+        ['Fixation bénin (%)', form.benign_fixation_pct],
+        ['Période effective utilisateur (j)', form.user_period_days],
+        ['Durée distance X (h)', form.user_hours_1],
+        ['Distance X (m)', form.user_distance_1],
+        ['Durée à 1 m (h)', form.user_hours_2],
+        ['Limite dosimétrique (mSv)', form.user_limit]
+      ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+
+      document.getElementById('inputGrid').innerHTML = inputEntries.length
+        ? inputEntries.map(([label, value]) => row(label, value)).join('')
+        : '<div class="muted">Aucune donnée de saisie à afficher.</div>';
 
       const result = payload.result || {};
       const effDays = result.effective_days ?? '-';

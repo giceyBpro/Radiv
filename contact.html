@@ -65,7 +65,16 @@
     }
 
     function renderRecaptcha() {
-      window.grecaptcha.render('recaptchaContainer', {
+      const api = window.grecaptcha?.render
+        ? window.grecaptcha
+        : (window.grecaptcha?.enterprise?.render ? window.grecaptcha.enterprise : null);
+
+      if (!api) {
+        setStatus('reCAPTCHA indisponible: vérifiez le type de clé (v2 checkbox) et le chargement du script.', false);
+        return;
+      }
+
+      api.render('recaptchaContainer', {
         sitekey: recaptchaSiteKey,
         callback: (token) => { recaptchaToken = token; },
         'expired-callback': () => { recaptchaToken = ''; }
@@ -111,11 +120,17 @@
     (async () => {
       try {
         await loadPublicConfig();
+        window.onRecaptchaLoaded = () => {
+          if (window.grecaptcha?.ready) {
+            window.grecaptcha.ready(renderRecaptcha);
+            return;
+          }
+          renderRecaptcha();
+        };
         const script = document.createElement('script');
-        script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+        script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
         script.async = true;
         script.defer = true;
-        script.onload = renderRecaptcha;
         document.head.appendChild(script);
       } catch (err) {
         setStatus(err.message, false);
