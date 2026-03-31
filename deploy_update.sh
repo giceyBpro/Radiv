@@ -17,7 +17,7 @@ source "$ENV_FILE"
 
 GIT_BRANCH="${GIT_BRANCH:-main}"
 BACKEND_DIR="${BACKEND_DIR:-$HOME/dosimetrie}"
-FRONTEND_DIR="${FRONTEND_DIR:-$HOME/public_htm/dosimetrie.fr}"
+FRONTEND_DIR="${FRONTEND_DIR:-$HOME/public_html/dosimetrie.fr}"
 CHECKOUT_DIR="${CHECKOUT_DIR:-$BACKEND_DIR/repo}"
 API_PORT="${API_PORT:-3000}"
 API_CORS_ORIGIN="${API_CORS_ORIGIN:-*}"
@@ -71,7 +71,20 @@ fi
 # Synchronisation frontend avec suppression contrôlée des fichiers supprimés du repo,
 # sans supprimer les fichiers de configuration statiques du vhost.
 echo "[DEPLOY] Synchronisation frontend..."
-rsync -a --delete   --filter='P .htaccess'   --filter='P .user.ini'   --include='*/'   --include='index.html'   --include='api-fonctionnement.html'   --include='contact.html'   --exclude='*'   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
+rsync -a --delete \
+  --filter='P .htaccess' \
+  --filter='P .user.ini' \
+  --exclude='.git/' \
+  --exclude='node_modules/' \
+  --exclude='logs/' \
+  --exclude='.env' \
+  --exclude='.runtime.env' \
+  --exclude='server.js' \
+  --exclude='deploy_update.sh' \
+  --exclude='monitor_node.sh' \
+  --exclude='package.json' \
+  --exclude='package-lock.json' \
+  "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
 echo "[DEPLOY] Frontend synchronisé vers $FRONTEND_DIR"
 

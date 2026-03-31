@@ -149,7 +149,7 @@ npm start
 2. Personnaliser au minimum dans `.env` :
    - `API_PORT`
    - `BACKEND_DIR`
-   - `FRONTEND_DIR`
+   - `FRONTEND_DIR` (par défaut: `$HOME/public_html/dosimetrie.fr`)
    - `SITE_PUBLIC_URL`
    - `API_PUBLIC_URL`
    - `ADMIN_TOKEN` (recommandé)
@@ -163,7 +163,7 @@ cd ~/dosimetrie
 Le script :
 - crée les dossiers nécessaires,
 - fait un `git pull` sur la branche configurée,
-- synchronise backend/frontend vers les bons répertoires,
+- synchronise backend/frontend vers les bons répertoires (les fichiers frontend du repo sont remplacés/supprimés selon l'état git),
 - supprime localement les fichiers supprimés du repo,
 - protège les fichiers de configuration statiques locaux (`.env`, `.runtime.env`, `.htaccess`, etc.),
 - écrit `config.js` côté frontend avec l'URL API publique,
