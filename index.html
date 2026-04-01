@@ -680,18 +680,24 @@
     }
 
     async function fetchConfig() {
-      const response = await fetch(`${API_BASE}/config`);
-      if (!response.ok) throw new Error('Impossible de charger la configuration');
+      const url = `${API_BASE}/config`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez le proxy /api vers Node.js.`);
+      }
       return response.json();
     }
 
     async function fetchCalculation(payload) {
-      const response = await fetch(`${API_BASE}/calculate`, {
+      const url = `${API_BASE}/calculate`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error('Erreur lors du calcul serveur');
+      if (!response.ok) {
+        throw new Error(`Erreur API (${response.status}) sur ${url}`);
+      }
       return response.json();
     }
 

@@ -41,6 +41,7 @@
     const API_BASE = (window.DOSIMETRIE_API_URL || 'api').replace(/\/+$/, '');
     let recaptchaSiteKey = '';
     let recaptchaReady = false;
+    let recaptchaInitPromise = null;
 
     function setStatus(message, ok) {
       const el = document.getElementById('status');
@@ -82,6 +83,17 @@
       return window.grecaptcha.execute(recaptchaSiteKey, { action: 'contact_form' });
     }
 
+    async function ensureRecaptchaReady() {
+      if (recaptchaReady) return;
+      if (!recaptchaInitPromise) {
+        recaptchaInitPromise = (async () => {
+          await loadPublicConfig();
+          await loadRecaptchaV3();
+        })();
+      }
+      await recaptchaInitPromise;
+    }
+
     async function sendContact(payload) {
       const res = await fetch(`${API_BASE}/contact`, {
         method: 'POST',
@@ -93,10 +105,13 @@
 
     document.getElementById('contactForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!recaptchaReady) {
-        setStatus('reCAPTCHA non initialisé.', false);
+      try {
+        await ensureRecaptchaReady();
+      } catch (err) {
+        setStatus(err.message || 'reCAPTCHA non initialisé.', false);
         return;
       }
+
       const payload = {
         name: 'Formulaire web',
         email: document.getElementById('email').value.trim(),
@@ -117,8 +132,8 @@
 
     (async () => {
       try {
-        await loadPublicConfig();
-        await loadRecaptchaV3();
+        recaptchaInitPromise = ensureRecaptchaReady();
+        await recaptchaInitPromise;
       } catch (err) {
         setStatus(err.message, false);
       }

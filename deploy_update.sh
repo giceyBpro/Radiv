@@ -23,7 +23,7 @@ API_PORT="${API_PORT:-3000}"
 API_CORS_ORIGIN="${API_CORS_ORIGIN:-*}"
 API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://dosimetrie.fr}"
-INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-false}"
+INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
 echo "[DEPLOY] Initialisation des répertoires..."
 mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
@@ -172,6 +172,13 @@ chmod +x "$BACKEND_DIR/monitor_node.sh"
 "$BACKEND_DIR/monitor_node.sh"
 
 if [[ "$INSTALL_CRON_MONITOR" == "true" ]]; then
+  if ! command -v crontab >/dev/null 2>&1; then
+    echo "[DEPLOY] crontab indisponible, impossible d'installer la supervision cron automatiquement."
+    popd >/dev/null
+    echo "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
+    echo "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
+    exit 0
+  fi
   CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
   CURRENT_CRON="$(crontab -l 2>/dev/null || true)"
   if ! grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$CURRENT_CRON"; then

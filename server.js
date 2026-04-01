@@ -516,6 +516,15 @@ const server = http.createServer((req, res) => {
   }
   sendJson(res, 404, { error: 'Not found' });
 });
+
+process.on('uncaughtException', (error) => {
+  console.error('[FATAL] uncaughtException:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason);
+});
+
 server.listen(port, () => {
   console.log(`Dosimetrie API listening on port ${port}`);
 });
