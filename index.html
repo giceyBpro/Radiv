@@ -625,22 +625,6 @@
 
     let isotopes = [];
     let lastResult = null;
-    const FALLBACK_ISOTOPES = [
-      { api_code: 'iode131_0_fixation', label: 'Iode-131-0%-fixation' },
-      { api_code: 'iode131_5_fixation', label: 'Iode-131-5%-fixation' },
-      { api_code: 'iode131_25_fixation', label: 'Iode-131-25%-fixation' },
-      { api_code: 'iode131_benin', label: 'Iode-131-Bénin' },
-      { api_code: 'radium223', label: 'Radium-223' },
-      { api_code: 'psma_177lu', label: 'PSMA-177Lu' },
-      { api_code: 'synovectomie_90y', label: 'Synovectomie-90Y' },
-      { api_code: 'synovectomie_186re', label: 'Synovectomie-186Re' },
-      { api_code: 'synovectomie_169er', label: 'Synovectomie-169Er' },
-      { api_code: 'microspheres_90y', label: 'Microsphères-90Y' },
-      { api_code: 'lipiodol_131i', label: 'Lipiodol-131I' },
-      { api_code: 'lutetium177_net', label: 'Lutétium-177 NET' },
-      { api_code: 'mibg_131i', label: 'MIBG-131I' },
-      { api_code: 'non_defini', label: 'Non défini' }
-    ];
     const audienceMeta = {
       conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '-' },
       conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: '-' },
@@ -832,14 +816,12 @@
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
+        bindEvents();
+        renderResults();
       } catch (error) {
-        isotopes = FALLBACK_ISOTOPES;
-        populateIsotopes('iode131_25_fixation');
         $('errorBox').style.display = 'block';
-        $('errorBox').innerHTML = `<strong>Configuration API indisponible :</strong><br>- ${error.message}<br>- Liste isotopes chargée en mode local (secours).`;
+        $('errorBox').innerHTML = '<strong>Service temporairement indisponible.</strong><br>- Veuillez réessayer dans quelques minutes.';
       }
-      bindEvents();
-      renderResults();
     }
 
     function openPrintableVersion() {

@@ -108,6 +108,8 @@ SMTP_USER="${SMTP_USER:-}"
 SMTP_PASS="${SMTP_PASS:-}"
 SMTP_FROM="${SMTP_FROM:-}"
 CONTACT_DEST="${CONTACT_DEST:-}"
+ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
+ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
 RUNTIME
 
 echo "[DEPLOY] Génération script de supervision monitor_node.sh..."
@@ -127,6 +129,54 @@ fi
 
 PORT="${PORT:-3000}"
 HEALTH_URL="http://127.0.0.1:${PORT}/health"
+ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
+ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
+ALERT_STATE_FILE="$BACKEND_DIR/.api_down_alert.last"
+
+send_api_down_alert() {
+  [[ "$ALERT_ON_API_DOWN_EMAIL" == "true" ]] || return 0
+  [[ -n "${SMTP_HOST:-}" && -n "${SMTP_PORT:-}" && -n "${SMTP_USER:-}" && -n "${SMTP_PASS:-}" && -n "${CONTACT_DEST:-}" ]] || return 0
+
+  now_ts="$(date +%s)"
+  last_ts=0
+  if [[ -f "$ALERT_STATE_FILE" ]]; then
+    last_ts="$(cat "$ALERT_STATE_FILE" 2>/dev/null || echo 0)"
+  fi
+  if (( now_ts - last_ts < ALERT_ON_API_DOWN_COOLDOWN_SEC )); then
+    return 0
+  fi
+
+  from_header="${SMTP_FROM:-$SMTP_USER}"
+  from_match="$(sed -n 's/.*<\([^>]*\)>.*/\1/p' <<< "$from_header")"
+  envelope_from="${from_match:-$SMTP_USER}"
+  smtp_url="smtp://${SMTP_HOST}:${SMTP_PORT}"
+  if [[ "${SMTP_SECURE:-false}" == "true" ]]; then
+    smtp_url="smtps://${SMTP_HOST}:${SMTP_PORT}"
+  fi
+
+  mail_payload="$(cat <<EOF
+From: ${from_header}
+To: <${CONTACT_DEST}>
+Subject: [Dosimetrie RIV] Alerte indisponibilité API
+Date: $(date -R)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+L'API Dosimetrie RIV est indisponible malgré une tentative de redémarrage.
+Serveur: $(hostname)
+Date: $(date -Is)
+Healthcheck: ${HEALTH_URL}
+EOF
+)"
+
+  if curl -fsS --url "$smtp_url" \
+    --user "${SMTP_USER}:${SMTP_PASS}" \
+    --mail-from "<${envelope_from}>" \
+    --mail-rcpt "<${CONTACT_DEST}>" \
+    --upload-file - <<< "$mail_payload" >/dev/null 2>&1; then
+    echo "$now_ts" > "$ALERT_STATE_FILE"
+  fi
+}
 
 is_healthy() {
   curl -fsS --max-time 3 "$HEALTH_URL" >/dev/null 2>&1
@@ -163,6 +213,7 @@ if ! is_healthy; then
   sleep 2
   if ! is_healthy; then
     echo "[$(date -Is)] Échec redémarrage API" >> "$LOG_FILE"
+    send_api_down_alert
     exit 1
   fi
 fi
