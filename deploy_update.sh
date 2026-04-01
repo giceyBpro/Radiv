@@ -22,6 +22,7 @@ CHECKOUT_DIR="${CHECKOUT_DIR:-$BACKEND_DIR/repo}"
 API_PORT="${API_PORT:-3003}"
 API_CORS_ORIGIN="${API_CORS_ORIGIN:-*}"
 API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
+MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-${API_PUBLIC_URL%/}/config}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://dosimetrie.fr}"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
@@ -110,6 +111,7 @@ SMTP_FROM="${SMTP_FROM:-}"
 CONTACT_DEST="${CONTACT_DEST:-}"
 ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
 ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
+MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL}"
 RUNTIME
 
 echo "[DEPLOY] Génération script de supervision monitor_node.sh..."
@@ -129,6 +131,7 @@ fi
 
 PORT="${PORT:-3003}"
 HEALTH_URL="http://127.0.0.1:${PORT}/health"
+PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-}"
 ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
 ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
 ALERT_STATE_FILE="$BACKEND_DIR/.api_down_alert.last"
@@ -182,6 +185,30 @@ is_healthy() {
   curl -fsS --max-time 3 "$HEALTH_URL" >/dev/null 2>&1
 }
 
+is_public_ok() {
+  if [[ -z "$PUBLIC_CONFIG_URL" ]]; then
+    return 0
+  fi
+  curl -fsS --max-time 8 "$PUBLIC_CONFIG_URL" >/dev/null 2>&1
+}
+
+kill_managed_processes() {
+  if [[ -f "$PID_FILE" ]]; then
+    old_pid="$(cat "$PID_FILE" || true)"
+    if [[ -n "${old_pid}" ]] && kill -0 "$old_pid" >/dev/null 2>&1; then
+      cmdline="$(ps -p "$old_pid" -o args= 2>/dev/null || true)"
+      if [[ "$cmdline" == *"$BACKEND_DIR/server.js"* ]]; then
+        kill "$old_pid" >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
+
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] || continue
+    kill "$pid" >/dev/null 2>&1 || true
+  done < <(pgrep -f "node .*${BACKEND_DIR}/server.js" || true)
+}
+
 start_nohup() {
   nohup node "$BACKEND_DIR/server.js" >>"$LOG_FILE" 2>&1 &
   echo $! > "$PID_FILE"
@@ -198,20 +225,15 @@ restart_service() {
     return
   fi
 
-  if [[ -f "$PID_FILE" ]]; then
-    old_pid="$(cat "$PID_FILE" || true)"
-    if [[ -n "${old_pid}" ]] && kill -0 "$old_pid" >/dev/null 2>&1; then
-      kill "$old_pid" >/dev/null 2>&1 || true
-      sleep 1
-    fi
-  fi
+  kill_managed_processes
+  sleep 1
   start_nohup
 }
 
-if ! is_healthy; then
+if ! is_healthy || ! is_public_ok; then
   restart_service
-  sleep 2
-  if ! is_healthy; then
+  sleep 3
+  if ! is_healthy || ! is_public_ok; then
     echo "[$(date -Is)] Échec redémarrage API" >> "$LOG_FILE"
     send_api_down_alert
     exit 1

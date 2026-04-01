@@ -110,11 +110,19 @@
       $('recvBox').textContent = 'Requête en cours...';
 
       try {
-        const resp = await fetch(url, {
-          method,
-          headers,
-          body: body ? JSON.stringify(body) : undefined
-        });
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        let resp;
+        try {
+          resp = await fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timer);
+        }
 
         const text = await resp.text();
         let parsed = text;
@@ -126,9 +134,12 @@
           data: parsed
         }, null, 2);
       } catch (error) {
+        const isTimeout = error && error.name === 'AbortError';
         $('recvBox').textContent = JSON.stringify({
-          error: 'NETWORK_ERROR',
-          message: error.message
+          error: isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR',
+          message: isTimeout
+            ? 'Aucune réponse API après 15s (proxy/API potentiellement indisponible).'
+            : error.message
         }, null, 2);
       }
     }

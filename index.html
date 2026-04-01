@@ -442,12 +442,12 @@
             </div>
             <div>
               <div class="field-title">Débit de dose à 1 m (µSv/h) en sortie de chambre</div>
-              <input id="doseRate" type="number" min="0" step="0.01" value="20">
+              <input id="doseRate" type="number" min="0" step="0.01" value="">
               <div class="small" id="doseRateHelp">Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.</div>
             </div>
             <div>
               <div class="field-title">Taille du patient (cm)</div>
-              <input id="patientSize" type="number" min="1" step="1" value="160">
+              <input id="patientSize" type="number" min="1" step="1" value="">
             </div>
           </div>
         </div>
@@ -460,11 +460,11 @@
             </div>
             <div>
               <div class="field-title">Débit</div>
-              <div class="opt-preview"><a class="fake-link" id="dosePreview">20</a></div>
+              <div class="opt-preview"><a class="fake-link" id="dosePreview">-</a></div>
             </div>
             <div>
               <div class="field-title">Taille</div>
-              <div class="opt-preview"><a class="fake-link" id="sizePreview">160</a></div>
+              <div class="opt-preview"><a class="fake-link" id="sizePreview">-</a></div>
             </div>
           </div>
         </div>
@@ -657,6 +657,16 @@
       return Math.round(value);
     }
 
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     function syncActivityFromMbq() {
       const mbq = getNumberOrNull('benignActivityMbq');
       if (mbq === null) {
@@ -681,7 +691,7 @@
 
     async function fetchConfig() {
       const url = `${API_BASE}/config`;
-      const response = await fetch(url);
+      const response = await fetchWithTimeout(url, {}, 12000);
       if (!response.ok) {
         throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez le proxy /api vers Node.js.`);
       }
@@ -690,11 +700,11 @@
 
     async function fetchCalculation(payload) {
       const url = `${API_BASE}/calculate`;
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      });
+      }, 15000);
       if (!response.ok) {
         throw new Error(`Erreur API (${response.status}) sur ${url}`);
       }
@@ -817,7 +827,6 @@
         isotopes = config.isotopes || [];
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
         bindEvents();
-        renderResults();
       } catch (error) {
         $('errorBox').style.display = 'block';
         $('errorBox').innerHTML = '<strong>Service temporairement indisponible.</strong><br>- Veuillez réessayer dans quelques minutes.';

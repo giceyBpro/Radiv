@@ -179,6 +179,7 @@ $BACKEND_DIR/monitor_node.sh
 
 Ce script :
 - vérifie `http://127.0.0.1:$API_PORT/health`,
+- vérifie aussi `MONITOR_PUBLIC_CONFIG_URL` (par défaut: `$API_PUBLIC_URL/config`) pour détecter un proxy public cassé,
 - redémarre via `pm2` si disponible,
 - sinon relance via `nohup node server.js`.
 
