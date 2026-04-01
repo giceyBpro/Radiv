@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Version imprimable - Dosimétrie RIV</title>
+  <style>
+    :root { --ink:#111; --line:#333; --paper:#fff; }
+    body { margin:0; background:#f5f5f5; font-family:Arial, Helvetica, sans-serif; color:var(--ink); }
+    .sheet {
+      box-sizing:border-box;
+      width:210mm;
+      min-height:297mm;
+      margin:10mm auto;
+      background:var(--paper);
+      padding:12mm;
+      border:1px solid #ddd;
+    }
+    h1 { margin:0 0 6mm 0; font-size:20px; }
+    .topline { display:flex; justify-content:space-between; gap:12px; margin-bottom:6mm; }
+    .label-box { border:1px solid var(--line); min-height:20mm; padding:4mm; margin-bottom:6mm; }
+    .block { margin-bottom:6mm; }
+    .block h2 { margin:0 0 3mm 0; font-size:14px; border-bottom:1px solid var(--line); padding-bottom:2mm; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:2mm 8mm; font-size:13px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { border:1px solid var(--line); padding:6px; text-align:left; vertical-align:top; }
+    th { background:#eee; }
+    .actions { margin:8px auto 18px; width:210mm; display:flex; gap:12px; }
+    .actions a, .actions button { border:1px solid #111; background:#fff; padding:8px 12px; text-decoration:none; color:#111; cursor:pointer; }
+    .muted { color:#555; font-size:12px; }
+    @media print {
+      body { background:#fff; }
+      .sheet { margin:0; border:none; width:auto; min-height:auto; }
+      .actions { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions">
+    <a href="/">← Retour à la racine du site</a>
+    <button type="button" id="printNowBtn">Imprimer</button>
+  </div>
+
+  <main class="sheet">
+    <h1>Durées de restriction des contacts — RIV</h1>
+    <div class="topline">
+      <div><strong>Date :</strong> <span id="printDate">-</span></div>
+      <div class="muted">Document destiné à l'impression A4 noir et blanc</div>
+    </div>
+
+    <div class="label-box">
+      <strong>Identité patient / étiquette :</strong>
+    </div>
+
+    <section class="block">
+      <h2>Données saisies</h2>
+      <div class="grid" id="inputGrid"></div>
+    </section>
+
+    <section class="block">
+      <h2>Résultat du calcul</h2>
+      <div id="effectiveText" style="margin-bottom:4mm;">-</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Scénario</th>
+            <th>Durée (jours)</th>
+          </tr>
+        </thead>
+        <tbody id="resultRows"></tbody>
+      </table>
+      <div id="patientTips" class="muted" style="margin-top:3mm;"></div>
+    </section>
+  </main>
+
+  <script>
+    function safe(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      return String(value);
+    }
+
+    function row(label, value) {
+      return `<div><strong>${label}</strong></div><div>${safe(value)}</div>`;
+    }
+
+    (function bootstrap() {
+      const raw = localStorage.getItem('dosimetrie_print_payload') || sessionStorage.getItem('dosimetrie_print_payload');
+      if (!raw) {
+        document.getElementById('inputGrid').innerHTML = '<div>Aucune donnée disponible.</div>';
+        return;
+      }
+
+      const payload = JSON.parse(raw);
+      const date = new Date(payload.generated_at || Date.now());
+      document.getElementById('printDate').textContent = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR');
+
+      const form = payload.form || {};
+      const inputEntries = [
+        ['Radiopharmaceutique', form.isotope_label],
+        ['Débit de dose à 1 m (µSv/h)', form.dose_rate],
+        ['Taille patient (cm)', form.patient_size_cm],
+        ['Activité bénin (MBq)', form.benign_activity_mbq],
+        ['Fixation bénin (%)', form.benign_fixation_pct],
+        ['Période effective utilisateur (j)', form.user_period_days],
+        ['Durée distance X (h)', form.user_hours_1],
+        ['Distance X (m)', form.user_distance_1],
+        ['Durée à 1 m (h)', form.user_hours_2],
+        ['Limite dosimétrique (mSv)', form.user_limit]
+      ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+
+      document.getElementById('inputGrid').innerHTML = inputEntries.length
+        ? inputEntries.map(([label, value]) => row(label, value)).join('')
+        : '<div class="muted">Aucune donnée de saisie à afficher.</div>';
+
+      const result = payload.result || {};
+      const effDays = result.effective_days ?? '-';
+      const effHours = result.effective_hours ?? '-';
+      document.getElementById('effectiveText').innerHTML = `<strong>Période effective :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
+
+      const audienceMeta = {
+        conjoint_plus_60: 'Contact avec le (la) conjoint(e) > 60 ans',
+        conjoint_moins_60: 'Contact avec le (la) conjoint(e) < 60 ans',
+        conjointe_enceinte: 'Contact avec une femme enceinte',
+        transport_commun: 'Transport en commun',
+        enfant_moins_3_ans: 'Contact avec enfant < 3 ans',
+        enfant_3_11_ans: 'Contact avec enfant 3–11 ans',
+        collegues_travail: 'Collègues de travail',
+        scenario_utilisateur: 'Scénario utilisateur'
+      };
+      const audienceTips = {
+        conjoint_plus_60: 'Dormez séparément pendant la durée indiquée.',
+        conjoint_moins_60: 'Limitez les contacts rapprochés prolongés.',
+        conjointe_enceinte: 'Évitez les contacts proches prolongés.',
+        transport_commun: 'Évitez les trajets longs en proximité immédiate.',
+        enfant_moins_3_ans: 'Évitez de porter l’enfant et les contacts rapprochés.',
+        enfant_3_11_ans: 'Limitez les contacts rapprochés prolongés.',
+        collegues_travail: 'Limitez la proximité prolongée au travail.',
+        scenario_utilisateur: 'Suivez les règles définies par votre équipe soignante.'
+      };
+      const rows = Array.isArray(result.rows) && result.rows.length
+        ? result.rows
+        : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => ({
+            audience_code: audienceCode,
+            label: audienceMeta[audienceCode] || audienceCode,
+            value
+          }));
+      document.getElementById('resultRows').innerHTML = rows.map((r) => `
+        <tr>
+          <td>${safe(r.label)}</td>
+          <td>${safe(r.value)}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('patientTips').innerHTML = rows
+        .map((r) => `• <strong>${safe(r.label)}</strong> : ${safe(audienceTips[r.audience_code] || 'Suivez les consignes médicales données.')}`)
+        .join('<br>');
+    })();
+
+    document.getElementById('printNowBtn').addEventListener('click', () => window.print());
+  </script>
+</body>
+</html>
