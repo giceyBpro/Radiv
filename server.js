@@ -12,13 +12,20 @@ function loadDotEnv(filePath) {
     const idx = trimmed.indexOf('=');
     if (idx === -1) return;
     const key = trimmed.slice(0, idx).trim();
-    const value = trimmed.slice(idx + 1).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
     if (!process.env[key]) process.env[key] = value;
   });
 }
 loadDotEnv(path.join(__dirname, '.runtime.env'));
 loadDotEnv(path.join(__dirname, '.env'));
-const port = Number(process.env.PORT || 3000);
+const parsedPort = Number(process.env.PORT || 3003);
+const port = Number.isInteger(parsedPort) && parsedPort >= 0 && parsedPort <= 65535 ? parsedPort : 3003;
+if (!Number.isInteger(parsedPort) || parsedPort < 0 || parsedPort > 65535) {
+  console.warn(`PORT invalide (${process.env.PORT}); fallback sur 3003`);
+}
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 const adminToken = process.env.ADMIN_TOKEN || '';
 const logsDir = path.join(__dirname, 'logs');
