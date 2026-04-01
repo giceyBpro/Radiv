@@ -54,7 +54,6 @@
       if (!res.ok) throw new Error('Impossible de charger la configuration publique');
       const data = await res.json();
       recaptchaSiteKey = data.recaptcha_site_key || '';
-      if (!recaptchaSiteKey) throw new Error('reCAPTCHA non configuré côté serveur');
     }
 
     function loadRecaptchaV3() {
@@ -84,10 +83,12 @@
     }
 
     async function ensureRecaptchaReady() {
+      if (!recaptchaSiteKey) return;
       if (recaptchaReady) return;
       if (!recaptchaInitPromise) {
         recaptchaInitPromise = (async () => {
           await loadPublicConfig();
+          if (!recaptchaSiteKey) return;
           await loadRecaptchaV3();
         })();
       }
@@ -112,12 +113,22 @@
         return;
       }
 
+      let recaptchaToken = '';
+      if (recaptchaSiteKey) {
+        try {
+          recaptchaToken = await getRecaptchaToken();
+        } catch (err) {
+          setStatus('Validation anti-spam indisponible, merci de réessayer.', false);
+          return;
+        }
+      }
+
       const payload = {
         name: 'Formulaire web',
         email: document.getElementById('email').value.trim(),
         subject: 'Contact formulaire web',
         message: document.getElementById('message').value.trim(),
-        recaptcha_token: await getRecaptchaToken()
+        recaptcha_token: recaptchaToken
       };
 
       const response = await sendContact(payload);
@@ -132,10 +143,13 @@
 
     (async () => {
       try {
-        recaptchaInitPromise = ensureRecaptchaReady();
-        await recaptchaInitPromise;
+        await loadPublicConfig();
+        if (recaptchaSiteKey) {
+          recaptchaInitPromise = ensureRecaptchaReady();
+          await recaptchaInitPromise;
+        }
       } catch (err) {
-        setStatus(err.message, false);
+        // reCAPTCHA optionnel: pas d'erreur bloquante côté utilisateur
       }
     })();
   </script>

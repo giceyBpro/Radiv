@@ -92,7 +92,7 @@ Variables `.env` requises :
 
 1. Ouvrir Google reCAPTCHA Admin : https://www.google.com/recaptcha/admin/create
 2. Type recommandé : **reCAPTCHA v2** puis **"Je ne suis pas un robot" (Checkbox)**.
-3. Ajouter votre/vos domaine(s) (ex: `dosimetrie.fr`).
+3. Ajouter votre/vos domaine(s) (ex: `www.example.org`).
 4. Récupérer :
    - **Site key** → `RECAPTCHA_SITE_KEY`
    - **Secret key** → `RECAPTCHA_SECRET_KEY`
@@ -140,20 +140,20 @@ npm install
 npm start
 ```
 
-## Déploiement o2switch
+## Déploiement
 
-1. Copier `deploy_update.sh` et un `.env` (basé sur `.env.example`) dans `~/dosimetrie`.
+1. Copier `deploy_update.sh` et un `.env` (basé sur `.env.example`) dans votre répertoire d'exploitation.
 2. Personnaliser au minimum dans `.env` :
    - `API_PORT`
    - `BACKEND_DIR`
-   - `FRONTEND_DIR` (par défaut: `$HOME/public_html/dosimetrie.fr`)
+   - `FRONTEND_DIR` (par défaut: `$HOME/public_html/frontend`)
    - `SITE_PUBLIC_URL`
    - `API_PUBLIC_URL`
    - `ADMIN_TOKEN` (recommandé)
 3. Lancer :
 
 ```bash
-cd ~/dosimetrie
+cd ~/[Backend]
 ./deploy_update.sh
 ```
 

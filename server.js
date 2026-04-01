@@ -260,7 +260,7 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 async function verifyRecaptcha(token, ip) {
-  if (!recaptchaSecretKey) return false;
+  if (!recaptchaSecretKey) return true;
   const params = new URLSearchParams();
   params.set('secret', recaptchaSecretKey);
   params.set('response', token || '');
