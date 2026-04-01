@@ -188,7 +188,7 @@ Ce script :
 Ajouter cette ligne au crontab utilisateur :
 
 ```bash
-* * * * * /home/votre_user/dosimetrie/monitor_node.sh >/dev/null 2>&1
+* * * * * /home/votre_user/[Backend]/monitor_node.sh >/dev/null 2>&1
 ```
 
 Commandes :
