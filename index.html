@@ -376,6 +376,11 @@
       cursor: pointer;
     }
 
+    .required-field {
+      border: 2px solid #c62828 !important;
+      box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.15);
+    }
+
     @media (max-width: 900px) {
       .mandatory-body {
         grid-template-columns: 1fr;
@@ -500,7 +505,7 @@
     </section>
 
     <section class="section optional">
-      <details>
+      <details id="optionalDetails">
         <summary>
           <span class="summary-left">
             <span>Éléments optionnels : pour calculer un scénario d'exposition personnalisé</span>
@@ -626,13 +631,13 @@
     let isotopes = [];
     let lastResult = null;
     const audienceMeta = {
-      conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '-' },
-      conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: '-' },
-      conjointe_enceinte: { label: 'Contact avec une femme enceinte', condition: '-' },
-      transport_commun: { label: 'Transport en commun', condition: '-' },
-      enfant_moins_3_ans: { label: 'Contact avec enfant < 3 ans', condition: '-' },
-      enfant_3_11_ans: { label: 'Contact avec enfant 3–11 ans', condition: '-' },
-      collegues_travail: { label: 'Collègues de travail', condition: '-' },
+      conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: 'Dormir séparément pendant la durée indiquée.' },
+      conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: 'Limiter les contacts rapprochés prolongés.' },
+      conjointe_enceinte: { label: 'Contact avec une femme enceinte', condition: 'Éviter tout contact proche prolongé.' },
+      transport_commun: { label: 'Transport en commun', condition: 'Éviter les trajets prolongés en proximité immédiate.' },
+      enfant_moins_3_ans: { label: 'Contact avec enfant < 3 ans', condition: 'Éviter de porter l’enfant et les contacts rapprochés.' },
+      enfant_3_11_ans: { label: 'Contact avec enfant 3–11 ans', condition: 'Limiter les contacts rapprochés prolongés.' },
+      collegues_travail: { label: 'Collègues de travail', condition: 'Limiter la proximité prolongée au travail.' },
       scenario_utilisateur: { label: 'Scénario utilisateur', condition: '-' }
     };
 
@@ -731,6 +736,47 @@
         : 'Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.';
     }
 
+    function getRequiredFieldIds(isotopeCode) {
+      if (isotopeCode === 'iode131_benin') {
+        return ['patientSize', 'benignActivityMbq', 'benignFixation'];
+      }
+      if (isotopeCode === 'non_defini') {
+        return ['doseRate', 'patientSize', 'userPeriodDays'];
+      }
+      return ['doseRate', 'patientSize'];
+    }
+
+    function applyRequiredHighlight(isotopeCode) {
+      ['doseRate', 'patientSize', 'benignActivityMbq', 'benignFixation', 'userPeriodDays']
+        .forEach((id) => $(id).classList.remove('required-field'));
+
+      getRequiredFieldIds(isotopeCode).forEach((id) => $(id).classList.add('required-field'));
+
+      if (isotopeCode === 'non_defini') {
+        $('optionalDetails').open = true;
+      }
+    }
+
+    function buildFriendlyErrors(selected) {
+      const code = selected?.api_code || $('isotope').value;
+      const missingLabels = [];
+      const labels = {
+        doseRate: 'Débit de dose à 1 m',
+        patientSize: 'Taille du patient',
+        benignActivityMbq: 'Activité administrée (MBq)',
+        benignFixation: 'Taux de fixation (%)',
+        userPeriodDays: 'Période effective (j)'
+      };
+      getRequiredFieldIds(code).forEach((id) => {
+        const value = getNumberOrNull(id);
+        if (!(value > 0)) missingLabels.push(labels[id]);
+      });
+
+      if (!missingLabels.length) return [];
+      const isotopeLabel = selected?.label || code;
+      return [`Pour « ${isotopeLabel} », merci de renseigner : ${missingLabels.join(', ')}.`];
+    }
+
     function buildPayload() {
       return {
         isotope_code: $('isotope').value,
@@ -751,6 +797,7 @@
       const selected = result.selected;
       const isBenign = selected.api_code === 'iode131_benin';
       toggleBenignRows(isBenign);
+      applyRequiredHighlight(selected.api_code);
 
       $('clinicalSituation').textContent = selected.situation || '-';
       $('selectedIsotopeText').textContent = selected.label;
@@ -776,9 +823,10 @@
 
       const errorBox = $('errorBox');
       if (result.errors.length) {
-        const apiReason = result.error?.reason ? `<br><strong>Raison API :</strong> ${result.error.reason}` : '';
+        const friendlyErrors = buildFriendlyErrors(selected);
+        const displayedErrors = friendlyErrors.length ? friendlyErrors : result.errors;
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${result.errors.map((e) => `- ${e}`).join('<br>')}${apiReason}`;
+        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${e}`).join('<br>')}`;
       } else {
         errorBox.style.display = 'none';
         errorBox.textContent = '';
@@ -826,6 +874,7 @@
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
+        applyRequiredHighlight($('isotope').value);
         bindEvents();
       } catch (error) {
         $('errorBox').style.display = 'block';

@@ -65,11 +65,11 @@
           <tr>
             <th>Scénario</th>
             <th>Durée (jours)</th>
-            <th>Conditions</th>
           </tr>
         </thead>
         <tbody id="resultRows"></tbody>
       </table>
+      <div id="patientTips" class="muted" style="margin-top:3mm;"></div>
     </section>
   </main>
 
@@ -127,20 +127,33 @@
         collegues_travail: 'Collègues de travail',
         scenario_utilisateur: 'Scénario utilisateur'
       };
+      const audienceTips = {
+        conjoint_plus_60: 'Dormez séparément pendant la durée indiquée.',
+        conjoint_moins_60: 'Limitez les contacts rapprochés prolongés.',
+        conjointe_enceinte: 'Évitez les contacts proches prolongés.',
+        transport_commun: 'Évitez les trajets longs en proximité immédiate.',
+        enfant_moins_3_ans: 'Évitez de porter l’enfant et les contacts rapprochés.',
+        enfant_3_11_ans: 'Limitez les contacts rapprochés prolongés.',
+        collegues_travail: 'Limitez la proximité prolongée au travail.',
+        scenario_utilisateur: 'Suivez les règles définies par votre équipe soignante.'
+      };
       const rows = Array.isArray(result.rows) && result.rows.length
         ? result.rows
         : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => ({
+            audience_code: audienceCode,
             label: audienceMeta[audienceCode] || audienceCode,
-            condition: '-',
             value
           }));
       document.getElementById('resultRows').innerHTML = rows.map((r) => `
         <tr>
           <td>${safe(r.label)}</td>
           <td>${safe(r.value)}</td>
-          <td>${safe(r.condition)}</td>
         </tr>
       `).join('');
+
+      document.getElementById('patientTips').innerHTML = rows
+        .map((r) => `• <strong>${safe(r.label)}</strong> : ${safe(audienceTips[r.audience_code] || 'Suivez les consignes médicales données.')}`)
+        .join('<br>');
     })();
 
     document.getElementById('printNowBtn').addEventListener('click', () => window.print());
