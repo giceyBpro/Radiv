@@ -1,0 +1,89 @@
+FORMULES ET METHODE DE CALCUL — RADIOPROTECTION RIV
+===================================================
+
+Source de vérité du calcul
+- Les calculs sont réalisés côté backend dans `server.js`.
+- Les paramètres isotopes et scénarios standards sont définis dans des tableaux constants.
+
+1) Grandeurs d'entrée
+- isotope_code
+- dose_rate (µSv/h à 1 m) [ignoré pour iode131_benin]
+- patient_size_cm
+- Paramètres scénario utilisateur (optionnels):
+  - user_hours_1 (h), user_distance_1 (m), user_hours_2 (h à 1 m), user_limit (mSv)
+- Paramètres iode131_benin:
+  - benign_activity_mbq, benign_fixation_pct
+- Paramètre non_defini:
+  - user_period_days obligatoire
+
+2) Période effective (jours)
+- effective_days = user_period_days si renseigné
+- sinon effective_days = periodHours(isotope)/24
+- exception: isotope_code=non_defini -> user_period_days obligatoire
+
+3) Débit de dose utilisé
+- Cas général: dose_rate (saisi)
+- Exception isotope_code=iode131_benin:
+  dose_rate_calcule = 2.2 × benign_activity_mbq × (benign_fixation_pct/100) / 37
+
+4) Formules physiques
+- Fraction de décroissance sur une exposition de `hours`:
+  decay_fraction = 1 - exp(-((ln(2)/effective_days) × (hours/24)))
+
+- Facteur géométrique distance/taille:
+  geometry_factor(distance, patient_size_cm)
+  = atan(patient_size_cm/(2×distance×100)) / (patient_size_cm×distance/200)
+
+- Contribution d'une exposition (ligne de scénario):
+  contribution = decay_fraction × geom
+  avec:
+  - geom = 1 si unit_factor_at_1m=true ET distance=1
+  - sinon geom = geometry_factor(distance, patient_size_cm)
+
+- Facteur commun:
+  common_factor
+  = ((effective_days×24)/ln(2)) / (1 - exp(-(ln(2)/effective_days)))
+
+- Dénominateur scénario:
+  denominator = (somme des contributions d'exposition) × common_factor
+
+- Jour de fin de restriction:
+  ratio = (limit_mSv × 1000) / denominator
+  day = -(effective_days/ln(2)) × ln(ratio / dose_rate)
+  résultat = max(0, round(day))
+
+5) Scénarios standards (durée, distance, limite)
+- conjoint_plus_60:
+  8 h à 0,3 m + 3 h à 1 m ; limite 15 mSv
+- conjoint_moins_60:
+  8 h à 0,3 m + 3 h à 1 m ; limite 3 mSv
+- conjointe_enceinte:
+  8 h à 0,3 m + 3 h à 1 m ; limite 1 mSv
+- transport_commun:
+  3 h à 0,5 m ; limite 1 mSv
+- enfant_moins_3_ans:
+  9 h à 1 m ; limite 1 mSv
+- enfant_3_11_ans:
+  2 h à 0,5 m + 2 h à 1 m ; limite 1 mSv
+- collegues_travail:
+  6 h à 1 m ; limite 1 mSv
+
+6) Scénario utilisateur (optionnel)
+- Activé seulement si les 4 champs sont tous renseignés:
+  user_hours_1, user_distance_1, user_hours_2, user_limit
+- Les 2 expositions utilisées:
+  - user_hours_1 à user_distance_1 (unit_factor_at_1m=false)
+  - user_hours_2 à 1 m (unit_factor_at_1m=true)
+- limite = user_limit
+
+7) Validations / exceptions
+- patient_size_cm > 0 toujours requis
+- Cas général: dose_rate > 0
+- iode131_benin:
+  - benign_activity_mbq > 0 et benign_fixation_pct > 0 requis
+  - dose_rate saisi est ignoré
+- non_defini:
+  - dose_rate > 0 et user_period_days > 0 requis
+- scenario utilisateur:
+  - soit tous les champs vides, soit tous remplis avec valeurs valides
+
