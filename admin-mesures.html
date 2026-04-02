@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mesures RIV collectées</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; background: #eef1f3; margin: 0; padding: 20px; }
+    main { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    input, button { padding: 8px 10px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #d5dde1; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 13px; }
+    th { background: #f4f7f8; }
+    .muted { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Mesures RIV collectées</h1>
+    <p class="muted">Filtre par année appliqué côté backend. Export CSV généré côté backend.</p>
+    <div class="controls">
+      <label>Année <input id="yearInput" type="number" min="2000" max="2100" placeholder="ex. 2026"></label>
+      <label>Token admin <input id="tokenInput" type="password" placeholder="si configuré"></label>
+      <button id="loadBtn">Charger</button>
+      <button id="exportBtn">Exporter CSV</button>
+    </div>
+    <div id="status" class="muted">Aucune donnée chargée.</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>IP</th>
+          <th>Isotope</th>
+          <th>Entrées</th>
+          <th>Résultats</th>
+          <th>OK</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
+    const rowsEl = document.getElementById('rows');
+    const statusEl = document.getElementById('status');
+
+    function q() {
+      const year = document.getElementById('yearInput').value.trim();
+      const token = document.getElementById('tokenInput').value.trim();
+      const params = new URLSearchParams();
+      if (year) params.set('year', year);
+      if (token) params.set('token', token);
+      return params.toString() ? `?${params.toString()}` : '';
+    }
+
+    async function loadRows() {
+      const resp = await fetch(`${API_BASE}/admin/measurements${q()}`);
+      if (!resp.ok) {
+        statusEl.textContent = `Erreur ${resp.status} lors du chargement.`;
+        rowsEl.innerHTML = '';
+        return;
+      }
+      const data = await resp.json();
+      statusEl.textContent = `${data.total} mesure(s) chargée(s).`;
+      rowsEl.innerHTML = data.rows.map((r) => `
+        <tr>
+          <td>${r.timestamp || ''}</td>
+          <td>${r.ip || ''}</td>
+          <td>${r.input?.isotope_code || ''}</td>
+          <td><pre>${JSON.stringify(r.input || {}, null, 2)}</pre></td>
+          <td><pre>${JSON.stringify(r.result?.rows || [], null, 2)}</pre></td>
+          <td>${r.result?.ok === true ? 'oui' : 'non'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function exportCsv() {
+      window.location.href = `${API_BASE}/admin/measurements.csv${q()}`;
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', loadRows);
+    document.getElementById('exportBtn').addEventListener('click', exportCsv);
+  </script>
+</body>
+</html>
