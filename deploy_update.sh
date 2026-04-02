@@ -27,7 +27,13 @@ SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
 COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_PUBLIC_URL}}"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
-echo "[DEPLOY] Initialisation des répertoires..."
+log_step() { echo -e "\n[DEPLOY][STEP] $1"; }
+log_info() { echo "[DEPLOY][INFO] $1"; }
+log_ok() { echo "[DEPLOY][OK] $1"; }
+log_warn() { echo "[DEPLOY][WARN] $1"; }
+
+log_step "Initialisation"
+log_info "Répertoires cibles: backend=$BACKEND_DIR | frontend=$FRONTEND_DIR"
 mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
 
 AUTH_REPO="$GIT_REPO"
@@ -36,43 +42,44 @@ if [[ "$GIT_REPO" == https://* ]]; then
 fi
 
 if [[ ! -d "$CHECKOUT_DIR/.git" ]]; then
-  echo "[DEPLOY] Clone initial du dépôt..."
+  log_info "Clone initial du dépôt dans $CHECKOUT_DIR"
   git clone "$AUTH_REPO" "$CHECKOUT_DIR"
 fi
 
 pushd "$CHECKOUT_DIR" >/dev/null
 
 if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Dépôt local modifié dans $CHECKOUT_DIR. Nettoyage avant mise à jour." >&2
+  log_warn "Dépôt local modifié dans $CHECKOUT_DIR, reset --hard avant mise à jour."
   git reset --hard
 fi
 
-echo "[DEPLOY] Mise à jour git (${GIT_BRANCH})..."
+log_step "Mise à jour Git"
+log_info "Branche: $GIT_BRANCH"
 git remote set-url origin "$AUTH_REPO"
 git fetch --all --prune
 git checkout "$GIT_BRANCH"
 git pull --ff-only origin "$GIT_BRANCH"
 
-echo "[DEPLOY] Installation des dépendances backend..."
+log_step "Dépendances backend"
 npm install --omit=dev
 
 # Synchronisation backend avec suppression des fichiers supprimés du repo
 # tout en protégeant les fichiers de configuration/runtime locaux.
-echo "[DEPLOY] Synchronisation backend..."
+log_step "Synchronisation backend"
 rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
 
-echo "[DEPLOY] Mise à jour du script deploy_update.sh sur backend..."
+log_info "Mise à jour des droits d'exécution deploy_update.sh"
 chmod +x "$BACKEND_DIR/deploy_update.sh"
 
 mkdir -p "$BACKEND_DIR/node_modules"
 if [[ -d "$CHECKOUT_DIR/node_modules" ]]; then
-  echo "[DEPLOY] Synchronisation node_modules..."
+  log_info "Synchronisation node_modules"
   rsync -a --delete "$CHECKOUT_DIR/node_modules/" "$BACKEND_DIR/node_modules/"
 fi
 
 # Synchronisation frontend avec suppression contrôlée des fichiers supprimés du repo,
 # sans supprimer les fichiers de configuration statiques du vhost.
-echo "[DEPLOY] Synchronisation frontend..."
+log_step "Synchronisation frontend"
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
@@ -88,16 +95,16 @@ rsync -a --delete \
   --exclude='package-lock.json' \
   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
-echo "[DEPLOY] Frontend synchronisé vers $FRONTEND_DIR"
+log_ok "Frontend synchronisé vers $FRONTEND_DIR"
 
-echo "[DEPLOY] Génération config.js frontend..."
+log_step "Configuration frontend runtime"
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.RADIOPROTECTION_API_URL = "${API_PUBLIC_URL}";
 window.RADIOPROTECTION_SITE_URL = "${SITE_PUBLIC_URL}";
 window.RADIOPROTECTION_COPYRIGHT_OWNER = "${COPYRIGHT_OWNER}";
 FRONTCFG
 
-echo "[DEPLOY] Écriture .runtime.env backend..."
+log_step "Configuration backend runtime (.runtime.env)"
 cat > "$BACKEND_DIR/.runtime.env" <<RUNTIME
 PORT="${API_PORT}"
 CORS_ORIGIN="${API_CORS_ORIGIN}"
@@ -116,7 +123,7 @@ ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
 MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL}"
 RUNTIME
 
-echo "[DEPLOY] Génération script de supervision monitor_node.sh..."
+log_step "Génération du script monitor_node.sh"
 cat > "$BACKEND_DIR/monitor_node.sh" <<'MONITOR'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -137,10 +144,13 @@ PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-}"
 ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
 ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
 ALERT_STATE_FILE="$BACKEND_DIR/.api_down_alert.last"
+log() { echo "[MONITOR] $1"; }
+ok() { echo "[MONITOR][OK] $1"; }
+warn() { echo "[MONITOR][WARN] $1"; }
 
 send_api_down_alert() {
-  [[ "$ALERT_ON_API_DOWN_EMAIL" == "true" ]] || return 0
-  [[ -n "${SMTP_HOST:-}" && -n "${SMTP_PORT:-}" && -n "${SMTP_USER:-}" && -n "${SMTP_PASS:-}" && -n "${CONTACT_DEST:-}" ]] || return 0
+  [[ "$ALERT_ON_API_DOWN_EMAIL" == "true" ]] || { log "Alerte email désactivée."; return 0; }
+  [[ -n "${SMTP_HOST:-}" && -n "${SMTP_PORT:-}" && -n "${SMTP_USER:-}" && -n "${SMTP_PASS:-}" && -n "${CONTACT_DEST:-}" ]] || { warn "Alerte email activée mais configuration SMTP incomplète."; return 0; }
 
   now_ts="$(date +%s)"
   last_ts=0
@@ -148,6 +158,7 @@ send_api_down_alert() {
     last_ts="$(cat "$ALERT_STATE_FILE" 2>/dev/null || echo 0)"
   fi
   if (( now_ts - last_ts < ALERT_ON_API_DOWN_COOLDOWN_SEC )); then
+    log "Cooldown alerte actif, aucun email envoyé."
     return 0
   fi
 
@@ -180,6 +191,9 @@ EOF
     --mail-rcpt "<${CONTACT_DEST}>" \
     --upload-file - <<< "$mail_payload" >/dev/null 2>&1; then
     echo "$now_ts" > "$ALERT_STATE_FILE"
+    ok "Email d'alerte indisponibilité envoyé à ${CONTACT_DEST}."
+  else
+    warn "Échec envoi email d'alerte indisponibilité."
   fi
 }
 
@@ -233,35 +247,45 @@ restart_service() {
 }
 
 if ! is_healthy || ! is_public_ok; then
+  warn "API indisponible (local/public). Tentative de redémarrage..."
   restart_service
   sleep 3
   if ! is_healthy || ! is_public_ok; then
     echo "[$(date -Is)] Échec redémarrage API" >> "$LOG_FILE"
+    warn "Redémarrage échoué. Voir le log: $LOG_FILE"
     send_api_down_alert
     exit 1
   fi
+  ok "API relancée et opérationnelle."
+else
+  ok "API opérationnelle (checks local/public OK)."
 fi
 MONITOR
 
 chmod +x "$BACKEND_DIR/monitor_node.sh"
+log_step "Exécution d'un contrôle monitor immédiat"
 "$BACKEND_DIR/monitor_node.sh"
 
 if [[ "$INSTALL_CRON_MONITOR" == "true" ]]; then
   if ! command -v crontab >/dev/null 2>&1; then
-    echo "[DEPLOY] crontab indisponible, impossible d'installer la supervision cron automatiquement."
+    log_warn "crontab indisponible, impossible d'installer la supervision cron automatiquement."
     popd >/dev/null
-    echo "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
-    echo "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
+    log_ok "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
+    log_info "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
     exit 0
   fi
+  log_step "Configuration cron de supervision"
   CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
   CURRENT_CRON="$(crontab -l 2>/dev/null || true)"
   if ! grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$CURRENT_CRON"; then
     { echo "$CURRENT_CRON"; echo "$CRON_LINE"; } | crontab -
+    log_ok "Entrée cron ajoutée: $CRON_LINE"
+  else
+    log_info "Entrée cron déjà présente (aucune modification)."
   fi
 fi
 
 popd >/dev/null
 
-echo "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
-echo "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
+log_ok "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
+log_info "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
