@@ -84,7 +84,7 @@
       return (base || 'api').trim().replace(/\/+$/, '') || 'api';
     }
 
-    $('apiBase').value = normalizeBase(window.DOSIMETRIE_API_URL || $('apiBase').value);
+    $('apiBase').value = normalizeBase(window.RADIOPROTECTION_API_URL || $('apiBase').value);
 
     async function send() {
       const apiBase = normalizeBase($('apiBase').value);

@@ -280,7 +280,7 @@ async function smtpSendMail({ replyTo, subject, html }) {
   }
   const fromMatch = smtpFrom.match(/<([^>]+)>/);
   const envelopeFrom = (fromMatch ? fromMatch[1] : smtpUser).trim();
-  const messageId = `<${Date.now()}.${Math.random().toString(16).slice(2)}@dosimetrie-riv.local>`;
+  const messageId = `<${Date.now()}.${Math.random().toString(16).slice(2)}@radioprotection-riv.local>`;
 
   const connect = () => new Promise((resolve, reject) => {
     const onError = (err) => reject(err);
@@ -336,7 +336,7 @@ async function smtpSendMail({ replyTo, subject, html }) {
       throw new Error(`SMTP greeting invalide: ${greet.join(' | ')}`);
     }
 
-    const ehlo = await sendCmd('EHLO dosimetrie-riv.local', '2');
+    const ehlo = await sendCmd('EHLO radioprotection-riv.local', '2');
 
     if (!smtpSecure && ehlo.join('\n').includes('STARTTLS')) {
       await sendCmd('STARTTLS', '2');
@@ -348,7 +348,7 @@ async function smtpSendMail({ replyTo, subject, html }) {
       secureSocket.setEncoding('utf8');
       // eslint-disable-next-line no-param-reassign
       Object.assign(socket, secureSocket);
-      await sendCmd('EHLO dosimetrie-riv.local', '2');
+      await sendCmd('EHLO radioprotection-riv.local', '2');
     }
 
     await sendCmd(`AUTH LOGIN`, '3');
@@ -364,7 +364,7 @@ async function smtpSendMail({ replyTo, subject, html }) {
       `From: ${smtpFrom}`,
       `To: <${contactDest}>`,
       `Reply-To: ${replyTo}`,
-      `Subject: [Dosimetrie RIV] ${subject}`,
+      `Subject: [Radioprotection RIV] ${subject}`,
       `Date: ${new Date().toUTCString()}`,
       `Message-ID: ${messageId}`,
       `Return-Path: <${envelopeFrom}>`,
@@ -533,5 +533,5 @@ process.on('unhandledRejection', (reason) => {
 });
 
 server.listen(port, () => {
-  console.log(`Dosimetrie API listening on port ${port}`);
+  console.log(`Radioprotection API listening on port ${port}`);
 });

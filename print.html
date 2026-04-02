@@ -28,6 +28,20 @@
     .actions { margin:8px auto 18px; width:210mm; display:flex; gap:12px; }
     .actions a, .actions button { border:1px solid #111; background:#fff; padding:8px 12px; text-decoration:none; color:#111; cursor:pointer; }
     .muted { color:#555; font-size:12px; }
+    .warning-block {
+      margin-top: 3mm;
+      padding: 10px;
+      background: #ececec;
+      color: #0b59a5;
+      font-size: 23px;
+      line-height: 1.3;
+    }
+    .copyright {
+      margin-top: 4mm;
+      font-size: 11px;
+      color: #666;
+      text-align: right;
+    }
     @media print {
       body { background:#fff; }
       .sheet { margin:0; border:none; width:auto; min-height:auto; }
@@ -69,11 +83,19 @@
         </thead>
         <tbody id="resultRows"></tbody>
       </table>
+      <div class="warning-block">
+        Attention: ce tableur ne tient compte que de l'exposition externe aux rayonnements ionisants. les risques de contamination (externe et interne) doivent être gérés conformément aux recommandations.
+      </div>
       <div id="patientTips" class="muted" style="margin-top:3mm;"></div>
     </section>
+    <div class="copyright" id="copyrightText">© -</div>
   </main>
 
+  <script src="config.js"></script>
   <script>
+    const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
+    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_URL;
+
     function safe(value) {
       if (value === null || value === undefined || value === '') return '-';
       return String(value);
@@ -83,8 +105,20 @@
       return `<div><strong>${label}</strong></div><div>${safe(value)}</div>`;
     }
 
+    function buildUserScenarioCondition(form) {
+      const h1 = form.user_hours_1;
+      const d1 = form.user_distance_1;
+      const h2 = form.user_hours_2;
+      const limit = form.user_limit;
+      const hasAll = [h1, d1, h2, limit].every((value) => value !== null && value !== undefined && String(value).trim() !== '');
+      if (!hasAll) return null;
+      return `${h1} h à ${d1} m et ${h2} h à 1 m, limite ${limit} mSv`;
+    }
+
     (function bootstrap() {
-      const raw = localStorage.getItem('dosimetrie_print_payload') || sessionStorage.getItem('dosimetrie_print_payload');
+      const now = new Date();
+      document.getElementById('copyrightText').textContent = `© ${now.getFullYear()} ${COPYRIGHT_OWNER}`;
+      const raw = localStorage.getItem('radioprotection_print_payload') || sessionStorage.getItem('radioprotection_print_payload');
       if (!raw) {
         document.getElementById('inputGrid').innerHTML = '<div>Aucune donnée disponible.</div>';
         return;
@@ -137,6 +171,7 @@
         collegues_travail: 'Limitez la proximité prolongée au travail.',
         scenario_utilisateur: 'Suivez les règles définies par votre équipe soignante.'
       };
+      const userScenarioCondition = buildUserScenarioCondition(form);
       const rows = Array.isArray(result.rows) && result.rows.length
         ? result.rows
         : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => ({
@@ -152,7 +187,12 @@
       `).join('');
 
       document.getElementById('patientTips').innerHTML = rows
-        .map((r) => `• <strong>${safe(r.label)}</strong> : ${safe(audienceTips[r.audience_code] || 'Suivez les consignes médicales données.')}`)
+        .map((r) => {
+          if (r.audience_code === 'scenario_utilisateur' && userScenarioCondition) {
+            return `• <strong>${safe(r.label)}</strong> : ${safe(userScenarioCondition)}`;
+          }
+          return `• <strong>${safe(r.label)}</strong> : ${safe(audienceTips[r.audience_code] || 'Suivez les consignes médicales données.')}`;
+        })
         .join('<br>');
     })();
 

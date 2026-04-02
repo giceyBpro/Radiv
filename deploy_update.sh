@@ -24,6 +24,7 @@ API_CORS_ORIGIN="${API_CORS_ORIGIN:-*}"
 API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
 MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-${API_PUBLIC_URL%/}/config}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
+COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_PUBLIC_URL}}"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
 echo "[DEPLOY] Initialisation des répertoires..."
@@ -58,7 +59,7 @@ npm install --omit=dev
 # Synchronisation backend avec suppression des fichiers supprimés du repo
 # tout en protégeant les fichiers de configuration/runtime locaux.
 echo "[DEPLOY] Synchronisation backend..."
-rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P dosimetrie-api.log'   --filter='P dosimetrie-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
+rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
 
 echo "[DEPLOY] Mise à jour du script deploy_update.sh sur backend..."
 chmod +x "$BACKEND_DIR/deploy_update.sh"
@@ -91,8 +92,9 @@ echo "[DEPLOY] Frontend synchronisé vers $FRONTEND_DIR"
 
 echo "[DEPLOY] Génération config.js frontend..."
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
-window.DOSIMETRIE_API_URL = "${API_PUBLIC_URL}";
-window.DOSIMETRIE_SITE_URL = "${SITE_PUBLIC_URL}";
+window.RADIOPROTECTION_API_URL = "${API_PUBLIC_URL}";
+window.RADIOPROTECTION_SITE_URL = "${SITE_PUBLIC_URL}";
+window.RADIOPROTECTION_COPYRIGHT_OWNER = "${COPYRIGHT_OWNER}";
 FRONTCFG
 
 echo "[DEPLOY] Écriture .runtime.env backend..."
@@ -121,8 +123,8 @@ set -euo pipefail
 
 BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNTIME_FILE="$BACKEND_DIR/.runtime.env"
-PID_FILE="$BACKEND_DIR/dosimetrie-api.pid"
-LOG_FILE="$BACKEND_DIR/dosimetrie-api.log"
+PID_FILE="$BACKEND_DIR/radioprotection-api.pid"
+LOG_FILE="$BACKEND_DIR/radioprotection-api.log"
 
 if [[ -f "$RUNTIME_FILE" ]]; then
   # shellcheck source=/dev/null
@@ -160,12 +162,12 @@ send_api_down_alert() {
   mail_payload="$(cat <<EOF
 From: ${from_header}
 To: <${CONTACT_DEST}>
-Subject: [Dosimetrie RIV] Alerte indisponibilité API
+Subject: [Radioprotection RIV] Alerte indisponibilité API
 Date: $(date -R)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-L'API Dosimetrie RIV est indisponible malgré une tentative de redémarrage.
+L'API Radioprotection RIV est indisponible malgré une tentative de redémarrage.
 Serveur: $(hostname)
 Date: $(date -Is)
 Healthcheck: ${HEALTH_URL}
@@ -216,10 +218,10 @@ start_nohup() {
 
 restart_service() {
   if command -v pm2 >/dev/null 2>&1; then
-    if pm2 describe dosimetrie-api >/dev/null 2>&1; then
-      pm2 restart dosimetrie-api --update-env >/dev/null
+    if pm2 describe radioprotection-api >/dev/null 2>&1; then
+      pm2 restart radioprotection-api --update-env >/dev/null
     else
-      pm2 start "$BACKEND_DIR/server.js" --name dosimetrie-api --time >/dev/null
+      pm2 start "$BACKEND_DIR/server.js" --name radioprotection-api --time >/dev/null
       pm2 save >/dev/null 2>&1 || true
     fi
     return
