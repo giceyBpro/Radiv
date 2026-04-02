@@ -332,6 +332,7 @@
     table.results td.scenario {
       font-weight: 700;
       font-size: 15px;
+      white-space: pre-line;
     }
 
     .meta {
@@ -660,14 +661,14 @@
     let isotopes = [];
     let lastResult = null;
     const audienceMeta = {
-      conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: 'Dormir séparément pendant la durée indiquée.' },
-      conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: 'Limiter les contacts rapprochés prolongés.' },
-      conjointe_enceinte: { label: 'Contact avec une femme enceinte', condition: 'Éviter tout contact proche prolongé.' },
-      transport_commun: { label: 'Transport en commun', condition: 'Éviter les trajets prolongés en proximité immédiate.' },
-      enfant_moins_3_ans: { label: 'Contact avec enfant < 3 ans', condition: 'Éviter de porter l’enfant et les contacts rapprochés.' },
-      enfant_3_11_ans: { label: 'Contact avec enfant 3–11 ans', condition: 'Limiter les contacts rapprochés prolongés.' },
-      collegues_travail: { label: 'Collègues de travail', condition: 'Limiter la proximité prolongée au travail.' },
-      scenario_utilisateur: { label: 'Scénario utilisateur', condition: '-' }
+      conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
+      conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
+      conjointe_enceinte: { label: 'Contact avec la conjointe enceinte', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv' },
+      transport_commun: { label: 'Transport en commun', condition: '3 h à 0,5 m,\nlimite 1 mSv' },
+      enfant_moins_3_ans: { label: 'Contact avec un enfant (<3 ans)\nau retour à la maison', condition: '9 h à 1 m,\nlimite 1 mSv' },
+      enfant_3_11_ans: { label: 'Contact avec un enfant (entre 3 et 11 ans)\nau retour à la maison', condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
+      collegues_travail: { label: 'Contact avec des collègues de travail', condition: '6 h à 1 m,\nlimite 1 mSv' },
+      scenario_utilisateur: { label: 'Scénario utilisateur', condition: 'h à m et h à 1 m,\nlimite mSv' }
     };
 
     function formatNumber(value, decimals = 2) {
