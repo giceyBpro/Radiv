@@ -25,6 +25,7 @@
     table { width:100%; border-collapse:collapse; font-size:13px; }
     th, td { border:1px solid var(--line); padding:6px; text-align:left; vertical-align:top; }
     th { background:#eee; }
+    #resultRows td:first-child { white-space: pre-line; }
     .actions { margin:8px auto 18px; width:210mm; display:flex; gap:12px; }
     .actions a, .actions button { border:1px solid #111; background:#fff; padding:8px 12px; text-decoration:none; color:#111; cursor:pointer; }
     .muted { color:#111; font-size:12px; }
@@ -87,7 +88,6 @@
       <div class="warning-block">
         Attention: ce tableur ne tient compte que de l'exposition externe aux rayonnements ionisants. les risques de contamination (externe et interne) doivent être gérés conformément aux recommandations.
       </div>
-      <div id="patientTips" class="muted" style="margin-top:3mm;"></div>
     </section>
     <div class="copyright" id="copyrightText">© -</div>
   </main>
@@ -104,16 +104,6 @@
 
     function row(label, value) {
       return `<div><strong>${label}</strong></div><div>${safe(value)}</div>`;
-    }
-
-    function buildUserScenarioCondition(form) {
-      const h1 = form.user_hours_1;
-      const d1 = form.user_distance_1;
-      const h2 = form.user_hours_2;
-      const limit = form.user_limit;
-      const hasAll = [h1, d1, h2, limit].every((value) => value !== null && value !== undefined && String(value).trim() !== '');
-      if (!hasAll) return null;
-      return `${h1} h à ${d1} m et ${h2} h à 1 m, limite ${limit} mSv`;
     }
 
     (function bootstrap() {
@@ -155,24 +145,13 @@
       const audienceMeta = {
         conjoint_plus_60: 'Contact avec le (la) conjoint(e) > 60 ans',
         conjoint_moins_60: 'Contact avec le (la) conjoint(e) < 60 ans',
-        conjointe_enceinte: 'Contact avec une femme enceinte',
+        conjointe_enceinte: 'Contact avec la conjointe enceinte',
         transport_commun: 'Transport en commun',
-        enfant_moins_3_ans: 'Contact avec enfant < 3 ans',
-        enfant_3_11_ans: 'Contact avec enfant 3–11 ans',
-        collegues_travail: 'Collègues de travail',
+        enfant_moins_3_ans: 'Contact avec un enfant (<3 ans)\nau retour à la maison',
+        enfant_3_11_ans: 'Contact avec un enfant (entre 3 et 11 ans)\nau retour à la maison',
+        collegues_travail: 'Contact avec des collègues de travail',
         scenario_utilisateur: 'Scénario utilisateur'
       };
-      const audienceTips = {
-        conjoint_plus_60: 'Consigne modèle : 8 h à 0,3 m et 3 h à 1 m, limite 15 mSv.',
-        conjoint_moins_60: 'Consigne modèle : 8 h à 0,3 m et 3 h à 1 m, limite 3 mSv.',
-        conjointe_enceinte: 'Consigne modèle : 8 h à 0,3 m et 3 h à 1 m, limite 1 mSv.',
-        transport_commun: 'Consigne modèle : 3 h à 0,5 m, limite 1 mSv.',
-        enfant_moins_3_ans: 'Consigne modèle : 9 h à 1 m, limite 1 mSv.',
-        enfant_3_11_ans: 'Consigne modèle : 2 h à 0,5 m et 2 h à 1 m, limite 1 mSv.',
-        collegues_travail: 'Consigne modèle : 6 h à 1 m, limite 1 mSv.',
-        scenario_utilisateur: 'Suivez les règles définies par votre équipe soignante.'
-      };
-      const userScenarioCondition = buildUserScenarioCondition(form);
       const rows = Array.isArray(result.rows) && result.rows.length
         ? result.rows
         : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => ({
@@ -186,15 +165,6 @@
           <td>${safe(r.value)}</td>
         </tr>
       `).join('');
-
-      document.getElementById('patientTips').innerHTML = rows
-        .map((r) => {
-          if (r.audience_code === 'scenario_utilisateur' && userScenarioCondition) {
-            return `• <strong>${safe(r.label)}</strong> : ${safe(userScenarioCondition)}`;
-          }
-          return `• <strong>${safe(r.label)}</strong> : ${safe(audienceTips[r.audience_code] || 'Suivez les consignes médicales données.')}`;
-        })
-        .join('<br>');
     })();
 
     document.getElementById('printNowBtn').addEventListener('click', () => window.print());
