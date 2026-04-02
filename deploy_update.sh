@@ -24,7 +24,8 @@ API_CORS_ORIGIN="${API_CORS_ORIGIN:-*}"
 API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
 MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-${API_PUBLIC_URL%/}/config}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
-COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_PUBLIC_URL}}"
+SITE_NAME="${SITE_NAME:-$(sed -E 's#^https?://##; s#/.*$##; s#^www\.##' <<< "${SITE_PUBLIC_URL}")}"
+COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_NAME}}"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
 log_step() { echo -e "\n[DEPLOY][STEP] $1"; }
@@ -66,7 +67,7 @@ npm install --omit=dev
 # Synchronisation backend avec suppression des fichiers supprimés du repo
 # tout en protégeant les fichiers de configuration/runtime locaux.
 log_step "Synchronisation backend"
-rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
+rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='formules.txt'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
 
 log_info "Mise à jour des droits d'exécution deploy_update.sh"
 chmod +x "$BACKEND_DIR/deploy_update.sh"
@@ -89,6 +90,7 @@ rsync -a --delete \
   --exclude='.env' \
   --exclude='.runtime.env' \
   --exclude='server.js' \
+  --exclude='formules.txt' \
   --exclude='deploy_update.sh' \
   --exclude='monitor_node.sh' \
   --exclude='package.json' \
@@ -101,6 +103,7 @@ log_step "Configuration frontend runtime"
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.RADIOPROTECTION_API_URL = "${API_PUBLIC_URL}";
 window.RADIOPROTECTION_SITE_URL = "${SITE_PUBLIC_URL}";
+window.RADIOPROTECTION_SITE_NAME = "${SITE_NAME}";
 window.RADIOPROTECTION_COPYRIGHT_OWNER = "${COPYRIGHT_OWNER}";
 FRONTCFG
 

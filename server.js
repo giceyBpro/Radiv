@@ -30,6 +30,7 @@ const corsOrigin = process.env.CORS_ORIGIN || '*';
 const adminToken = process.env.ADMIN_TOKEN || '';
 const logsDir = path.join(__dirname, 'logs');
 const logsFile = path.join(logsDir, 'measurements.jsonl');
+const geoIpCache = new Map();
 const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
 const recaptchaSiteKey = process.env.RECAPTCHA_SITE_KEY || '';
 const smtpHost = process.env.SMTP_HOST || '';
@@ -208,6 +209,51 @@ function getClientIp(req) {
   if (typeof forwarded === 'string' && forwarded.length) return forwarded.split(',')[0].trim();
   return req.socket?.remoteAddress || 'unknown';
 }
+function normalizeIpForLookup(ip) {
+  if (!ip) return '';
+  if (ip.startsWith('::ffff:')) return ip.slice(7);
+  if (ip === '::1') return '127.0.0.1';
+  return ip;
+}
+function isPrivateOrLocalIp(ip) {
+  return ip === '127.0.0.1'
+    || ip === '0.0.0.0'
+    || ip.startsWith('10.')
+    || ip.startsWith('192.168.')
+    || /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+    || ip.startsWith('fc')
+    || ip.startsWith('fd')
+    || ip === '::1';
+}
+async function resolveGeoFromIp(ip) {
+  const normalized = normalizeIpForLookup(ip);
+  if (!normalized) return null;
+  if (isPrivateOrLocalIp(normalized)) {
+    return { ip: normalized, scope: 'private_or_local' };
+  }
+  if (geoIpCache.has(normalized)) return geoIpCache.get(normalized);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1500);
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(normalized)}`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data?.success) return null;
+    const geo = {
+      ip: normalized,
+      country: data.country || null,
+      region: data.region || null,
+      city: data.city || null,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null
+    };
+    geoIpCache.set(normalized, geo);
+    return geo;
+  } catch {
+    return null;
+  }
+}
 function appendMeasurementLog(entry) {
   try {
     fs.appendFileSync(logsFile, `${JSON.stringify(entry)}\n`, 'utf8');
@@ -237,10 +283,11 @@ function csvEscape(value) {
   return text;
 }
 function toCsv(rows) {
-  const headers = ['timestamp', 'ip', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'rows'];
+  const headers = ['timestamp', 'ip', 'ip_geo', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'rows'];
   const body = rows.map((row) => [
     row.timestamp,
     row.ip,
+    JSON.stringify(row.ip_geo || null),
     row.input?.isotope_code,
     row.input?.dose_rate,
     row.input?.patient_size_cm,
@@ -446,13 +493,16 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && pathname === '/api/calculate') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
         const result = calculate(payload);
+        const ip = getClientIp(req);
+        const ipGeo = await resolveGeoFromIp(ip);
         appendMeasurementLog({
           timestamp: new Date().toISOString(),
-          ip: getClientIp(req),
+          ip,
+          ip_geo: ipGeo,
           input: payload,
           result
         });

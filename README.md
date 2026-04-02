@@ -157,6 +157,12 @@ cd ~/[Backend]
 ./deploy_update.sh
 ```
 
+### Important (hébergements avec interface type cPanel/o2switch)
+
+`deploy_update.sh` **ne crée pas** automatiquement une application Node.js dans l’interface d’hébergement.
+
+Il déploie le code, génère la configuration runtime, lance le monitor et redémarre l’API via `pm2`/`nohup`, mais la partie “création/routage” de l’app Node (proxy/passenger) dans le panel doit être faite **au moins une fois** manuellement.
+
 > Si votre hébergement ne route pas automatiquement `/api` vers Node.js, définissez `API_PUBLIC_URL` avec une URL absolue joignable (ex: `https://api.votre-domaine.tld/api`).
 
 Le script :

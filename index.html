@@ -435,7 +435,7 @@
 </head>
 <body>
   <main class="page">
-    <h1>Calcul de durée de restriction des contacts<br>après radiothérapie interne vectorisée&nbsp;RIV</h1>
+    <h1><span id="siteNameBanner">[Nom du site]</span> : Calcul de durée de restriction des contacts<br>après radiothérapie interne vectorisée&nbsp;RIV</h1>
     <div class="subtitle">Établi le <span id="todayLabel"></span></div>
     <div class="subtitle">Adaptation web d’après le tableur SFMN / groupe radioprotection.</div>
 
@@ -647,7 +647,14 @@
   <script>
     const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
     const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
-    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_URL;
+    const SITE_NAME = window.RADIOPROTECTION_SITE_NAME || (() => {
+      try {
+        return new URL(SITE_URL).hostname.replace(/^www\./, '');
+      } catch (_) {
+        return 'Nom du site';
+      }
+    })();
+    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME;
     const $ = (id) => document.getElementById(id);
 
     let isotopes = [];
@@ -671,6 +678,7 @@
     function setToday() {
       const now = new Date();
       $('todayLabel').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      $('siteNameBanner').textContent = SITE_NAME;
       $('copyrightText').textContent = `© ${now.getFullYear()} ${COPYRIGHT_OWNER}`;
     }
 
