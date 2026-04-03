@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mesures RIV collectées</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; background: #eef1f3; margin: 0; padding: 20px; }
+    main { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    input, button { padding: 8px 10px; font-size: 14px; }
+    #map { height: 420px; border: 1px solid #d5dde1; border-radius: 8px; margin: 10px 0 14px; }
+    .legend { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0; font-size: 13px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #d5dde1; padding: 8px; text-align: left; vertical-align: top; font-size: 13px; }
+    th { background: #f4f7f8; }
+    .muted { color: #666; font-size: 13px; }
+    .small { font-size: 12px; color: #666; }
+    .pill { display: inline-block; padding: 2px 6px; border-radius: 999px; background: #eef6ff; margin: 2px 4px 2px 0; }
+    .ok { color: #0d6d31; font-weight: 700; }
+    .ko { color: #a32222; font-weight: 700; }
+    .marker-wrap {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 12px; border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.35);
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+  <main>
+    <h1>Mesures RIV collectées</h1>
+    <p class="muted">Filtre par année appliqué côté backend. Export CSV généré côté backend.</p>
+    <div class="controls">
+      <label>Année <input id="yearInput" type="number" min="2000" max="2100" placeholder="ex. 2026"></label>
+      <label>Token admin <input id="tokenInput" type="password" placeholder="si configuré"></label>
+      <button id="loadBtn">Charger</button>
+      <button id="exportBtn">Exporter CSV</button>
+    </div>
+    <div id="status" class="muted">Aucune donnée chargée.</div>
+    <div class="legend">
+      <strong>Carte des sollicitations</strong>
+      <span><span class="legend-dot" style="background:#2f6eb7;"></span> 1-2 requêtes</span>
+      <span><span class="legend-dot" style="background:#e57f1f;"></span> 3-5 requêtes</span>
+      <span><span class="legend-dot" style="background:#b22222;"></span> 6+ requêtes</span>
+    </div>
+    <div id="map"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>IP</th>
+          <th>Lieu</th>
+          <th>Isotope</th>
+          <th>Entrées</th>
+          <th>Résultats</th>
+          <th>OK</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
+    const rowsEl = document.getElementById('rows');
+    const statusEl = document.getElementById('status');
+    const map = L.map('map', { worldCopyJump: true }).setView([46.5, 2.2], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    const markersLayer = L.layerGroup().addTo(map);
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function markerColor(count) {
+      if (count >= 6) return '#b22222';
+      if (count >= 3) return '#e57f1f';
+      return '#2f6eb7';
+    }
+    function formatGeo(geo) {
+      if (!geo) return 'Non disponible';
+      if (typeof geo === 'string') return geo;
+      if (geo.scope === 'private_or_local') return `IP locale/privée (${escapeHtml(geo.ip || '')})`;
+      const city = geo.city || '';
+      const region = geo.region || '';
+      const country = geo.country || '';
+      return [city, region, country].filter(Boolean).join(', ') || 'Non disponible';
+    }
+    function renderMap(rows) {
+      markersLayer.clearLayers();
+      const grouped = new Map();
+      rows.forEach((row) => {
+        const geo = row.ip_geo;
+        const lat = Number(geo?.latitude);
+        const lon = Number(geo?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+        const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+        const current = grouped.get(key) || { lat, lon, count: 0, labels: new Set() };
+        current.count += 1;
+        current.labels.add(formatGeo(geo));
+        grouped.set(key, current);
+      });
+      if (!grouped.size) return;
+      const bounds = [];
+      grouped.forEach((point) => {
+        const color = markerColor(point.count);
+        const icon = L.divIcon({
+          className: '',
+          html: `<div class="marker-wrap" style="background:${color};">${point.count}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+        const marker = L.marker([point.lat, point.lon], { icon })
+          .bindPopup(`<strong>${escapeHtml(Array.from(point.labels).join(' / '))}</strong><br>${point.count} requête(s)`);
+        markersLayer.addLayer(marker);
+        bounds.push([point.lat, point.lon]);
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
+    }
+    function renderInput(input) {
+      if (!input) return '';
+      const pieces = [
+        `Débit: ${input.dose_rate ?? '-'}`,
+        `Taille: ${input.patient_size_cm ?? '-'}`,
+        input.user_period_days ? `Période: ${input.user_period_days} j` : '',
+        input.benign_activity_mbq ? `Activité bénin: ${input.benign_activity_mbq}` : ''
+      ].filter(Boolean);
+      return pieces.map((x) => `<span class="pill">${escapeHtml(x)}</span>`).join('');
+    }
+    function renderResult(result) {
+      if (!result) return '';
+      const recos = Object.entries(result.recommendations_days || {})
+        .map(([k, v]) => `<span class="pill">${escapeHtml(k)}: <strong>${escapeHtml(v)}</strong></span>`)
+        .join('');
+      const errors = (result.errors || []).length
+        ? `<div class="small">Erreurs: ${escapeHtml(result.errors.join(' | '))}</div>` : '';
+      return `${recos || '<span class="small">Aucune recommandation</span>'}${errors}`;
+    }
+
+    function q() {
+      const year = document.getElementById('yearInput').value.trim();
+      const token = document.getElementById('tokenInput').value.trim();
+      const params = new URLSearchParams();
+      if (year) params.set('year', year);
+      if (token) params.set('token', token);
+      return params.toString() ? `?${params.toString()}` : '';
+    }
+
+    async function loadRows() {
+      const resp = await fetch(`${API_BASE}/admin/measurements${q()}`);
+      if (!resp.ok) {
+        statusEl.textContent = `Erreur ${resp.status} lors du chargement.`;
+        rowsEl.innerHTML = '';
+        return;
+      }
+      const data = await resp.json();
+      statusEl.textContent = `${data.total} mesure(s) chargée(s).`;
+      renderMap(data.rows || []);
+      rowsEl.innerHTML = data.rows.map((r) => `
+        <tr>
+          <td>${escapeHtml(r.timestamp || '')}</td>
+          <td>${escapeHtml(r.ip || '')}</td>
+          <td>${escapeHtml(formatGeo(r.ip_geo))}</td>
+          <td>${escapeHtml(r.input?.isotope_code || '')}</td>
+          <td>${renderInput(r.input)}</td>
+          <td>${renderResult(r.result)}</td>
+          <td class="${r.result?.ok === true ? 'ok' : 'ko'}">${r.result?.ok === true ? 'oui' : 'non'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function exportCsv() {
+      window.location.href = `${API_BASE}/admin/measurements.csv${q()}`;
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', loadRows);
+    document.getElementById('exportBtn').addEventListener('click', exportCsv);
+  </script>
+</body>
+</html>
