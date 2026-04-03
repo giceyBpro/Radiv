@@ -396,45 +396,6 @@
       border: 2px solid #c62828 !important;
       box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.15);
     }
-    .benign-fixation-row {
-      display: grid;
-      grid-template-columns: minmax(120px, 180px) 1fr;
-      gap: 10px;
-      align-items: center;
-    }
-    .benign-presets {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: flex-end;
-    }
-    .benign-presets button {
-      border: 1px solid #333;
-      background: #fff;
-      border-radius: 999px;
-      padding: 6px 10px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .cure-selector {
-      margin-top: 10px;
-      display: none;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .cure-selector button {
-      border: 1px solid #333;
-      background: #fff;
-      border-radius: 999px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .cure-selector button.active {
-      background: #1f1f1f;
-      color: #fff;
-    }
 
     @media (max-width: 900px) {
       .mandatory-body {
@@ -499,12 +460,6 @@
             <div>
               <div class="field-title">Radiopharmaceutique (menu déroulant)</div>
               <select id="isotope"></select>
-              <div id="cureSelector" class="cure-selector" aria-label="Nombre de cures">
-                <span class="small">Nombre de cures :</span>
-                <button type="button" data-cure="1">1 cure</button>
-                <button type="button" data-cure="4">4 cures</button>
-                <button type="button" data-cure="6">6 cures</button>
-              </div>
             </div>
             <div>
               <div class="field-title">Débit de dose à 1 m (µSv/h) en sortie de chambre</div>
@@ -559,14 +514,7 @@
           </div>
           <div>
             <div class="field-title">Taux de fixation (%)</div>
-            <div class="benign-fixation-row">
-              <input id="benignFixation" type="number" min="0" step="0.01" placeholder="vide">
-              <div class="benign-presets">
-                <button type="button" data-benign-fixation="15">Nodule chaud</button>
-                <button type="button" data-benign-fixation="25">Goître multinodulaire</button>
-                <button type="button" data-benign-fixation="30">Maladie de Basedow</button>
-              </div>
-            </div>
+            <input id="benignFixation" type="number" min="0" step="0.01" placeholder="vide">
           </div>
         </div>
       </div>
@@ -711,8 +659,6 @@
     const $ = (id) => document.getElementById(id);
 
     let isotopes = [];
-    let cureOptionsByIsotope = {};
-    let selectedCureCount = 1;
     let lastResult = null;
     const audienceMeta = {
       conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
@@ -813,22 +759,6 @@
       });
     }
 
-    function getAllowedCureOptions(isotopeCode) {
-      return cureOptionsByIsotope[isotopeCode] || [1];
-    }
-
-    function renderCureSelector(isotopeCode) {
-      const selector = $('cureSelector');
-      const allowed = getAllowedCureOptions(isotopeCode);
-      selector.style.display = allowed.length > 1 ? 'flex' : 'none';
-      if (!allowed.includes(selectedCureCount)) selectedCureCount = 1;
-      selector.querySelectorAll('button[data-cure]').forEach((button) => {
-        const cure = Number(button.dataset.cure);
-        button.style.display = allowed.includes(cure) ? 'inline-block' : 'none';
-        button.classList.toggle('active', cure === selectedCureCount);
-      });
-    }
-
     function toggleBenignRows(isBenign) {
       $('benignSection').hidden = !isBenign;
       $('doseRate').readOnly = isBenign;
@@ -857,7 +787,6 @@
       if (isotopeCode === 'non_defini') {
         $('optionalDetails').open = true;
       }
-      renderCureSelector(isotopeCode);
     }
 
     function buildFriendlyErrors(selected) {
@@ -891,8 +820,7 @@
         user_hours_2: getNumberOrNull('userHours2'),
         user_limit: getNumberOrNull('userLimit'),
         benign_activity_mbq: getNumberOrNull('benignActivityMbq'),
-        benign_fixation_pct: getNumberOrNull('benignFixation'),
-        cure_count: selectedCureCount
+        benign_fixation_pct: getNumberOrNull('benignFixation')
       };
     }
 
@@ -923,8 +851,6 @@
       $('sizePreview').textContent = formatNumber(Number($('patientSize').value), 0);
       $('referenceText').textContent = selected.reference || '-';
       $('remarkText').textContent = selected.remark || '-';
-      selectedCureCount = Number(result.cure_count || selectedCureCount || 1);
-      renderCureSelector(selected.api_code);
 
       $('effectivePeriodLabel').textContent = selected.api_code === 'non_defini'
         ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
@@ -983,23 +909,6 @@
       ['isotope', 'doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
         .forEach((id) => $(id).addEventListener('input', renderResults));
 
-      $('cureSelector').querySelectorAll('button[data-cure]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const cure = Number(button.dataset.cure);
-          const allowed = getAllowedCureOptions($('isotope').value);
-          if (!allowed.includes(cure)) return;
-          selectedCureCount = cure;
-          renderCureSelector($('isotope').value);
-          renderResults();
-        });
-      });
-      document.querySelectorAll('button[data-benign-fixation]').forEach((button) => {
-        button.addEventListener('click', () => {
-          $('benignFixation').value = button.dataset.benignFixation;
-          renderResults();
-        });
-      });
-
       $('benignActivityMbq').addEventListener('input', syncActivityFromMbq);
       $('benignActivityMci').addEventListener('input', syncActivityFromMci);
     }
@@ -1009,7 +918,6 @@
       try {
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
-        cureOptionsByIsotope = config.cure_options_by_isotope || {};
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
         applyRequiredHighlight($('isotope').value);
         bindEvents();
@@ -1033,8 +941,7 @@
           user_hours_1: $('userHours1').value,
           user_distance_1: $('userDistance1').value,
           user_hours_2: $('userHours2').value,
-          user_limit: $('userLimit').value,
-          cure_count: selectedCureCount
+          user_limit: $('userLimit').value
         },
         result: lastResult
       };

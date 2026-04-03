@@ -69,6 +69,11 @@ const scenarios = [
   { audience_code: 'enfant_3_11_ans', label: 'Contact avec un enfant (entre 3 et 11 ans) au retour à la maison', exposures: [{ hours: 2, distance: 0.5, unit_factor_at_1m: false }, { hours: 2, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
   { audience_code: 'collegues_travail', label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: false }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
 ];
+const cureOptionsByIsotope = {
+  radium223: [1, 4, 6],
+  psma_177lu: [1, 4, 6],
+  lutetium177_net: [1, 4]
+};
 const toNumberOrNull = (value) => {
   if (value === '' || value === null || value === undefined) return null;
   const number = Number(value);
@@ -98,8 +103,17 @@ const computeDoseRate = (selected, benignActivityMbq, benignFixationPct, doseRat
   if (benignActivityMbq === null || benignFixationPct === null) return null;
   return 2.2 * benignActivityMbq * (benignFixationPct / 100) / 37;
 };
+function normalizeCureCount(selected, rawValue) {
+  const allowed = cureOptionsByIsotope[selected.api_code] || [1];
+  const parsed = toNumberOrNull(rawValue);
+  if (parsed === null) return { value: 1, allowed, valid: true };
+  if (!Number.isInteger(parsed) || !allowed.includes(parsed)) {
+    return { value: 1, allowed, valid: false };
+  }
+  return { value: parsed, allowed, valid: true };
+}
 function expectedPayloadByIsotope(selected) {
-  const common = ['isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit'];
+  const common = ['isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'cure_count'];
   if (selected.api_code === 'iode131_benin') {
     return {
       common,
@@ -122,6 +136,7 @@ function expectedPayloadByIsotope(selected) {
 }
 function calculate(payload) {
   const selected = getIsotope(payload.isotope_code);
+  const cure = normalizeCureCount(selected, payload.cure_count);
   const userPeriodDays = toNumberOrNull(payload.user_period_days);
   const effectiveDays = userPeriodDays !== null ? userPeriodDays : (selected.api_code === 'non_defini' ? null : selected.periodHours / 24);
   const benignActivityMbq = toNumberOrNull(payload.benign_activity_mbq);
@@ -148,6 +163,7 @@ function calculate(payload) {
   }
   if (!(patientSizeCm > 0)) errors.push('patient_size_cm doit être strictement positif.');
   if (selected.api_code === 'non_defini' && !(effectiveDays > 0)) errors.push('Avec isotope_code=non_defini, user_period_days devient obligatoire et doit être > 0.');
+  if (!cure.valid) errors.push(`Pour ${selected.api_code}, cure_count doit être l'une des valeurs suivantes : ${cure.allowed.join(', ')}.`);
   if (effectiveDays !== null && !(effectiveDays > 0)) errors.push('La période effective retenue doit être strictement positive.');
   if (!userEmpty && !userComplete) errors.push('Pour calculer le scénario utilisateur, renseignez les 4 champs bleus du scénario personnalisé, ou laissez-les tous vides.');
   if (userComplete) {
@@ -159,7 +175,7 @@ function calculate(payload) {
     audience_code: scenario.audience_code,
     label: scenario.label,
     condition: scenario.condition,
-    value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, scenario.exposures, scenario.limit)
+    value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, scenario.exposures, scenario.limit / cure.value)
   }));
   let userRow = { audience_code: 'scenario_utilisateur', label: 'Scénario utilisateur', condition: '-', value: null };
   if (userComplete) {
@@ -187,6 +203,8 @@ function calculate(payload) {
         expected_payload
       },
       selected,
+      cure_count: cure.value,
+      cure_count_allowed: cure.allowed,
       computed_dose_rate: doseRate,
       effective_days: effectiveDays,
       effective_hours: effectiveDays === null ? null : effectiveDays * 24,
@@ -197,6 +215,8 @@ function calculate(payload) {
   return {
     ok: true,
     selected,
+    cure_count: cure.value,
+    cure_count_allowed: cure.allowed,
     computed_dose_rate: doseRate,
     effective_days: effectiveDays,
     effective_hours: effectiveDays === null ? null : effectiveDays * 24,
@@ -233,23 +253,65 @@ async function resolveGeoFromIp(ip) {
   }
   if (geoIpCache.has(normalized)) return geoIpCache.get(normalized);
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 1500);
-    const response = await fetch(`https://ipwho.is/${encodeURIComponent(normalized)}`, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (!data?.success) return null;
-    const geo = {
-      ip: normalized,
-      country: data.country || null,
-      region: data.region || null,
-      city: data.city || null,
-      latitude: data.latitude ?? null,
-      longitude: data.longitude ?? null
-    };
-    geoIpCache.set(normalized, geo);
-    return geo;
+    const providers = [
+      {
+        name: 'ipwho.is',
+        url: `https://ipwho.is/${encodeURIComponent(normalized)}`,
+        parse: (data) => (data?.success ? {
+          ip: normalized,
+          provider: 'ipwho.is',
+          country: data.country || null,
+          region: data.region || null,
+          city: data.city || null,
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null
+        } : null)
+      },
+      {
+        name: 'ipapi.co',
+        url: `https://ipapi.co/${encodeURIComponent(normalized)}/json/`,
+        parse: (data) => (data && !data.error ? {
+          ip: normalized,
+          provider: 'ipapi.co',
+          country: data.country_name || null,
+          region: data.region || null,
+          city: data.city || null,
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null
+        } : null)
+      },
+      {
+        name: 'ip-api.com',
+        url: `http://ip-api.com/json/${encodeURIComponent(normalized)}`,
+        parse: (data) => (data?.status === 'success' ? {
+          ip: normalized,
+          provider: 'ip-api.com',
+          country: data.country || null,
+          region: data.regionName || null,
+          city: data.city || null,
+          latitude: data.lat ?? null,
+          longitude: data.lon ?? null
+        } : null)
+      }
+    ];
+    for (const provider of providers) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 1600);
+        const response = await fetch(provider.url, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!response.ok) continue;
+        const data = await response.json();
+        const geo = provider.parse(data);
+        if (geo) {
+          geoIpCache.set(normalized, geo);
+          return geo;
+        }
+      } catch {
+        // provider suivant
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -273,7 +335,8 @@ function readMeasurementLogs(year) {
       if (!year) return true;
       const y = new Date(row.timestamp).getFullYear();
       return Number.isFinite(y) && y === Number(year);
-    });
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 function csvEscape(value) {
   const text = String(value ?? '');
@@ -485,7 +548,11 @@ const server = http.createServer((req, res) => {
   const urlObj = new URL(req.url, `http://127.0.0.1:${port}`);
   const pathname = urlObj.pathname;
   if (req.method === 'GET' && pathname === '/api/config') {
-    return sendJson(res, 200, { isotopes, default_isotope_code: 'iode131_25_fixation' });
+    return sendJson(res, 200, {
+      isotopes,
+      default_isotope_code: 'iode131_25_fixation',
+      cure_options_by_isotope: cureOptionsByIsotope
+    });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {
     return sendJson(res, 200, { recaptcha_site_key: recaptchaSiteKey ? recaptchaSiteKey : '' });

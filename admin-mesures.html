@@ -131,6 +131,12 @@
       });
       if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
     }
+    function formatTimestampFr(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return escapeHtml(value);
+      return date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+    }
     function renderInput(input) {
       if (!input) return '';
       const pieces = [
@@ -168,11 +174,12 @@
         return;
       }
       const data = await resp.json();
-      statusEl.textContent = `${data.total} mesure(s) chargée(s).`;
-      renderMap(data.rows || []);
-      rowsEl.innerHTML = data.rows.map((r) => `
+      const rows = [...(data.rows || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      statusEl.textContent = `${rows.length} mesure(s) chargée(s), triées de la plus récente à la plus ancienne (heure de Paris).`;
+      renderMap(rows);
+      rowsEl.innerHTML = rows.map((r) => `
         <tr>
-          <td>${escapeHtml(r.timestamp || '')}</td>
+          <td>${escapeHtml(formatTimestampFr(r.timestamp || ''))}</td>
           <td>${escapeHtml(r.ip || '')}</td>
           <td>${escapeHtml(formatGeo(r.ip_geo))}</td>
           <td>${escapeHtml(r.input?.isotope_code || '')}</td>

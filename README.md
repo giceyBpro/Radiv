@@ -3,6 +3,7 @@
 ## Architecture
 
 - `index.html` : page principale utilisateur (visuel identique), sans formules métier.
+- `index-legacy.html` : copie rétro-compatible de l'ancienne page principale.
 - `api-fonctionnement.html` : page explicative du contrat API.
 - `contact.html` : formulaire de contact protégé par Google reCAPTCHA, envoi email côté backend.
 - `server.js` : API Node.js qui contient toutes les formules de calcul.
@@ -32,7 +33,8 @@ Exemple de payload JSON :
   "user_hours_2": null,
   "user_limit": null,
   "benign_activity_mbq": null,
-  "benign_fixation_pct": null
+  "benign_fixation_pct": null,
+  "cure_count": 4
 }
 ```
 Les valeurs possibles de `isotope_code` sont listées dans `api-fonctionnement.html`.
@@ -40,6 +42,7 @@ Les champs à `null` peuvent être omis : les champs absents sont traités comme
 
 Cas particulier : pour `isotope_code=iode131_benin`, les champs obligatoires sont `benign_activity_mbq` et `benign_fixation_pct`; `dose_rate` est ignoré.
 Pour `isotope_code=non_defini`, `user_period_days` est aussi obligatoire et doit être strictement positif.
+`cure_count` est optionnel (défaut `1`). Il est pris en charge pour `radium223` (1/4/6), `psma_177lu` (1/4/6), `lutetium177_net` (1/4).
 
 La réponse contient aussi `recommendations_days` : dictionnaire des recommandations en jours par type de public (`conjoint_plus_60`, `conjoint_moins_60`, `conjointe_enceinte`, `transport_commun`, `enfant_moins_3_ans`, `enfant_3_11_ans`, `collegues_travail`, `scenario_utilisateur`).
 
@@ -49,6 +52,8 @@ La réponse contient aussi `recommendations_days` : dictionnaire des recommandat
 {
   "ok": true,
   "selected": { "api_code": "iode131_25_fixation", "label": "Iode-131-25%-fixation" },
+  "cure_count": 1,
+  "cure_count_allowed": [1],
   "computed_dose_rate": 20,
   "effective_days": 0.66,
   "effective_hours": 16,

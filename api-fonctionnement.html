@@ -44,7 +44,8 @@ user_distance_1
 user_hours_2
 user_limit
 benign_activity_mbq
-benign_fixation_pct</code></pre>
+benign_fixation_pct
+cure_count</code></pre>
 
     <p>
       Les champs à <code>null</code> peuvent être omis du payload.
@@ -65,6 +66,14 @@ benign_fixation_pct</code></pre>
       Pour <code>isotope_code=non_defini</code>, vous devez fournir <code>user_period_days</code>
       (strictement positif) en plus de <code>dose_rate</code>, car aucune période effective
       n'est déduite automatiquement.
+    </p>
+
+    <h2>Cas particulier : cures répétées</h2>
+    <p>
+      Le champ <code>cure_count</code> est optionnel (valeur par défaut : <code>1</code>).
+      Il est pris en compte uniquement pour les isotopes suivants :
+      <code>radium223</code> (1, 4, 6), <code>psma_177lu</code> (1, 4, 6), <code>lutetium177_net</code> (1, 4).
+      Pour les autres isotopes, la valeur effective reste <code>1</code>.
     </p>
 
     <h2>Isotopes disponibles</h2>
@@ -114,7 +123,12 @@ benign_fixation_pct</code></pre>
   "isotopes": [
     { "api_code": "iode131_25_fixation", "label": "Iode-131-25%-fixation", "periodHours": 16 }
   ],
-  "default_isotope_code": "iode131_25_fixation"
+  "default_isotope_code": "iode131_25_fixation",
+  "cure_options_by_isotope": {
+    "radium223": [1, 4, 6],
+    "psma_177lu": [1, 4, 6],
+    "lutetium177_net": [1, 4]
+  }
 }</code></pre>
 
     <h2>Données renvoyées par l'API</h2>
@@ -122,6 +136,8 @@ benign_fixation_pct</code></pre>
     <pre><code>{
   "ok": true,
   "selected": { "api_code": "...", "label": "...", "periodHours": 16, "reference": "...", "remark": "...", "situation": "..." },
+  "cure_count": 1,
+  "cure_count_allowed": [1],
   "computed_dose_rate": 20,
   "effective_days": 0.66,
   "effective_hours": 16,
@@ -170,7 +186,8 @@ benign_fixation_pct</code></pre>
     "user_hours_2": null,
     "user_limit": null,
     "benign_activity_mbq": null,
-    "benign_fixation_pct": null
+    "benign_fixation_pct": null,
+    "cure_count": 4
   }'</code></pre>
 
     <div class="links">
