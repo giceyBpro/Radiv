@@ -40,7 +40,8 @@ Exemple de payload JSON :
 ```
 Les valeurs possibles de `isotope_code` sont listées dans `api-fonctionnement.html`.
 Les champs à `null` peuvent être omis : les champs absents sont traités comme `null` par l'API.
-`calculation_mode` accepte `local` (par défaut) ou `sfmn` (fonction spécifique en préparation).
+`calculation_mode` accepte `local` (par défaut) ou `sfmn` (fonction spécifique SFMN).
+En mode `sfmn`, le backend interroge le formulaire SFMN distant configuré dans `SFMN_CALCULATOR_URL` puis parse la page HTML de résultats.
 
 Cas particulier : pour `isotope_code=iode131_benin`, les champs obligatoires sont `benign_activity_mbq` et `benign_fixation_pct`; `dose_rate` est ignoré.
 Pour `isotope_code=non_defini`, `user_period_days` est aussi obligatoire et doit être strictement positif.

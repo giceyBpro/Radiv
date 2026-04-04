@@ -256,32 +256,222 @@ async function calculateSfmn(payload) {
       recommendations_days: emptyRecommendations()
     };
   }
-  let remoteReachable = false;
-  let remoteStatus = null;
+  const sfmnMap = {
+    iode131_0_fixation: 'Iodine-131-0%-uptake',
+    iode131_5_fixation: 'Iodine-131-5%-uptake',
+    iode131_25_fixation: 'Iodine-131-25%-uptake',
+    iode131_benin: 'Iodine-131-Benign disease',
+    psma_177lu: payload.cure_count === 6 ? 'PSMA-177Lu 6 cures' : payload.cure_count === 4 ? 'PSMA-177Lu 4 cures' : 'PSMA-177Lu',
+    radium223: 'Radium-223',
+    lutetium177_net: payload.cure_count === 4 ? 'NET 177Lu 4 cures' : 'NET 177Lu',
+    microspheres_90y: 'Microspheres-90Y',
+    lipiodol_131i: 'Lipiodol-131I',
+    mibg_131i: 'MIBG 131I',
+    synovectomie_90y: 'Synovectomy-90Y',
+    synovectomie_186re: 'Synovectomy-186Re',
+    synovectomie_169er: 'Synovectomy-169Er'
+  };
+  const sfmnRadiopharmaceutical = sfmnMap[selected.api_code];
+  if (!sfmnRadiopharmaceutical) {
+    return {
+      ok: false,
+      calculation_mode: 'sfmn',
+      selected,
+      errors: [`Isotope non supporté par le mapping SFMN: ${selected.api_code}`],
+      error: {
+        code: 'SFMN_UNSUPPORTED_ISOTOPE',
+        message: `Aucun mapping SFMN pour isotope_code=${selected.api_code}`
+      },
+      recommendations_days: emptyRecommendations()
+    };
+  }
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const userPeriod = toNum(payload.user_period_days);
+  const userH1 = toNum(payload.user_hours_1);
+  const userD1 = toNum(payload.user_distance_1);
+  const userH2 = toNum(payload.user_hours_2);
+  const userLimit = toNum(payload.user_limit);
+  const userFields = [userH1, userD1, userH2, userLimit];
+  const userComplete = userFields.every((v) => v !== null);
+  const useScenarioAdapted = (userPeriod !== null) || userComplete;
+  const benignActivity = toNum(payload.benign_activity_mbq);
+  const benignFixation = toNum(payload.benign_fixation_pct);
+  let pathology = 'nodule_hot_measured';
+  let measuredEstimated = '0';
+  let benignUptake = '';
+  if (selected.api_code === 'iode131_benin' && benignFixation !== null) {
+    if (Math.abs(benignFixation - 15) < 0.001) pathology = 'nodule_hot_measured';
+    else if (Math.abs(benignFixation - 25) < 0.001) pathology = 'mng_measured';
+    else if (Math.abs(benignFixation - 30) < 0.001) pathology = 'graves_measured';
+    else {
+      measuredEstimated = '1';
+      benignUptake = String(benignFixation);
+    }
+  }
+  const decodeHtml = (value) => String(value || '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&eacute;/g, 'é')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&icirc;/g, 'î')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&amp;/g, '&')
+    .replace(/&#160;/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const normalize = (value) => decodeHtml(value)
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const parseNumber = (value) => {
+    const m = String(value || '').match(/([0-9]+(?:[.,][0-9]+)?)/);
+    if (!m) return null;
+    const n = Number(m[1].replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  };
+  const buildFormBody = (csrfName) => {
+    const form = new URLSearchParams();
+    form.set('jform[radiopharmaceutical]', sfmnRadiopharmaceutical);
+    form.set('jform[dose_rate]', String(payload.dose_rate ?? ''));
+    form.set('jform[patient_size]', String(payload.patient_size_cm ?? ''));
+    form.set('jform[scenario_adapted_to_the_patient]', useScenarioAdapted ? '1' : '0');
+    form.set('jform[effective_half_life]', String(userPeriod ?? 0));
+    form.set('jform[duration_at_xm]', String(userH1 ?? ''));
+    form.set('jform[distance_at_xm]', String(userD1 ?? ''));
+    form.set('jform[duration_at_1m]', String(userH2 ?? ''));
+    form.set('jform[distance_at_1m]', '1');
+    form.set('jform[dosimetric_constraint]', String(userLimit ?? ''));
+    form.set('jform[thyroide]', selected.api_code === 'iode131_benin' ? '1' : '0');
+    form.set('jform[dysthyroidism_activity_administered]', String(benignActivity ?? ''));
+    form.set('jform[pathology]', pathology);
+    form.set('jform[measured_estimated]', measuredEstimated);
+    form.set('jform[dysthyroidism_iodine_uptake]', benignUptake);
+    form.set('boxchecked', '0');
+    form.set(csrfName, '1');
+    return form.toString();
+  };
+  const parseSfmnResponse = (html) => {
+    const recommendations = emptyRecommendations();
+    const labelMap = {
+      'contact avec le (la) conjoint(e) > 60 ans': 'conjoint_plus_60',
+      'contact avec le (la) conjoint(e) < 60 ans': 'conjoint_moins_60',
+      'contact avec la conjointe enceinte': 'conjointe_enceinte',
+      'transport en commun': 'transport_commun',
+      'contact avec un enfant (<3 ans) au retour a la maison': 'enfant_moins_3_ans',
+      'contact avec un enfant (entre 3 et 11 ans) au retour a la maison': 'enfant_3_11_ans',
+      'contact avec des collegues de travail': 'collegues_travail'
+    };
+    const rows = [];
+    const trRegex = /<tr>([\s\S]*?)<\/tr>/gi;
+    for (const trMatch of html.matchAll(trRegex)) {
+      const tr = trMatch[1];
+      const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+      const cols = [...tr.matchAll(tdRegex)].map((m) => decodeHtml(m[1]));
+      if (cols.length < 2) continue;
+      if (normalize(cols[0]).includes("cas d'exemple")) continue;
+      const code = labelMap[normalize(cols[0])];
+      const periodDays = parseNumber(cols[1]);
+      if (code && periodDays !== null) recommendations[code] = periodDays;
+      rows.push({
+        label: cols[0],
+        value: periodDays,
+        condition: cols[2] || '-',
+        limit: cols[3] || '-'
+      });
+    }
+    const periodMatch = html.match(/Période effective imposée:\s*([0-9.,]+)\s*heures\s*=\s*([0-9.,]+)\s*jours/i);
+    const effectiveHours = periodMatch ? parseNumber(periodMatch[1]) : null;
+    const effectiveDays = periodMatch ? parseNumber(periodMatch[2]) : null;
+    const doseMatch = html.match(/Débit de dose à 1m en sortie de chambre:\s*([0-9.,]+)/i);
+    const computedDoseRate = doseMatch ? parseNumber(doseMatch[1]) : null;
+    const curesMatch = html.match(/Nb cures:\s*([0-9]+)/i);
+    const parsedCureCount = curesMatch ? parseNumber(curesMatch[1]) : 1;
+    return { recommendations, rows, effectiveHours, effectiveDays, computedDoseRate, parsedCureCount };
+  };
   try {
+    const rootResp = await fetch(sfmnCalculatorUrl, { method: 'GET' });
+    if (!rootResp.ok) {
+      return {
+        ok: false,
+        calculation_mode: 'sfmn',
+        selected,
+        errors: [`SFMN inaccessible (GET ${rootResp.status}).`],
+        error: { code: 'SFMN_FETCH_FAILED', message: `GET SFMN a retourné ${rootResp.status}` },
+        recommendations_days: emptyRecommendations()
+      };
+    }
+    const rootHtml = await rootResp.text();
+    const actionMatch = rootHtml.match(/<form[^>]*action="([^"]*option=com_evictionperiod[^"]*task=process[^"]*)"/i);
+    const csrfMatch = rootHtml.match(/<input[^>]*type="hidden"[^>]*name="([a-f0-9]{32})"[^>]*value="1"/i);
+    if (!actionMatch || !csrfMatch) {
+      return {
+        ok: false,
+        calculation_mode: 'sfmn',
+        selected,
+        errors: ['Impossible d’extraire action/token CSRF du formulaire SFMN.'],
+        error: { code: 'SFMN_PARSE_FORM_FAILED', message: 'Action ou token CSRF introuvable.' },
+        recommendations_days: emptyRecommendations()
+      };
+    }
+    const actionUrl = new URL(actionMatch[1], sfmnCalculatorUrl).toString();
+    const formBody = buildFormBody(csrfMatch[1]);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const resp = await fetch(sfmnCalculatorUrl, { method: 'GET', signal: controller.signal });
+    const resp = await fetch(actionUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody,
+      signal: controller.signal
+    });
     clearTimeout(timer);
-    remoteStatus = resp.status;
-    remoteReachable = resp.ok;
+    if (!resp.ok) {
+      return {
+        ok: false,
+        calculation_mode: 'sfmn',
+        selected,
+        errors: [`SFMN task=process inaccessible (POST ${resp.status}).`],
+        error: { code: 'SFMN_PROCESS_FAILED', message: `POST SFMN a retourné ${resp.status}` },
+        recommendations_days: emptyRecommendations()
+      };
+    }
+    const resultHtml = await resp.text();
+    const parsed = parseSfmnResponse(resultHtml);
+    return {
+      ok: true,
+      calculation_mode: 'sfmn',
+      selected,
+      cure_count: parsed.parsedCureCount || 1,
+      cure_count_allowed: normalizeCureCount(selected, payload.cure_count).allowed,
+      computed_dose_rate: parsed.computedDoseRate,
+      effective_days: parsed.effectiveDays,
+      effective_hours: parsed.effectiveHours,
+      errors: [],
+      recommendations_days: parsed.recommendations,
+      sfmn_source: {
+        url: actionUrl,
+        parsed_rows: parsed.rows
+      }
+    };
   } catch (_) {
-    remoteReachable = false;
+    return {
+      ok: false,
+      calculation_mode: 'sfmn',
+      selected,
+      errors: ['Échec réseau vers SFMN.'],
+      error: {
+        code: 'SFMN_NETWORK_ERROR',
+        message: 'Impossible de joindre/traiter la réponse SFMN.'
+      },
+      recommendations_days: emptyRecommendations()
+    };
   }
-  return {
-    ok: false,
-    calculation_mode: 'sfmn',
-    selected,
-    errors: ['Mode SFMN en préparation. Conversion des champs vers le formulaire distant à finaliser.'],
-    error: {
-      code: 'SFMN_NOT_IMPLEMENTED',
-      message: 'Mode SFMN activé mais non finalisé.',
-      sfmn_url: sfmnCalculatorUrl,
-      sfmn_reachable: remoteReachable,
-      sfmn_status: remoteStatus
-    },
-    recommendations_days: emptyRecommendations()
-  };
 }
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
