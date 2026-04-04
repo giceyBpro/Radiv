@@ -395,6 +395,8 @@
     .required-field {
       border: 2px solid #c62828 !important;
       box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.15);
+      background: #fff1f1 !important;
+      color: #111 !important;
     }
     .benign-fixation-row {
       display: grid;
@@ -881,8 +883,14 @@
     }
 
     function buildPayload() {
+      const isotopeCode = $('isotope').value;
+      const allowedCures = getAllowedCureOptions(isotopeCode);
+      if (!allowedCures.includes(selectedCureCount)) {
+        selectedCureCount = 1;
+        renderCureSelector(isotopeCode);
+      }
       return {
-        isotope_code: $('isotope').value,
+        isotope_code: isotopeCode,
         dose_rate: getNumberOrNull('doseRate'),
         patient_size_cm: getNumberOrNull('patientSize'),
         user_period_days: getNumberOrNull('userPeriodDays'),

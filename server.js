@@ -104,7 +104,9 @@ const computeDoseRate = (selected, benignActivityMbq, benignFixationPct, doseRat
   return 2.2 * benignActivityMbq * (benignFixationPct / 100) / 37;
 };
 function normalizeCureCount(selected, rawValue) {
-  const allowed = cureOptionsByIsotope[selected.api_code] || [1];
+  const hasSpecificOptions = Object.prototype.hasOwnProperty.call(cureOptionsByIsotope, selected.api_code);
+  const allowed = hasSpecificOptions ? cureOptionsByIsotope[selected.api_code] : [1];
+  if (!hasSpecificOptions) return { value: 1, allowed, valid: true };
   const parsed = toNumberOrNull(rawValue);
   if (parsed === null) return { value: 1, allowed, valid: true };
   if (!Number.isInteger(parsed) || !allowed.includes(parsed)) {

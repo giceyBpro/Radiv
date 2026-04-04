@@ -55,6 +55,12 @@
   <div class="actions">
     <a href="/">← Retour à la racine du site</a>
     <button type="button" id="printNowBtn">Imprimer</button>
+    <button type="button" id="downloadPdfBtn">Télécharger PDF</button>
+    <button type="button" id="downloadImageBtn">Télécharger image</button>
+    <button type="button" id="copyImageBtn">Copier image</button>
+  </div>
+  <div class="actions" style="margin-top:-10px;">
+    <div id="exportStatus" class="muted"></div>
   </div>
 
   <main class="sheet">
@@ -93,6 +99,8 @@
   </main>
 
   <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script>
     const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
     const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_URL;
@@ -169,6 +177,85 @@
     })();
 
     document.getElementById('printNowBtn').addEventListener('click', () => window.print());
+
+    function setStatus(message, isError = false) {
+      const el = document.getElementById('exportStatus');
+      el.textContent = message || '';
+      el.style.color = isError ? '#b00020' : '#111';
+    }
+
+    async function renderSheetCanvas() {
+      setStatus('Préparation de l’export…');
+      if (typeof window.html2canvas !== 'function') {
+        throw new Error('Bibliothèque html2canvas indisponible');
+      }
+      const sheet = document.querySelector('.sheet');
+      return window.html2canvas(sheet, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true
+      });
+    }
+
+    async function handleDownloadPdf() {
+      try {
+        const canvas = await renderSheetCanvas();
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
+        const { jsPDF } = window.jspdf || {};
+        if (!jsPDF) throw new Error('Bibliothèque jsPDF indisponible');
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const imgRatio = canvas.width / canvas.height;
+        const pageRatio = pageWidth / pageHeight;
+        let pdfWidth = pageWidth;
+        let pdfHeight = pageHeight;
+        if (imgRatio > pageRatio) {
+          pdfHeight = pageWidth / imgRatio;
+        } else {
+          pdfWidth = pageHeight * imgRatio;
+        }
+        const x = (pageWidth - pdfWidth) / 2;
+        const y = (pageHeight - pdfHeight) / 2;
+        pdf.addImage(imageData, 'JPEG', x, y, pdfWidth, pdfHeight, undefined, 'FAST');
+        pdf.save(`radioprotection-${new Date().toISOString().slice(0, 10)}.pdf`);
+        setStatus('PDF téléchargé.');
+      } catch (error) {
+        setStatus(`Erreur export PDF : ${error.message}`, true);
+      }
+    }
+
+    async function handleDownloadImage() {
+      try {
+        const canvas = await renderSheetCanvas();
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `radioprotection-${new Date().toISOString().slice(0, 10)}.png`;
+        link.click();
+        setStatus('Image téléchargée.');
+      } catch (error) {
+        setStatus(`Erreur export image : ${error.message}`, true);
+      }
+    }
+
+    async function handleCopyImage() {
+      try {
+        if (!window.ClipboardItem || !navigator.clipboard?.write) {
+          throw new Error('Copie image non supportée par ce navigateur');
+        }
+        const canvas = await renderSheetCanvas();
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('Impossible de générer l’image');
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        setStatus('Image copiée dans le presse-papiers.');
+      } catch (error) {
+        setStatus(`Erreur copie image : ${error.message}`, true);
+      }
+    }
+
+    document.getElementById('downloadPdfBtn').addEventListener('click', handleDownloadPdf);
+    document.getElementById('downloadImageBtn').addEventListener('click', handleDownloadImage);
+    document.getElementById('copyImageBtn').addEventListener('click', handleCopyImage);
   </script>
 </body>
 </html>

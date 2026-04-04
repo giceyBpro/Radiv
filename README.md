@@ -79,7 +79,6 @@ En cas d'erreur, l'API renvoie un objet explicite :
 - `error.reason`
 - `error.expected_payload`
 
-
 ## Formulaire de contact (backend)
 
 - Page : `contact.html` (lien depuis `index.html`)
