@@ -40,6 +40,7 @@ const smtpUser = process.env.SMTP_USER || '';
 const smtpPass = process.env.SMTP_PASS || '';
 const smtpFrom = process.env.SMTP_FROM || '';
 const contactDest = process.env.CONTACT_DEST || '';
+const sfmnCalculatorUrl = process.env.SFMN_CALCULATOR_URL || '';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
@@ -115,7 +116,7 @@ function normalizeCureCount(selected, rawValue) {
   return { value: parsed, allowed, valid: true };
 }
 function expectedPayloadByIsotope(selected) {
-  const common = ['isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'cure_count'];
+  const common = ['calculation_mode', 'isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'cure_count'];
   if (selected.api_code === 'iode131_benin') {
     return {
       common,
@@ -194,6 +195,7 @@ function calculate(payload) {
   if (errors.length) {
     return {
       ok: false,
+      calculation_mode: 'local',
       error: {
         code: 'VALIDATION_ERROR',
         message: `Échec du calcul pour isotope_code=${selected.api_code}.`,
@@ -216,6 +218,7 @@ function calculate(payload) {
   }
   return {
     ok: true,
+    calculation_mode: 'local',
     selected,
     cure_count: cure.value,
     cure_count_allowed: cure.allowed,
@@ -224,6 +227,60 @@ function calculate(payload) {
     effective_hours: effectiveDays === null ? null : effectiveDays * 24,
     errors: [],
     recommendations_days
+  };
+}
+function emptyRecommendations() {
+  return {
+    conjoint_plus_60: null,
+    conjoint_moins_60: null,
+    conjointe_enceinte: null,
+    transport_commun: null,
+    enfant_moins_3_ans: null,
+    enfant_3_11_ans: null,
+    collegues_travail: null,
+    scenario_utilisateur: null
+  };
+}
+async function calculateSfmn(payload) {
+  const selected = getIsotope(payload.isotope_code);
+  if (!sfmnCalculatorUrl) {
+    return {
+      ok: false,
+      calculation_mode: 'sfmn',
+      selected,
+      errors: ['Mode SFMN indisponible: URL distante non configurée.'],
+      error: {
+        code: 'SFMN_URL_NOT_CONFIGURED',
+        message: 'SFMN_CALCULATOR_URL est vide côté backend.'
+      },
+      recommendations_days: emptyRecommendations()
+    };
+  }
+  let remoteReachable = false;
+  let remoteStatus = null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const resp = await fetch(sfmnCalculatorUrl, { method: 'GET', signal: controller.signal });
+    clearTimeout(timer);
+    remoteStatus = resp.status;
+    remoteReachable = resp.ok;
+  } catch (_) {
+    remoteReachable = false;
+  }
+  return {
+    ok: false,
+    calculation_mode: 'sfmn',
+    selected,
+    errors: ['Mode SFMN en préparation. Conversion des champs vers le formulaire distant à finaliser.'],
+    error: {
+      code: 'SFMN_NOT_IMPLEMENTED',
+      message: 'Mode SFMN activé mais non finalisé.',
+      sfmn_url: sfmnCalculatorUrl,
+      sfmn_reachable: remoteReachable,
+      sfmn_status: remoteStatus
+    },
+    recommendations_days: emptyRecommendations()
   };
 }
 function getClientIp(req) {
@@ -553,7 +610,9 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, {
       isotopes,
       default_isotope_code: 'iode131_25_fixation',
-      cure_options_by_isotope: cureOptionsByIsotope
+      cure_options_by_isotope: cureOptionsByIsotope,
+      calculation_modes: ['local', 'sfmn'],
+      default_calculation_mode: 'local'
     });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {
@@ -565,7 +624,10 @@ const server = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
-        const result = calculate(payload);
+        const calculationMode = String(payload.calculation_mode || 'local').toLowerCase();
+        const result = calculationMode === 'sfmn'
+          ? await calculateSfmn(payload)
+          : calculate(payload);
         const ip = getClientIp(req);
         const ipGeo = await resolveGeoFromIp(ip);
         appendMeasurementLog({
