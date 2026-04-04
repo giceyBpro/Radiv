@@ -499,6 +499,13 @@
         <div>
           <div class="field-stack">
             <div>
+              <div class="field-title">Mode de calcul</div>
+              <select id="calculationMode">
+                <option value="local" selected>Calcul local</option>
+                <option value="sfmn">Calcul SFMN</option>
+              </select>
+            </div>
+            <div>
               <div class="field-title">Radiopharmaceutique (menu déroulant)</div>
               <select id="isotope"></select>
               <div id="cureSelector" class="cure-selector" aria-label="Nombre de cures">
@@ -890,6 +897,7 @@
         renderCureSelector(isotopeCode);
       }
       return {
+        calculation_mode: $('calculationMode').value || 'local',
         isotope_code: isotopeCode,
         dose_rate: getNumberOrNull('doseRate'),
         patient_size_cm: getNumberOrNull('patientSize'),
@@ -918,6 +926,9 @@
     function renderFromResult(result) {
       lastResult = result;
       const selected = result.selected;
+      if ($('calculationMode')) {
+        $('calculationMode').value = result.calculation_mode || $('calculationMode').value || 'local';
+      }
       const isBenign = selected.api_code === 'iode131_benin';
       toggleBenignRows(isBenign);
       applyRequiredHighlight(selected.api_code);
@@ -988,7 +999,7 @@
     }
 
     function bindEvents() {
-      ['isotope', 'doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
+      ['calculationMode', 'isotope', 'doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
         .forEach((id) => $(id).addEventListener('input', renderResults));
 
       $('cureSelector').querySelectorAll('button[data-cure]').forEach((button) => {
@@ -1018,6 +1029,9 @@
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
+        if (config.default_calculation_mode && $('calculationMode')) {
+          $('calculationMode').value = config.default_calculation_mode;
+        }
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
         applyRequiredHighlight($('isotope').value);
         bindEvents();

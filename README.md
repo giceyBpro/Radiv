@@ -24,6 +24,7 @@ Exemple de payload JSON :
 
 ```json
 {
+  "calculation_mode": "local",
   "isotope_code": "iode131_25_fixation",
   "dose_rate": 20,
   "patient_size_cm": 160,
@@ -39,6 +40,7 @@ Exemple de payload JSON :
 ```
 Les valeurs possibles de `isotope_code` sont listées dans `api-fonctionnement.html`.
 Les champs à `null` peuvent être omis : les champs absents sont traités comme `null` par l'API.
+`calculation_mode` accepte `local` (par défaut) ou `sfmn` (fonction spécifique en préparation).
 
 Cas particulier : pour `isotope_code=iode131_benin`, les champs obligatoires sont `benign_activity_mbq` et `benign_fixation_pct`; `dose_rate` est ignoré.
 Pour `isotope_code=non_defini`, `user_period_days` est aussi obligatoire et doit être strictement positif.

@@ -67,7 +67,6 @@
     <h1>Durées de restriction des contacts — RIV</h1>
     <div class="topline">
       <div><strong>Date :</strong> <span id="printDate">-</span></div>
-      <div class="muted">Document destiné à l'impression A4 noir et blanc</div>
     </div>
 
     <div class="label-box">
@@ -128,6 +127,9 @@
       document.getElementById('printDate').textContent = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR');
 
       const form = payload.form || {};
+      const selectedApiCode = payload.result?.selected?.api_code || '';
+      const cureIsotopeSet = new Set(['radium223', 'psma_177lu', 'lutetium177_net']);
+      const shouldShowCureCount = cureIsotopeSet.has(selectedApiCode);
       const inputEntries = [
         ['Radiopharmaceutique', form.isotope_label],
         ['Débit de dose à 1 m (µSv/h)', form.dose_rate],
@@ -139,7 +141,7 @@
         ['Distance X (m)', form.user_distance_1],
         ['Durée à 1 m (h)', form.user_hours_2],
         ['Limite dosimétrique (mSv)', form.user_limit],
-        ['Nombre de cures', form.cure_count],
+        ['Nombre de cures', shouldShowCureCount ? form.cure_count : null],
       ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '');
 
       document.getElementById('inputGrid').innerHTML = inputEntries.length

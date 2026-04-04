@@ -36,6 +36,7 @@
     <h2>Champs attendus (sans caractères spéciaux)</h2>
     <p>Le payload JSON de <code>POST /api/calculate</code> doit utiliser les clés suivantes :</p>
     <pre><code>isotope_code
+calculation_mode
 dose_rate
 patient_size_cm
 user_period_days
@@ -50,6 +51,9 @@ cure_count</code></pre>
     <p>
       Les champs à <code>null</code> peuvent être omis du payload.
       L'API interprète les champs absents comme <code>null</code>.
+    </p>
+    <p>
+      <code>calculation_mode</code> accepte actuellement <code>local</code> (mode par défaut) et <code>sfmn</code>.
     </p>
 
 
@@ -124,6 +128,8 @@ cure_count</code></pre>
     { "api_code": "iode131_25_fixation", "label": "Iode-131-25%-fixation", "periodHours": 16 }
   ],
   "default_isotope_code": "iode131_25_fixation",
+  "default_calculation_mode": "local",
+  "calculation_modes": ["local", "sfmn"],
   "cure_options_by_isotope": {
     "radium223": [1, 4, 6],
     "psma_177lu": [1, 4, 6],
@@ -135,6 +141,7 @@ cure_count</code></pre>
     <p>Réponse de <code>POST /api/calculate</code> (succès) :</p>
     <pre><code>{
   "ok": true,
+  "calculation_mode": "local",
   "selected": { "api_code": "...", "label": "...", "periodHours": 16, "reference": "...", "remark": "...", "situation": "..." },
   "cure_count": 1,
   "cure_count_allowed": [1],
@@ -178,6 +185,7 @@ cure_count</code></pre>
   -H "Content-Type: application/json" \
   -d '{
     "isotope_code": "iode131_25_fixation",
+    "calculation_mode": "local",
     "dose_rate": 20,
     "patient_size_cm": 160,
     "user_period_days": null,
