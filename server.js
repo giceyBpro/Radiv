@@ -279,7 +279,7 @@ async function calculateSfmn(payload) {
     synovectomie_186re: 'Synovectomy-186Re',
     synovectomie_169er: 'Synovectomy-169Er'
   };
-  const sfmnRadiopharmaceutical = sfmnMap[selected.api_code];
+  let sfmnRadiopharmaceutical = sfmnMap[selected.api_code];
   if (!sfmnRadiopharmaceutical) {
     return wrapResult({
       ok: false,
@@ -467,11 +467,37 @@ async function calculateSfmn(payload) {
       });
     }
     const rootHtml = await rootResp.text();
+    const optionMatches = [...rootHtml.matchAll(/<option[^>]*value="([^"]*)"[^>]*>([\s\S]*?)<\/option>/gi)]
+      .map((m) => ({ value: decodeHtml(m[1]), text: decodeHtml(m[2]) }))
+      .filter((o) => o.value && o.value !== '—' && o.value !== '-');
+    if (optionMatches.length) {
+      const hasMappedValue = optionMatches.some((o) => o.value === sfmnRadiopharmaceutical);
+      if (!hasMappedValue) {
+        const targetNorm = normalize(selected.label || '');
+        const byText = optionMatches.find((o) => normalize(o.text).includes(targetNorm));
+        if (byText) sfmnRadiopharmaceutical = byText.value;
+      }
+    }
     if (debugEnabled) {
       sfmnDebug.parsing.root_html_excerpt = rootHtml.trimStart().slice(0, 1200);
       sfmnDebug.parsing.root_html = rootHtml;
       sfmnDebug.parsing.form_page_html_excerpt = sfmnDebug.parsing.root_html_excerpt;
       sfmnDebug.parsing.form_page_html = rootHtml;
+      sfmnDebug.parsing.radiopharmaceutical_options = optionMatches;
+      sfmnDebug.parsing.selected_radiopharmaceutical = sfmnRadiopharmaceutical;
+    }
+    if (optionMatches.length && !optionMatches.some((o) => o.value === sfmnRadiopharmaceutical)) {
+      return wrapResult({
+        ok: false,
+        calculation_mode: 'sfmn',
+        selected,
+        errors: ['Le radiopharmaceutique demandé n’est pas reconnu par le formulaire SFMN distant.'],
+        error: {
+          code: 'SFMN_RADIOPHARMACEUTICAL_MISMATCH',
+          message: `Valeur non trouvée dans les options SFMN: ${sfmnRadiopharmaceutical}`
+        },
+        recommendations_days: emptyRecommendations()
+      });
     }
     const actionMatch = rootHtml.match(/<form[^>]*action="([^"]*option=com_evictionperiod[^"]*task=process[^"]*)"/i);
     const csrfMatch = rootHtml.match(/<input[^>]*type="hidden"[^>]*name="([a-f0-9]{32})"[^>]*value="1"/i);
