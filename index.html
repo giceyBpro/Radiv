@@ -935,9 +935,15 @@
 
       $('clinicalSituation').textContent = selected.situation || '-';
       $('selectedIsotopeText').textContent = selected.label;
-      $('dosePreview').textContent = formatNumber(result.computed_dose_rate, 2);
+      const fallbackDoseRate = selected.api_code === 'iode131_benin' ? null : getNumberOrNull('doseRate');
+      const displayDoseRate = result.computed_dose_rate ?? fallbackDoseRate;
+      $('dosePreview').textContent = formatNumber(displayDoseRate, 2);
       if (isBenign) {
-        $('doseRate').value = result.computed_dose_rate === null ? '' : String(Number(result.computed_dose_rate.toFixed(4)));
+        if (result.computed_dose_rate === null || result.computed_dose_rate === undefined) {
+          $('doseRate').value = $('doseRate').value || '';
+        } else {
+          $('doseRate').value = String(Number(result.computed_dose_rate.toFixed(4)));
+        }
       }
       $('sizePreview').textContent = formatNumber(Number($('patientSize').value), 0);
       $('referenceText').textContent = selected.reference || '-';
@@ -964,8 +970,14 @@
         errorBox.style.display = 'block';
         errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${e}`).join('<br>')}`;
       } else {
-        errorBox.style.display = 'none';
-        errorBox.textContent = '';
+        const isSfmnMode = (result.calculation_mode || $('calculationMode').value) === 'sfmn';
+        if (isSfmnMode && (result.computed_dose_rate === null || result.computed_dose_rate === undefined)) {
+          errorBox.style.display = 'block';
+          errorBox.innerHTML = '<strong>Information :</strong><br>- Calcul SFMN reçu sans débit explicite ; la valeur saisie est affichée.';
+        } else {
+          errorBox.style.display = 'none';
+          errorBox.textContent = '';
+        }
       }
 
       const displayRows = Array.isArray(result.rows) && result.rows.length
