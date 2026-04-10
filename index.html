@@ -964,16 +964,28 @@
       }
 
       const errorBox = $('errorBox');
+      const sfmnVerbose = result.sfmn_debug && result.sfmn_debug.enabled
+        ? JSON.stringify(result.sfmn_debug, null, 2)
+        : null;
       if (result.errors.length) {
         const friendlyErrors = buildFriendlyErrors(selected);
         const displayedErrors = friendlyErrors.length ? friendlyErrors : result.errors;
         errorBox.style.display = 'block';
         errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${e}`).join('<br>')}`;
+        if (sfmnVerbose) {
+          errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
+        }
       } else {
         const isSfmnMode = (result.calculation_mode || $('calculationMode').value) === 'sfmn';
         if (isSfmnMode && (result.computed_dose_rate === null || result.computed_dose_rate === undefined)) {
           errorBox.style.display = 'block';
           errorBox.innerHTML = '<strong>Information :</strong><br>- Calcul SFMN reçu sans débit explicite ; la valeur saisie est affichée.';
+          if (sfmnVerbose) {
+            errorBox.innerHTML += `<br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
+          }
+        } else if (sfmnVerbose) {
+          errorBox.style.display = 'block';
+          errorBox.innerHTML = `<strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
         } else {
           errorBox.style.display = 'none';
           errorBox.textContent = '';
