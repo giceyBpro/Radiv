@@ -293,10 +293,7 @@ async function calculateSfmn(payload) {
       recommendations_days: emptyRecommendations()
     });
   }
-  const toNum = (v) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  };
+  const toNum = (v) => toNumberOrNull(v);
   const userPeriod = toNum(payload.user_period_days);
   const userH1 = toNum(payload.user_hours_1);
   const userD1 = toNum(payload.user_distance_1);
