@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentation API - Dosimétrie RIV</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #eef1f3; color: #111; }
+    main { max-width: 980px; margin: 24px auto; background: #fff; padding: 28px; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); }
+    h1, h2 { margin-top: 0; }
+    pre { background: #f4f7f8; padding: 12px; border-radius: 6px; overflow: auto; }
+    code { font-family: Consolas, Monaco, monospace; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #d5dde1; padding: 8px 10px; text-align: left; }
+    th { background: #f4f7f8; }
+    .links { margin-top: 20px; display: flex; gap: 16px; flex-wrap: wrap; }
+    a { color: #1637b8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Fonctionnement de l'API Dosimétrie RIV</h1>
+    <p>
+      Cette page décrit uniquement le contrat d'échange avec l'API (endpoints, champs attendus, formats).
+    </p>
+
+    <h2>Endpoints</h2>
+    <ul>
+      <li><code>GET /api/config</code> : retourne la liste des radiopharmaceutiques et la valeur par défaut.</li>
+      <li><code>POST /api/calculate</code> : calcule les durées de restriction selon les données envoyées.</li>
+      <li><code>GET /health</code> : endpoint de supervision (monitoring).</li>
+      <li><code>GET /api/public-config</code> : renvoie la clé reCAPTCHA publique.</li>
+      <li><code>POST /api/contact</code> : envoi du message de contact (validation reCAPTCHA côté backend).</li>
+    </ul>
+
+    <h2>Champs attendus (sans caractères spéciaux)</h2>
+    <p>Le payload JSON de <code>POST /api/calculate</code> doit utiliser les clés suivantes :</p>
+    <pre><code>isotope_code
+calculation_mode
+dose_rate
+patient_size_cm
+user_period_days
+user_hours_1
+user_distance_1
+user_hours_2
+user_limit
+benign_activity_mbq
+benign_fixation_pct
+cure_count</code></pre>
+
+    <p>
+      Les champs à <code>null</code> peuvent être omis du payload.
+      L'API interprète les champs absents comme <code>null</code>.
+    </p>
+    <p>
+      <code>calculation_mode</code> accepte actuellement <code>local</code> (mode par défaut) et <code>sfmn</code>.
+    </p>
+    <p>
+      En mode <code>sfmn</code>, le backend soumet les données au formulaire SFMN distant (URL configurée côté serveur), parse la page de résultats HTML puis renvoie les recommandations dans le même format API.
+    </p>
+
+
+    <h2>Cas particulier : <code>iode131_benin</code></h2>
+    <p>
+      Pour <code>isotope_code=iode131_benin</code>, les données attendues ne sont pas les mêmes :
+      <strong>vous devez fournir</strong> <code>benign_activity_mbq</code> et <code>benign_fixation_pct</code>.
+      Dans ce cas, <code>dose_rate</code> est ignoré car calculé automatiquement par l'API.
+    </p>
+
+
+    <h2>Cas particulier : <code>non_defini</code></h2>
+    <p>
+      Pour <code>isotope_code=non_defini</code>, vous devez fournir <code>user_period_days</code>
+      (strictement positif) en plus de <code>dose_rate</code>, car aucune période effective
+      n'est déduite automatiquement.
+    </p>
+
+    <h2>Cas particulier : cures répétées</h2>
+    <p>
+      Le champ <code>cure_count</code> est optionnel (valeur par défaut : <code>1</code>).
+      Il est pris en compte uniquement pour les isotopes suivants :
+      <code>radium223</code> (1, 4, 6), <code>psma_177lu</code> (1, 4, 6), <code>lutetium177_net</code> (1, 4).
+      Pour les autres isotopes, la valeur effective reste <code>1</code>.
+    </p>
+
+    <h2>Isotopes disponibles</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Libellé affiché</th>
+          <th>Valeur API attendue (<code>isotope_code</code>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Iode-131-0%-fixation</td><td><code>iode131_0_fixation</code></td></tr>
+        <tr><td>Iode-131-5%-fixation</td><td><code>iode131_5_fixation</code></td></tr>
+        <tr><td>Iode-131-25%-fixation</td><td><code>iode131_25_fixation</code></td></tr>
+        <tr><td>Iode-131-Bénin</td><td><code>iode131_benin</code></td></tr>
+        <tr><td>Radium-223</td><td><code>radium223</code></td></tr>
+        <tr><td>PSMA-177Lu</td><td><code>psma_177lu</code></td></tr>
+        <tr><td>Synovectomie-90Y</td><td><code>synovectomie_90y</code></td></tr>
+        <tr><td>Synovectomie-186Re</td><td><code>synovectomie_186re</code></td></tr>
+        <tr><td>Synovectomie-169Er</td><td><code>synovectomie_169er</code></td></tr>
+        <tr><td>Microsphères-90Y</td><td><code>microspheres_90y</code></td></tr>
+        <tr><td>Lipiodol-131I</td><td><code>lipiodol_131i</code></td></tr>
+        <tr><td>Lutétium-177 NET</td><td><code>lutetium177_net</code></td></tr>
+        <tr><td>MIBG-131I</td><td><code>mibg_131i</code></td></tr>
+        <tr><td>Non défini</td><td><code>non_defini</code></td></tr>
+      </tbody>
+    </table>
+
+
+    
+    
+    <h2>Formulaire de contact</h2>
+    <p>Payload de <code>POST /api/contact</code> :</p>
+    <pre><code>{
+  "name": "Prénom Nom",
+  "email": "adresse@exemple.fr",
+  "subject": "Demande",
+  "message": "Votre message...",
+  "recaptcha_token": "token_google"
+}</code></pre>
+    <p>Réponse de succès :</p>
+    <pre><code>{ "ok": true }</code></pre>
+
+    <h2>Exemple de retour de l'API</h2>
+    <p>Réponse type de <code>GET /api/config</code> :</p>
+    <pre><code>{
+  "isotopes": [
+    { "api_code": "iode131_25_fixation", "label": "Iode-131-25%-fixation", "periodHours": 16 }
+  ],
+  "default_isotope_code": "iode131_25_fixation",
+  "default_calculation_mode": "local",
+  "calculation_modes": ["local", "sfmn"],
+  "cure_options_by_isotope": {
+    "radium223": [1, 4, 6],
+    "psma_177lu": [1, 4, 6],
+    "lutetium177_net": [1, 4]
+  }
+}</code></pre>
+
+    <h2>Données renvoyées par l'API</h2>
+    <p>Réponse de <code>POST /api/calculate</code> (succès) :</p>
+    <pre><code>{
+  "ok": true,
+  "calculation_mode": "local",
+  "selected": { "api_code": "...", "label": "...", "periodHours": 16, "reference": "...", "remark": "...", "situation": "..." },
+  "cure_count": 1,
+  "cure_count_allowed": [1],
+  "computed_dose_rate": 20,
+  "effective_days": 0.66,
+  "effective_hours": 16,
+  "errors": [],
+  "recommendations_days": {
+    "conjoint_plus_60": 0,
+    "conjoint_moins_60": 0,
+    "conjointe_enceinte": 0,
+    "transport_commun": 0,
+    "enfant_moins_3_ans": 0,
+    "enfant_3_11_ans": 0,
+    "collegues_travail": 0,
+    "scenario_utilisateur": null
+  }
+}</code></pre>
+
+    
+    <p><strong>Types de public (clés de <code>recommendations_days</code>) :</strong>
+      <code>conjoint_plus_60</code>, <code>conjoint_moins_60</code>, <code>conjointe_enceinte</code>,
+      <code>transport_commun</code>, <code>enfant_moins_3_ans</code>, <code>enfant_3_11_ans</code>,
+      <code>collegues_travail</code>, <code>scenario_utilisateur</code>.
+    </p>
+
+    <p>Réponse en cas d'échec de validation :</p>
+    <pre><code>{
+  "ok": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "...",
+    "reason": "...",
+    "expected_payload": { "common": ["..."], "isotope_specific_required": ["..."] }
+  },
+  "errors": ["..."]
+}</code></pre>
+
+    <h2>Exemple d'appel</h2>
+    <pre><code>curl -X POST "$RADIOPROTECTION_API_URL/calculate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "isotope_code": "iode131_25_fixation",
+    "calculation_mode": "local",
+    "dose_rate": 20,
+    "patient_size_cm": 160,
+    "user_period_days": null,
+    "user_hours_1": null,
+    "user_distance_1": null,
+    "user_hours_2": null,
+    "user_limit": null,
+    "benign_activity_mbq": null,
+    "benign_fixation_pct": null,
+    "cure_count": 4
+  }'</code></pre>
+
+    <div class="links">
+      <a href="test-api.html">Ouvrir la page de test API</a>
+      <a href="index.html">← Retour à la page principale</a>
+    </div>
+  </main>
+</body>
+</html>
