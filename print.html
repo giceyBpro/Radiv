@@ -199,6 +199,42 @@
       });
     }
 
+    function cropBottomWhitespace(canvas) {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return canvas;
+      const { width, height } = canvas;
+      const data = ctx.getImageData(0, 0, width, height).data;
+      let lastContentRow = height - 1;
+
+      const isWhiteRow = (row) => {
+        const start = row * width * 4;
+        const end = start + width * 4;
+        for (let i = start; i < end; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (a > 0 && (r < 250 || g < 250 || b < 250)) return false;
+        }
+        return true;
+      };
+
+      while (lastContentRow > 0 && isWhiteRow(lastContentRow)) {
+        lastContentRow -= 1;
+      }
+
+      const croppedHeight = Math.max(1, lastContentRow + 1);
+      if (croppedHeight >= height) return canvas;
+
+      const cropped = document.createElement('canvas');
+      cropped.width = width;
+      cropped.height = croppedHeight;
+      const croppedCtx = cropped.getContext('2d');
+      if (!croppedCtx) return canvas;
+      croppedCtx.drawImage(canvas, 0, 0, width, croppedHeight, 0, 0, width, croppedHeight);
+      return cropped;
+    }
+
     async function handleDownloadPdf() {
       try {
         const canvas = await renderSheetCanvas();
@@ -246,7 +282,8 @@
           throw new Error('Copie image non supportée par ce navigateur');
         }
         const canvas = await renderSheetCanvas();
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        const croppedCanvas = cropBottomWhitespace(canvas);
+        const blob = await new Promise((resolve) => croppedCanvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('Impossible de générer l’image');
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         setStatus('Image copiée dans le presse-papiers.');
