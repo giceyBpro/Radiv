@@ -46,7 +46,8 @@ user_hours_2
 user_limit
 benign_activity_mbq
 benign_fixation_pct
-cure_count</code></pre>
+cure_count
+sfmn_debug</code></pre>
 
     <p>
       Les champs à <code>null</code> peuvent être omis du payload.
@@ -54,6 +55,10 @@ cure_count</code></pre>
     </p>
     <p>
       <code>calculation_mode</code> accepte actuellement <code>local</code> (mode par défaut) et <code>sfmn</code>.
+    </p>
+    <p>
+      Pour diagnostiquer le mode <code>sfmn</code>, vous pouvez envoyer <code>sfmn_debug=true</code> :
+      l’API renvoie alors une section <code>sfmn_debug</code> (requêtes envoyées, statuts HTTP, extraits HTML et résumé du parsing).
     </p>
     <p>
       En mode <code>sfmn</code>, le backend soumet les données au formulaire SFMN distant (URL configurée côté serveur), parse la page de résultats HTML puis renvoie les recommandations dans le même format API.

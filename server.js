@@ -41,6 +41,7 @@ const smtpPass = process.env.SMTP_PASS || '';
 const smtpFrom = process.env.SMTP_FROM || '';
 const contactDest = process.env.CONTACT_DEST || '';
 const sfmnCalculatorUrl = process.env.SFMN_CALCULATOR_URL || '';
+const sfmnDebugDefault = String(process.env.SFMN_DEBUG || 'false').toLowerCase() === 'true';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
@@ -243,8 +244,15 @@ function emptyRecommendations() {
 }
 async function calculateSfmn(payload) {
   const selected = getIsotope(payload.isotope_code);
+  const debugEnabled = sfmnDebugDefault || String(payload.sfmn_debug || '').toLowerCase() === 'true';
+  const sfmnDebug = {
+    enabled: debugEnabled,
+    requests: [],
+    parsing: {}
+  };
+  const wrapResult = (result) => (debugEnabled ? { ...result, sfmn_debug: sfmnDebug } : result);
   if (!sfmnCalculatorUrl) {
-    return {
+    return wrapResult({
       ok: false,
       calculation_mode: 'sfmn',
       selected,
@@ -254,7 +262,7 @@ async function calculateSfmn(payload) {
         message: 'SFMN_CALCULATOR_URL est vide côté backend.'
       },
       recommendations_days: emptyRecommendations()
-    };
+    });
   }
   const sfmnMap = {
     iode131_0_fixation: 'Iodine-131-0%-uptake',
@@ -273,7 +281,7 @@ async function calculateSfmn(payload) {
   };
   const sfmnRadiopharmaceutical = sfmnMap[selected.api_code];
   if (!sfmnRadiopharmaceutical) {
-    return {
+    return wrapResult({
       ok: false,
       calculation_mode: 'sfmn',
       selected,
@@ -283,7 +291,7 @@ async function calculateSfmn(payload) {
         message: `Aucun mapping SFMN pour isotope_code=${selected.api_code}`
       },
       recommendations_days: emptyRecommendations()
-    };
+    });
   }
   const toNum = (v) => {
     const n = Number(v);
@@ -355,6 +363,30 @@ async function calculateSfmn(payload) {
     form.set('jform[dysthyroidism_iodine_uptake]', benignUptake);
     form.set('boxchecked', '0');
     form.set(csrfName, '1');
+    if (debugEnabled) {
+      sfmnDebug.requests.push({
+        step: 'prepare_post_body',
+        url: null,
+        payload: {
+          radiopharmaceutical: sfmnRadiopharmaceutical,
+          dose_rate: String(payload.dose_rate ?? ''),
+          patient_size: String(payload.patient_size_cm ?? ''),
+          scenario_adapted_to_the_patient: useScenarioAdapted ? '1' : '0',
+          effective_half_life: String(userPeriod ?? 0),
+          duration_at_xm: String(userH1 ?? ''),
+          distance_at_xm: String(userD1 ?? ''),
+          duration_at_1m: String(userH2 ?? ''),
+          distance_at_1m: '1',
+          dosimetric_constraint: String(userLimit ?? ''),
+          thyroide: selected.api_code === 'iode131_benin' ? '1' : '0',
+          dysthyroidism_activity_administered: String(benignActivity ?? ''),
+          pathology,
+          measured_estimated: measuredEstimated,
+          dysthyroidism_iodine_uptake: benignUptake,
+          csrf_name: csrfName
+        }
+      });
+    }
     return form.toString();
   };
   const parseSfmnResponse = (html) => {
@@ -397,28 +429,39 @@ async function calculateSfmn(payload) {
   };
   try {
     const rootResp = await fetch(sfmnCalculatorUrl, { method: 'GET' });
+    if (debugEnabled) {
+      sfmnDebug.requests.push({
+        step: 'sfmn_root_get',
+        method: 'GET',
+        url: sfmnCalculatorUrl,
+        status: rootResp.status
+      });
+    }
     if (!rootResp.ok) {
-      return {
+      return wrapResult({
         ok: false,
         calculation_mode: 'sfmn',
         selected,
         errors: [`SFMN inaccessible (GET ${rootResp.status}).`],
         error: { code: 'SFMN_FETCH_FAILED', message: `GET SFMN a retourné ${rootResp.status}` },
         recommendations_days: emptyRecommendations()
-      };
+      });
     }
     const rootHtml = await rootResp.text();
+    if (debugEnabled) {
+      sfmnDebug.parsing.root_html_excerpt = rootHtml.slice(0, 1200);
+    }
     const actionMatch = rootHtml.match(/<form[^>]*action="([^"]*option=com_evictionperiod[^"]*task=process[^"]*)"/i);
     const csrfMatch = rootHtml.match(/<input[^>]*type="hidden"[^>]*name="([a-f0-9]{32})"[^>]*value="1"/i);
     if (!actionMatch || !csrfMatch) {
-      return {
+      return wrapResult({
         ok: false,
         calculation_mode: 'sfmn',
         selected,
         errors: ['Impossible d’extraire action/token CSRF du formulaire SFMN.'],
         error: { code: 'SFMN_PARSE_FORM_FAILED', message: 'Action ou token CSRF introuvable.' },
         recommendations_days: emptyRecommendations()
-      };
+      });
     }
     const actionUrl = new URL(actionMatch[1], sfmnCalculatorUrl).toString();
     const formBody = buildFormBody(csrfMatch[1]);
@@ -431,19 +474,38 @@ async function calculateSfmn(payload) {
       signal: controller.signal
     });
     clearTimeout(timer);
+    if (debugEnabled) {
+      sfmnDebug.requests.push({
+        step: 'sfmn_process_post',
+        method: 'POST',
+        url: actionUrl,
+        status: resp.status
+      });
+    }
     if (!resp.ok) {
-      return {
+      return wrapResult({
         ok: false,
         calculation_mode: 'sfmn',
         selected,
         errors: [`SFMN task=process inaccessible (POST ${resp.status}).`],
         error: { code: 'SFMN_PROCESS_FAILED', message: `POST SFMN a retourné ${resp.status}` },
         recommendations_days: emptyRecommendations()
-      };
+      });
     }
     const resultHtml = await resp.text();
+    if (debugEnabled) {
+      sfmnDebug.parsing.result_html_excerpt = resultHtml.slice(0, 2000);
+    }
     const parsed = parseSfmnResponse(resultHtml);
-    return {
+    if (debugEnabled) {
+      sfmnDebug.parsing.parsed_summary = {
+        parsed_rows_count: parsed.rows.length,
+        effective_days: parsed.effectiveDays,
+        effective_hours: parsed.effectiveHours,
+        computed_dose_rate: parsed.computedDoseRate
+      };
+    }
+    return wrapResult({
       ok: true,
       calculation_mode: 'sfmn',
       selected,
@@ -458,9 +520,15 @@ async function calculateSfmn(payload) {
         url: actionUrl,
         parsed_rows: parsed.rows
       }
-    };
+    });
   } catch (_) {
-    return {
+    if (debugEnabled) {
+      sfmnDebug.requests.push({
+        step: 'sfmn_exception',
+        error: 'exception_during_remote_call'
+      });
+    }
+    return wrapResult({
       ok: false,
       calculation_mode: 'sfmn',
       selected,
@@ -470,7 +538,7 @@ async function calculateSfmn(payload) {
         message: 'Impossible de joindre/traiter la réponse SFMN.'
       },
       recommendations_days: emptyRecommendations()
-    };
+    });
   }
 }
 function getClientIp(req) {
