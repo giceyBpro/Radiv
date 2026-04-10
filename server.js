@@ -388,6 +388,15 @@ async function calculateSfmn(payload) {
   };
   const parseSfmnResponse = (html) => {
     const recommendations = emptyRecommendations();
+    const fallbackAudienceOrder = [
+      'conjoint_plus_60',
+      'conjoint_moins_60',
+      'conjointe_enceinte',
+      'transport_commun',
+      'enfant_moins_3_ans',
+      'enfant_3_11_ans',
+      'collegues_travail'
+    ];
     const labelMap = {
       'contact avec le (la) conjoint(e) > 60 ans': 'conjoint_plus_60',
       'contact avec le (la) conjoint(e) < 60 ans': 'conjoint_moins_60',
@@ -395,9 +404,17 @@ async function calculateSfmn(payload) {
       'transport en commun': 'transport_commun',
       'contact avec un enfant (<3 ans) au retour a la maison': 'enfant_moins_3_ans',
       'contact avec un enfant (entre 3 et 11 ans) au retour a la maison': 'enfant_3_11_ans',
-      'contact avec des collegues de travail': 'collegues_travail'
+      'contact avec des collegues de travail': 'collegues_travail',
+      'contact with spouse > 60 years old': 'conjoint_plus_60',
+      'contact with spouse < 60 years old': 'conjoint_moins_60',
+      'contact with pregnant spouse': 'conjointe_enceinte',
+      'public transportation': 'transport_commun',
+      'contact with child (<3 years old) when back home': 'enfant_moins_3_ans',
+      'contact with child (between 3 and 11 years old) when back home': 'enfant_3_11_ans',
+      'contact with colleagues at work': 'collegues_travail'
     };
     const rows = [];
+    let fallbackIndex = 0;
     const trRegex = /<tr>([\s\S]*?)<\/tr>/gi;
     for (const trMatch of html.matchAll(trRegex)) {
       const tr = trMatch[1];
@@ -405,10 +422,15 @@ async function calculateSfmn(payload) {
       const cols = [...tr.matchAll(tdRegex)].map((m) => decodeHtml(m[1]));
       if (cols.length < 2) continue;
       if (normalize(cols[0]).includes("cas d'exemple")) continue;
-      const code = labelMap[normalize(cols[0])];
+      let code = labelMap[normalize(cols[0])];
       const periodDays = parseNumber(cols[1]);
+      if (!code && periodDays !== null && fallbackIndex < fallbackAudienceOrder.length) {
+        code = fallbackAudienceOrder[fallbackIndex];
+      }
       if (code && periodDays !== null) recommendations[code] = periodDays;
+      if (periodDays !== null) fallbackIndex += 1;
       rows.push({
+        audience_code: code || null,
         label: cols[0],
         value: periodDays,
         condition: cols[2] || '-',
@@ -445,9 +467,7 @@ async function calculateSfmn(payload) {
       });
     }
     const rootHtml = await rootResp.text();
-    if (debugEnabled) {
-      sfmnDebug.parsing.root_html_excerpt = rootHtml.slice(0, 1200);
-    }
+    if (debugEnabled) sfmnDebug.parsing.root_html_excerpt = rootHtml.trimStart().slice(0, 1200);
     const actionMatch = rootHtml.match(/<form[^>]*action="([^"]*option=com_evictionperiod[^"]*task=process[^"]*)"/i);
     const csrfMatch = rootHtml.match(/<input[^>]*type="hidden"[^>]*name="([a-f0-9]{32})"[^>]*value="1"/i);
     if (!actionMatch || !csrfMatch) {
@@ -476,7 +496,9 @@ async function calculateSfmn(payload) {
         step: 'sfmn_process_post',
         method: 'POST',
         url: actionUrl,
-        status: resp.status
+        status: resp.status,
+        redirected: Boolean(resp.redirected),
+        final_url: resp.url || null
       });
     }
     if (!resp.ok) {
@@ -490,9 +512,7 @@ async function calculateSfmn(payload) {
       });
     }
     const resultHtml = await resp.text();
-    if (debugEnabled) {
-      sfmnDebug.parsing.result_html_excerpt = resultHtml.slice(0, 2000);
-    }
+    if (debugEnabled) sfmnDebug.parsing.result_html_excerpt = resultHtml.trimStart().slice(0, 2000);
     const parsed = parseSfmnResponse(resultHtml);
     if (debugEnabled) {
       sfmnDebug.parsing.parsed_summary = {
