@@ -223,10 +223,13 @@ kill_managed_processes() {
     fi
   fi
 
-  while IFS= read -r pid; do
-    [[ -n "$pid" ]] || continue
-    kill "$pid" >/dev/null 2>&1 || true
-  done < <(pgrep -f "node .*${BACKEND_DIR}/server.js" || true)
+  pids="$(pgrep -f "node .*${BACKEND_DIR}/server.js" 2>/dev/null || true)"
+  if [[ -n "$pids" ]]; then
+    while IFS= read -r pid; do
+      [[ -n "$pid" ]] || continue
+      kill "$pid" >/dev/null 2>&1 || true
+    done <<< "$pids"
+  fi
 }
 
 start_nohup() {
