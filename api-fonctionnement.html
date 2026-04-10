@@ -61,6 +61,11 @@ sfmn_debug</code></pre>
       l’API renvoie alors une section <code>sfmn_debug</code> (requêtes envoyées, statuts HTTP, extraits HTML, pages HTML complètes reçues et résumé du parsing).
     </p>
     <p>
+      Dans <code>sfmn_debug.parsing</code> :
+      <code>form_page_*</code> correspond à la page formulaire initiale,
+      et <code>response_*</code> / <code>result_*</code> correspond à la page de réponse après <code>task=process</code>.
+    </p>
+    <p>
       En mode <code>sfmn</code>, le backend soumet les données au formulaire SFMN distant (URL configurée côté serveur), parse la page de résultats HTML puis renvoie les recommandations dans le même format API.
     </p>
 

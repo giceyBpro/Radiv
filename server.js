@@ -470,6 +470,8 @@ async function calculateSfmn(payload) {
     if (debugEnabled) {
       sfmnDebug.parsing.root_html_excerpt = rootHtml.trimStart().slice(0, 1200);
       sfmnDebug.parsing.root_html = rootHtml;
+      sfmnDebug.parsing.form_page_html_excerpt = sfmnDebug.parsing.root_html_excerpt;
+      sfmnDebug.parsing.form_page_html = rootHtml;
     }
     const actionMatch = rootHtml.match(/<form[^>]*action="([^"]*option=com_evictionperiod[^"]*task=process[^"]*)"/i);
     const csrfMatch = rootHtml.match(/<input[^>]*type="hidden"[^>]*name="([a-f0-9]{32})"[^>]*value="1"/i);
@@ -518,6 +520,8 @@ async function calculateSfmn(payload) {
     if (debugEnabled) {
       sfmnDebug.parsing.result_html_excerpt = resultHtml.trimStart().slice(0, 2000);
       sfmnDebug.parsing.result_html = resultHtml;
+      sfmnDebug.parsing.response_html_excerpt = sfmnDebug.parsing.result_html_excerpt;
+      sfmnDebug.parsing.response_html = resultHtml;
     }
     const parsed = parseSfmnResponse(resultHtml);
     if (debugEnabled) {
