@@ -467,6 +467,13 @@ async function calculateSfmn(payload) {
       });
     }
     const rootHtml = await rootResp.text();
+    const setCookies = typeof rootResp.headers.getSetCookie === 'function'
+      ? rootResp.headers.getSetCookie()
+      : (rootResp.headers.get('set-cookie') ? [rootResp.headers.get('set-cookie')] : []);
+    const cookieHeader = setCookies
+      .map((cookie) => String(cookie).split(';')[0].trim())
+      .filter(Boolean)
+      .join('; ');
     const optionMatches = [...rootHtml.matchAll(/<option[^>]*value="([^"]*)"[^>]*>([\s\S]*?)<\/option>/gi)]
       .map((m) => ({ value: decodeHtml(m[1]), text: decodeHtml(m[2]) }))
       .filter((o) => o.value && o.value !== '—' && o.value !== '-');
@@ -479,12 +486,11 @@ async function calculateSfmn(payload) {
       }
     }
     if (debugEnabled) {
-      sfmnDebug.parsing.root_html_excerpt = rootHtml.trimStart().slice(0, 1200);
       sfmnDebug.parsing.root_html = rootHtml;
-      sfmnDebug.parsing.form_page_html_excerpt = sfmnDebug.parsing.root_html_excerpt;
       sfmnDebug.parsing.form_page_html = rootHtml;
       sfmnDebug.parsing.radiopharmaceutical_options = optionMatches;
       sfmnDebug.parsing.selected_radiopharmaceutical = sfmnRadiopharmaceutical;
+      sfmnDebug.parsing.cookies_forwarded = cookieHeader ? cookieHeader.split('; ').map((c) => c.split('=')[0]) : [];
     }
     if (optionMatches.length && !optionMatches.some((o) => o.value === sfmnRadiopharmaceutical)) {
       return wrapResult({
@@ -517,7 +523,10 @@ async function calculateSfmn(payload) {
     const timer = setTimeout(() => controller.abort(), 8000);
     const resp = await fetch(actionUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(cookieHeader ? { Cookie: cookieHeader } : {})
+      },
       body: formBody,
       signal: controller.signal
     });
