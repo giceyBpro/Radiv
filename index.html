@@ -964,9 +964,24 @@
       }
 
       const errorBox = $('errorBox');
-      const sfmnVerbose = result.sfmn_debug && result.sfmn_debug.enabled
-        ? JSON.stringify(result.sfmn_debug, null, 2)
-        : null;
+      const sfmnVerbose = (() => {
+        if (!(result.sfmn_debug && result.sfmn_debug.enabled)) return null;
+        const debug = result.sfmn_debug || {};
+        const parsing = debug.parsing || {};
+        const filtered = {
+          enabled: true,
+          requests: debug.requests || [],
+          parsing: {
+            response_html_excerpt: parsing.response_html_excerpt || parsing.result_html_excerpt || null,
+            response_html: parsing.response_html || parsing.result_html || null,
+            parsed_summary: parsing.parsed_summary || null,
+            selected_radiopharmaceutical: parsing.selected_radiopharmaceutical || null,
+            radiopharmaceutical_options: parsing.radiopharmaceutical_options || null,
+            cookies_forwarded: parsing.cookies_forwarded || null
+          }
+        };
+        return JSON.stringify(filtered, null, 2);
+      })();
       if (result.errors.length) {
         const friendlyErrors = buildFriendlyErrors(selected);
         const displayedErrors = friendlyErrors.length ? friendlyErrors : result.errors;
