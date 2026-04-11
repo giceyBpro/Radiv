@@ -308,13 +308,11 @@ async function calculateSfmn(payload) {
   let measuredEstimated = '0';
   let benignUptake = '';
   if (selected.api_code === 'iode131_benin' && benignFixation !== null) {
-    if (Math.abs(benignFixation - 15) < 0.001) pathology = 'nodule_hot_measured';
-    else if (Math.abs(benignFixation - 25) < 0.001) pathology = 'mng_measured';
+    measuredEstimated = '1';
+    benignUptake = String(benignFixation);
+    if (Math.abs(benignFixation - 25) < 0.001) pathology = 'mng_measured';
     else if (Math.abs(benignFixation - 30) < 0.001) pathology = 'graves_measured';
-    else {
-      measuredEstimated = '1';
-      benignUptake = String(benignFixation);
-    }
+    else pathology = 'nodule_hot_measured';
   }
   const decodeHtml = (value) => String(value || '')
     .replace(/&nbsp;/g, ' ')
@@ -348,7 +346,7 @@ async function calculateSfmn(payload) {
       form.set(name, value ?? '');
     });
     form.set('jform[radiopharmaceutical]', sfmnRadiopharmaceutical);
-    form.set('jform[dose_rate]', String(payload.dose_rate ?? ''));
+    form.set('jform[dose_rate]', selected.api_code === 'iode131_benin' ? '' : String(payload.dose_rate ?? ''));
     form.set('jform[patient_size]', String(payload.patient_size_cm ?? ''));
     form.set('jform[scenario_adapted_to_the_patient]', useScenarioAdapted ? '1' : '0');
     form.set('jform[effective_half_life]', String(userPeriod ?? 0));
@@ -370,7 +368,7 @@ async function calculateSfmn(payload) {
         url: null,
         payload: {
           radiopharmaceutical: sfmnRadiopharmaceutical,
-          dose_rate: String(payload.dose_rate ?? ''),
+          dose_rate: selected.api_code === 'iode131_benin' ? '' : String(payload.dose_rate ?? ''),
           patient_size: String(payload.patient_size_cm ?? ''),
           scenario_adapted_to_the_patient: useScenarioAdapted ? '1' : '0',
           effective_half_life: String(userPeriod ?? 0),
