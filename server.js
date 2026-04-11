@@ -341,8 +341,12 @@ async function calculateSfmn(payload) {
     const n = Number(m[1].replace(',', '.'));
     return Number.isFinite(n) ? n : null;
   };
-  const buildFormBody = (csrfName) => {
+  const buildFormBody = (csrfName, hiddenFields = {}) => {
     const form = new URLSearchParams();
+    Object.entries(hiddenFields).forEach(([name, value]) => {
+      if (!name) return;
+      form.set(name, value ?? '');
+    });
     form.set('jform[radiopharmaceutical]', sfmnRadiopharmaceutical);
     form.set('jform[dose_rate]', String(payload.dose_rate ?? ''));
     form.set('jform[patient_size]', String(payload.patient_size_cm ?? ''));
@@ -380,7 +384,8 @@ async function calculateSfmn(payload) {
           pathology,
           measured_estimated: measuredEstimated,
           dysthyroidism_iodine_uptake: benignUptake,
-          csrf_name: csrfName
+          csrf_name: csrfName,
+          hidden_forwarded: hiddenFields
         }
       });
     }
@@ -447,7 +452,12 @@ async function calculateSfmn(payload) {
     return { recommendations, rows, effectiveHours, effectiveDays, computedDoseRate, parsedCureCount };
   };
   try {
-    const rootResp = await fetch(sfmnCalculatorUrl, { method: 'GET' });
+    const browserHeaders = {
+      'User-Agent': 'Mozilla/5.0 (compatible; RadioprotectionBot/1.0; +https://example.org)',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8'
+    };
+    const rootResp = await fetch(sfmnCalculatorUrl, { method: 'GET', headers: browserHeaders });
     if (debugEnabled) {
       sfmnDebug.requests.push({
         step: 'sfmn_root_get',
@@ -477,6 +487,8 @@ async function calculateSfmn(payload) {
     const optionMatches = [...rootHtml.matchAll(/<option[^>]*value="([^"]*)"[^>]*>([\s\S]*?)<\/option>/gi)]
       .map((m) => ({ value: decodeHtml(m[1]), text: decodeHtml(m[2]) }))
       .filter((o) => o.value && o.value !== '—' && o.value !== '-');
+    const hiddenMatches = [...rootHtml.matchAll(/<input[^>]*type="hidden"[^>]*name="([^"]+)"[^>]*value="([^"]*)"[^>]*>/gi)];
+    const hiddenFields = Object.fromEntries(hiddenMatches.map((m) => [decodeHtml(m[1]), decodeHtml(m[2])]));
     if (optionMatches.length) {
       const hasMappedValue = optionMatches.some((o) => o.value === sfmnRadiopharmaceutical);
       if (!hasMappedValue) {
@@ -491,6 +503,7 @@ async function calculateSfmn(payload) {
       sfmnDebug.parsing.radiopharmaceutical_options = optionMatches;
       sfmnDebug.parsing.selected_radiopharmaceutical = sfmnRadiopharmaceutical;
       sfmnDebug.parsing.cookies_forwarded = cookieHeader ? cookieHeader.split('; ').map((c) => c.split('=')[0]) : [];
+      sfmnDebug.parsing.hidden_fields = hiddenFields;
     }
     if (optionMatches.length && !optionMatches.some((o) => o.value === sfmnRadiopharmaceutical)) {
       return wrapResult({
@@ -518,13 +531,15 @@ async function calculateSfmn(payload) {
       });
     }
     const actionUrl = new URL(actionMatch[1], sfmnCalculatorUrl).toString();
-    const formBody = buildFormBody(csrfMatch[1]);
+    const formBody = buildFormBody(csrfMatch[1], hiddenFields);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
     const resp = await fetch(actionUrl, {
       method: 'POST',
       headers: {
+        ...browserHeaders,
         'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: sfmnCalculatorUrl,
         ...(cookieHeader ? { Cookie: cookieHeader } : {})
       },
       body: formBody,
