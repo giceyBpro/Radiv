@@ -80,6 +80,8 @@
 
     <section class="block">
       <h2>Résultat du calcul</h2>
+      <div id="methodText" style="margin-bottom:2mm;">-</div>
+      <div id="referenceText" style="margin-bottom:4mm;">-</div>
       <div id="effectiveText" style="margin-bottom:4mm;">-</div>
       <table>
         <thead>
@@ -128,7 +130,7 @@
 
       const form = payload.form || {};
       const selectedApiCode = payload.result?.selected?.api_code || '';
-      const cureIsotopeSet = new Set(['radium223', 'psma_177lu', 'lutetium177_net']);
+      const cureIsotopeSet = new Set(['psma_177lu', 'lutetium177_net']);
       const shouldShowCureCount = cureIsotopeSet.has(selectedApiCode);
       const inputEntries = [
         ['Radiopharmaceutique', form.isotope_label],
@@ -149,6 +151,12 @@
         : '<div class="muted">Aucune donnée de saisie à afficher.</div>';
 
       const result = payload.result || {};
+      const calculationMode = result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local';
+      const sourceRef = result.calculation_mode === 'sfmn'
+        ? (result.sfmn_source?.url || 'https://www.sfmn.org/')
+        : 'https://www.cnp-mn.fr/reco_riv/';
+      document.getElementById('methodText').innerHTML = `<strong>Méthode de calcul :</strong> ${safe(calculationMode)}`;
+      document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
       const effDays = result.effective_days ?? '-';
       const effHours = result.effective_hours ?? '-';
       document.getElementById('effectiveText').innerHTML = `<strong>Période effective :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;

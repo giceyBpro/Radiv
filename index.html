@@ -437,6 +437,25 @@
       background: #1f1f1f;
       color: #fff;
     }
+    .mode-selector {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .mode-selector button {
+      border: 2px solid #7a7a7a;
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .mode-selector button.active {
+      border-color: #0a5d2a;
+      background: #e7ffe7;
+      box-shadow: inset 0 0 0 2px #7dcf7d;
+    }
 
     @media (max-width: 900px) {
       .mandatory-body {
@@ -483,8 +502,8 @@
 
     <div class="source-box">
       <strong>Source :</strong>
-      <a class="inline-link" href="https://www.cnp-mn.fr/reco_riv/" target="_blank" rel="noopener noreferrer">https://www.cnp-mn.fr/reco_riv/</a>
-      — version 1.4.5 du 30/01/2024
+      <a class="inline-link" id="sourceLink" href="https://www.cnp-mn.fr/reco_riv/" target="_blank" rel="noopener noreferrer">https://www.cnp-mn.fr/reco_riv/</a>
+      <span id="sourceMeta">— version 1.4.5 du 30/01/2024</span>
     </div>
 
     <div class="quick-actions no-print">
@@ -500,10 +519,10 @@
           <div class="field-stack">
             <div>
               <div class="field-title">Mode de calcul</div>
-              <select id="calculationMode">
-               <option value="sfmn">Calcul SFMN</option>
-               <option value="local" selected>Calcul local</option> 
-              </select>
+              <div id="calculationModeSelector" class="mode-selector" aria-label="Mode de calcul">
+                <button type="button" data-mode="sfmn">Calcul SFMN</button>
+                <button type="button" data-mode="local">Calcul local</button>
+              </div>
             </div>
             <div>
               <div class="field-title">Radiopharmaceutique (menu déroulant)</div>
@@ -722,6 +741,7 @@
     let isotopes = [];
     let cureOptionsByIsotope = {};
     let selectedCureCount = 1;
+    let selectedCalculationMode = 'sfmn';
     let lastResult = null;
     const audienceMeta = {
       conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
@@ -897,7 +917,7 @@
         renderCureSelector(isotopeCode);
       }
       return {
-        calculation_mode: $('calculationMode').value || 'local',
+        calculation_mode: selectedCalculationMode || 'sfmn',
         isotope_code: isotopeCode,
         dose_rate: getNumberOrNull('doseRate'),
         patient_size_cm: getNumberOrNull('patientSize'),
@@ -926,9 +946,8 @@
     function renderFromResult(result) {
       lastResult = result;
       const selected = result.selected;
-      if ($('calculationMode')) {
-        $('calculationMode').value = result.calculation_mode || $('calculationMode').value || 'local';
-      }
+      selectedCalculationMode = result.calculation_mode || selectedCalculationMode || 'sfmn';
+      renderCalculationModeSelector();
       const isBenign = selected.api_code === 'iode131_benin';
       toggleBenignRows(isBenign);
       applyRequiredHighlight(selected.api_code);
@@ -948,6 +967,7 @@
       $('sizePreview').textContent = formatNumber(Number($('patientSize').value), 0);
       $('referenceText').textContent = selected.reference || '-';
       $('remarkText').textContent = selected.remark || '-';
+      renderSourceForMode(result);
       selectedCureCount = Number(result.cure_count || selectedCureCount || 1);
       renderCureSelector(selected.api_code);
 
@@ -991,7 +1011,7 @@
           errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
         }
       } else {
-        const isSfmnMode = (result.calculation_mode || $('calculationMode').value) === 'sfmn';
+        const isSfmnMode = (result.calculation_mode || selectedCalculationMode) === 'sfmn';
         if (isSfmnMode && (result.computed_dose_rate === null || result.computed_dose_rate === undefined)) {
           errorBox.style.display = 'block';
           errorBox.innerHTML = '<strong>Information :</strong><br>- Calcul SFMN reçu sans débit explicite ; la valeur saisie est affichée.';
@@ -1027,6 +1047,27 @@
       `).join('');
     }
 
+    function renderCalculationModeSelector() {
+      $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.mode === selectedCalculationMode);
+      });
+    }
+
+    function renderSourceForMode(result = null) {
+      const link = $('sourceLink');
+      const meta = $('sourceMeta');
+      if (selectedCalculationMode === 'sfmn') {
+        const sfmnUrl = result?.sfmn_source?.url || 'https://www.sfmn.org/';
+        link.href = sfmnUrl;
+        link.textContent = sfmnUrl;
+        meta.textContent = '— source SFMN utilisée pour le calcul';
+        return;
+      }
+      link.href = 'https://www.cnp-mn.fr/reco_riv/';
+      link.textContent = 'https://www.cnp-mn.fr/reco_riv/';
+      meta.textContent = '— version 1.4.5 du 30/01/2024';
+    }
+
     async function renderResults() {
       try {
         const result = await fetchCalculation(buildPayload());
@@ -1038,8 +1079,17 @@
     }
 
     function bindEvents() {
-      ['calculationMode', 'isotope', 'doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
+      ['isotope', 'doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
         .forEach((id) => $(id).addEventListener('input', renderResults));
+
+      $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectedCalculationMode = button.dataset.mode || 'sfmn';
+          renderCalculationModeSelector();
+          renderSourceForMode();
+          renderResults();
+        });
+      });
 
       $('cureSelector').querySelectorAll('button[data-cure]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -1068,9 +1118,9 @@
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
-        if (config.default_calculation_mode && $('calculationMode')) {
-          $('calculationMode').value = config.default_calculation_mode;
-        }
+        selectedCalculationMode = config.default_calculation_mode || 'sfmn';
+        renderCalculationModeSelector();
+        renderSourceForMode();
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
         applyRequiredHighlight($('isotope').value);
         bindEvents();

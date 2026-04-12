@@ -72,7 +72,7 @@ const scenarios = [
   { audience_code: 'collegues_travail', label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: false }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
 ];
 const cureOptionsByIsotope = {
-  radium223: [1, 4, 6],
+  radium223: [1],
   psma_177lu: [1, 4, 6],
   lutetium177_net: [1, 4]
 };
@@ -945,7 +945,7 @@ const server = http.createServer((req, res) => {
       default_isotope_code: 'iode131_25_fixation',
       cure_options_by_isotope: cureOptionsByIsotope,
       calculation_modes: ['local', 'sfmn'],
-      default_calculation_mode: 'local'
+      default_calculation_mode: 'sfmn'
     });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {
@@ -957,7 +957,7 @@ const server = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
-        const calculationMode = String(payload.calculation_mode || 'local').toLowerCase();
+        const calculationMode = String(payload.calculation_mode || 'sfmn').toLowerCase();
         const result = calculationMode === 'sfmn'
           ? await calculateSfmn(payload)
           : calculate(payload);
