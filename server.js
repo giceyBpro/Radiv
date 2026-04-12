@@ -72,7 +72,6 @@ const scenarios = [
   { audience_code: 'collegues_travail', label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: false }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
 ];
 const cureOptionsByIsotope = {
-  radium223: [1],
   psma_177lu: [1, 4, 6],
   lutetium177_net: [1, 4]
 };
