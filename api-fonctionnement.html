@@ -47,7 +47,7 @@ user_limit
 benign_activity_mbq
 benign_fixation_pct
 cure_count
-</code></pre>
+sfmn_debug</code></pre>
 
     <p>
       Les champs à <code>null</code> peuvent être omis du payload.
@@ -56,7 +56,20 @@ cure_count
     <p>
       <code>calculation_mode</code> accepte actuellement <code>local</code> (mode par défaut) et <code>sfmn</code>.
     </p>
-    
+    <p>
+      Pour diagnostiquer le mode <code>sfmn</code>, vous pouvez envoyer <code>sfmn_debug=true</code> :
+      l’API renvoie alors une section <code>sfmn_debug</code> (requêtes envoyées, statuts HTTP, page réponse HTML complète et résumé du parsing).
+    </p>
+    <p>
+      Dans <code>sfmn_debug.parsing</code> :
+      <code>form_page_*</code> correspond à la page formulaire initiale,
+      et <code>response_*</code> / <code>result_*</code> correspond à la page de réponse après <code>task=process</code>.
+    </p>
+    <p>
+      En mode <code>sfmn</code>, le backend soumet les données au formulaire SFMN distant (URL configurée côté serveur), parse la page de résultats HTML puis renvoie les recommandations dans le même format API.
+    </p>
+
+
     <h2>Cas particulier : <code>iode131_benin</code></h2>
     <p>
       Pour <code>isotope_code=iode131_benin</code>, les données attendues ne sont pas les mêmes :

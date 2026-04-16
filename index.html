@@ -743,6 +743,7 @@
     let selectedCureCount = 1;
     let selectedCalculationMode = 'sfmn';
     let lastResult = null;
+    let latestRequestId = 0;
     const audienceMeta = {
       conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
       conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
@@ -932,6 +933,22 @@
       };
     }
 
+    function hasAllRequiredFields(isotopeCode) {
+      return getRequiredFieldIds(isotopeCode).every((id) => {
+        const value = getNumberOrNull(id);
+        return value !== null && value > 0;
+      });
+    }
+
+    function clearDisplayedResults() {
+      lastResult = null;
+      $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
+      $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
+      $('resultsBody').innerHTML = '';
+      $('errorBox').style.display = 'none';
+      $('errorBox').textContent = '';
+    }
+
     function buildUserScenarioCondition() {
       const h1 = getNumberOrNull('userHours1');
       const d1 = getNumberOrNull('userDistance1');
@@ -1057,7 +1074,7 @@
       const link = $('sourceLink');
       const meta = $('sourceMeta');
       if (selectedCalculationMode === 'sfmn') {
-        const sfmnUrl = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142';
+        const sfmnUrl = result?.sfmn_source?.url || 'https://www.sfmn.org/';
         link.href = sfmnUrl;
         link.textContent = sfmnUrl;
         meta.textContent = '— source SFMN utilisée pour le calcul';
@@ -1069,10 +1086,21 @@
     }
 
     async function renderResults() {
+      const isotopeCode = $('isotope').value;
+      if (!hasAllRequiredFields(isotopeCode)) {
+        latestRequestId += 1;
+        clearDisplayedResults();
+        return;
+      }
+
+      const requestId = ++latestRequestId;
+      clearDisplayedResults();
       try {
         const result = await fetchCalculation(buildPayload());
+        if (requestId !== latestRequestId) return;
         renderFromResult(result);
       } catch (error) {
+        if (requestId !== latestRequestId) return;
         $('errorBox').style.display = 'block';
         $('errorBox').innerHTML = `<strong>Erreur réseau/API :</strong><br>- ${error.message}`;
       }
