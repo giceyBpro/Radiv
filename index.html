@@ -960,6 +960,21 @@
       return audienceMeta.scenario_utilisateur.condition;
     }
 
+    function syncUiForSelectedIsotope() {
+      const selectedCode = $('isotope').value;
+      const selected = isotopes.find((iso) => iso.api_code === selectedCode);
+      const isBenign = selectedCode === 'iode131_benin';
+      toggleBenignRows(isBenign);
+      applyRequiredHighlight(selectedCode);
+      $('clinicalSituation').textContent = selected?.situation || '-';
+      $('selectedIsotopeText').textContent = selected?.label || '-';
+      $('referenceText').textContent = selected?.reference || '-';
+      $('remarkText').textContent = selected?.remark || '-';
+      $('effectivePeriodLabel').textContent = selectedCode === 'non_defini'
+        ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
+        : 'Période effective (j) imposée par l’utilisateur (laisser vide sinon)';
+    }
+
     function renderFromResult(result) {
       lastResult = result;
       const selected = result.selected;
@@ -1107,8 +1122,13 @@
     }
 
     function bindEvents() {
-      ['isotope', 'doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
+      ['doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
         .forEach((id) => $(id).addEventListener('input', renderResults));
+
+      $('isotope').addEventListener('input', () => {
+        syncUiForSelectedIsotope();
+        renderResults();
+      });
 
       $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -1150,7 +1170,7 @@
         renderCalculationModeSelector();
         renderSourceForMode();
         populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
-        applyRequiredHighlight($('isotope').value);
+        syncUiForSelectedIsotope();
         bindEvents();
       } catch (error) {
         $('errorBox').style.display = 'block';
