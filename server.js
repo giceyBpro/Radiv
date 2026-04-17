@@ -56,6 +56,7 @@ const isotopes = [
   { api_code: 'synovectomie_186re', label: 'Synovectomie-186Re', periodHours: 3.7 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
   { api_code: 'synovectomie_169er', label: 'Synovectomie-169Er', periodHours: 9.4 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
   { api_code: 'microspheres_90y', label: 'Microsphères-90Y', periodHours: 64.2, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'microspheres_166ho', label: 'Microsphères-166Ho', periodHours: 26.8, reference: 'Demi-vie physique du Holmium-166', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lipiodol_131i', label: 'Lipiodol-131I', periodHours: 8.04 * 24, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lutetium177_net', label: 'Lutétium-177 NET', periodHours: 100, reference: 'Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019', remark: 'Demi vie effective', situation: '' },
   { api_code: 'mibg_131i', label: 'MIBG-131I', periodHours: 10.6, reference: 'Nucl. Med. Commun. 16 (1995) 767–772', remark: 'un peu plus longue chez l’adulte que chez l’enfant', situation: '' },
@@ -273,6 +274,7 @@ async function calculateSfmn(payload) {
     radium223: 'Radium-223',
     lutetium177_net: payload.cure_count === 4 ? 'NET 177Lu 4 cures' : 'NET 177Lu',
     microspheres_90y: 'Microspheres-90Y',
+    microspheres_166ho: 'Microsphères-166Ho',
     lipiodol_131i: 'Lipiodol-131I',
     mibg_131i: 'MIBG 131I',
     synovectomie_90y: 'Synovectomy-90Y',
@@ -592,7 +594,7 @@ async function calculateSfmn(payload) {
       errors: [],
       recommendations_days: parsed.recommendations,
       sfmn_source: {
-        url: actionUrl,
+        url: sfmnCalculatorUrl,
         parsed_rows: parsed.rows
       }
     });
@@ -945,7 +947,8 @@ const server = http.createServer((req, res) => {
       default_isotope_code: 'iode131_25_fixation',
       cure_options_by_isotope: cureOptionsByIsotope,
       calculation_modes: ['local', 'sfmn'],
-      default_calculation_mode: 'sfmn'
+      default_calculation_mode: 'sfmn',
+      sfmn_calculator_url: sfmnCalculatorUrl
     });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {

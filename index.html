@@ -543,6 +543,31 @@
               <div class="field-title">Taille du patient (cm)</div>
               <input id="patientSize" type="number" min="1" step="1" value="">
             </div>
+            <div id="benignInlineBlock" hidden>
+              <div class="note" style="margin-top: 0;">
+                Champs spécifiques Iode-131-Bénin (calcul automatique du débit de dose à 1 m).
+              </div>
+              <div class="field-title">Activité administrée</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <div class="small" style="margin-bottom:4px;">MBq</div>
+                  <input id="benignActivityMbq" type="number" min="0" step="1" placeholder="vide">
+                </div>
+                <div>
+                  <div class="small" style="margin-bottom:4px;">mCi</div>
+                  <input id="benignActivityMci" type="number" min="0" step="1" placeholder="vide">
+                </div>
+              </div>
+              <div class="field-title" style="margin-top:8px;">Taux de fixation (%)</div>
+              <div class="benign-fixation-row">
+                <input id="benignFixation" type="number" min="0" step="0.01" placeholder="vide">
+                <div class="benign-presets">
+                  <button type="button" data-benign-fixation="15">Nodule chaud</button>
+                  <button type="button" data-benign-fixation="25">Goître multinodulaire</button>
+                  <button type="button" data-benign-fixation="30">Maladie de Basedow</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="situation-box" id="clinicalSituation">-</div>
@@ -559,41 +584,6 @@
             <div>
               <div class="field-title">Taille</div>
               <div class="opt-preview"><a class="fake-link" id="sizePreview">-</a></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="benignSection" hidden>
-      <div class="section-title" style="background: #f2d34f;">Paramètres spécifiques Iode-131-Bénin</div>
-      <div style="padding: 12px;">
-        <div class="note" style="margin-top: 0;">
-          Ces champs ne s’affichent que si <strong>Iode-131-Bénin</strong> est sélectionné. Ils servent à calculer automatiquement le débit de dose à 1 m, conformément au tableur.
-        </div>
-        <div class="field-stack" style="margin-top: 10px;">
-          <div>
-            <div class="field-title">Activité administrée</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-              <div>
-                <div class="small" style="margin-bottom:4px;">MBq</div>
-                <input id="benignActivityMbq" type="number" min="0" step="1" placeholder="vide">
-              </div>
-              <div>
-                <div class="small" style="margin-bottom:4px;">mCi</div>
-                <input id="benignActivityMci" type="number" min="0" step="1" placeholder="vide">
-              </div>
-            </div>
-          </div>
-          <div>
-            <div class="field-title">Taux de fixation (%)</div>
-            <div class="benign-fixation-row">
-              <input id="benignFixation" type="number" min="0" step="0.01" placeholder="vide">
-              <div class="benign-presets">
-                <button type="button" data-benign-fixation="15">Nodule chaud</button>
-                <button type="button" data-benign-fixation="25">Goître multinodulaire</button>
-                <button type="button" data-benign-fixation="30">Maladie de Basedow</button>
-              </div>
             </div>
           </div>
         </div>
@@ -742,6 +732,7 @@
     let cureOptionsByIsotope = {};
     let selectedCureCount = 1;
     let selectedCalculationMode = 'sfmn';
+    let sfmnCalculatorUrl = '';
     let lastResult = null;
     let latestRequestId = 0;
     const audienceMeta = {
@@ -833,12 +824,19 @@
     }
 
     function populateIsotopes(defaultIsotopeCode) {
+      const visibleIsotopes = selectedCalculationMode === 'sfmn'
+        ? isotopes.filter((iso) => iso.api_code !== 'non_defini')
+        : isotopes;
+      const fallbackCode = visibleIsotopes[0]?.api_code || '';
+      const preferredCode = visibleIsotopes.some((iso) => iso.api_code === defaultIsotopeCode)
+        ? defaultIsotopeCode
+        : fallbackCode;
       $('isotope').innerHTML = '';
-      isotopes.forEach((iso) => {
+      visibleIsotopes.forEach((iso) => {
         const option = document.createElement('option');
         option.value = iso.api_code;
         option.textContent = iso.label;
-        if (iso.api_code === defaultIsotopeCode) option.selected = true;
+        if (iso.api_code === preferredCode) option.selected = true;
         $('isotope').appendChild(option);
       });
     }
@@ -860,7 +858,7 @@
     }
 
     function toggleBenignRows(isBenign) {
-      $('benignSection').hidden = !isBenign;
+      $('benignInlineBlock').hidden = !isBenign;
       $('doseRate').readOnly = isBenign;
       $('doseRate').placeholder = isBenign ? 'calculé automatiquement' : '';
       $('doseRateHelp').textContent = isBenign
@@ -1089,7 +1087,7 @@
       const link = $('sourceLink');
       const meta = $('sourceMeta');
       if (selectedCalculationMode === 'sfmn') {
-        const sfmnUrl = result?.sfmn_source?.url || 'https://www.sfmn.org/';
+        const sfmnUrl = result?.sfmn_source?.url || sfmnCalculatorUrl || 'https://www.sfmn.org/';
         link.href = sfmnUrl;
         link.textContent = sfmnUrl;
         meta.textContent = '— source SFMN utilisée pour le calcul';
@@ -1134,6 +1132,8 @@
         button.addEventListener('click', () => {
           selectedCalculationMode = button.dataset.mode || 'sfmn';
           renderCalculationModeSelector();
+          populateIsotopes($('isotope').value);
+          syncUiForSelectedIsotope();
           renderSourceForMode();
           renderResults();
         });
@@ -1166,6 +1166,7 @@
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
+        sfmnCalculatorUrl = config.sfmn_calculator_url || '';
         selectedCalculationMode = config.default_calculation_mode || 'sfmn';
         renderCalculationModeSelector();
         renderSourceForMode();
