@@ -75,14 +75,13 @@
 
     .mandatory-body {
       display: grid;
-      grid-template-columns: 1.1fr 0.55fr 0.65fr;
+      grid-template-columns: 1fr;
+      background: var(--yellow);
     }
 
     .mandatory-body > div {
       padding: 10px 12px;
     }
-
-    .mandatory-body .values { background: var(--yellow); }
 
     .field-stack {
       display: grid;
@@ -93,15 +92,6 @@
       font-weight: 700;
       font-size: 15px;
       margin-bottom: 4px;
-    }
-
-    .situation-box {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-weight: 700;
-      padding: 10px 8px;
     }
 
     .pair {
@@ -513,7 +503,7 @@
     </div>
 
     <section class="section mandatory">
-      <div class="section-title">Éléments obligatoires à préciser (en jaune)</div>
+      <div class="section-title">Éléments obligatoires à préciser</div>
       <div class="mandatory-body">
         <div>
           <div class="field-stack">
@@ -570,23 +560,6 @@
             </div>
           </div>
         </div>
-        <div class="situation-box" id="clinicalSituation">-</div>
-        <div class="values">
-          <div class="field-stack">
-            <div>
-              <div class="field-title">Radiopharmaceutique retenu</div>
-              <div class="opt-preview"><a class="fake-link" id="selectedIsotopeText">-</a></div>
-            </div>
-            <div>
-              <div class="field-title">Débit</div>
-              <div class="opt-preview"><a class="fake-link" id="dosePreview">-</a></div>
-            </div>
-            <div>
-              <div class="field-title">Taille</div>
-              <div class="opt-preview"><a class="fake-link" id="sizePreview">-</a></div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -595,8 +568,7 @@
         <summary>
           <span class="summary-left">
             <span>Éléments optionnels : pour calculer un scénario d'exposition personnalisé</span>
-            <span class="summary-caption">Bloc replié par défaut. Structure reprise du tableur Excel : durée à la distance X, distance X, durée à 1 m et limite dosimétrique.</span>
-          </span>
+            </span>
           <span class="summary-arrow">▾</span>
         </summary>
 
@@ -824,6 +796,7 @@
     }
 
     function populateIsotopes(defaultIsotopeCode) {
+      const labelWithSituationCodes = new Set(['iode131_0_fixation', 'iode131_5_fixation', 'iode131_25_fixation']);
       const visibleIsotopes = selectedCalculationMode === 'sfmn'
         ? isotopes.filter((iso) => iso.api_code !== 'non_defini')
         : isotopes;
@@ -835,7 +808,9 @@
       visibleIsotopes.forEach((iso) => {
         const option = document.createElement('option');
         option.value = iso.api_code;
-        option.textContent = iso.label;
+        option.textContent = labelWithSituationCodes.has(iso.api_code) && iso.situation
+          ? `${iso.label} (${iso.situation})`
+          : iso.label;
         if (iso.api_code === preferredCode) option.selected = true;
         $('isotope').appendChild(option);
       });
@@ -964,8 +939,6 @@
       const isBenign = selectedCode === 'iode131_benin';
       toggleBenignRows(isBenign);
       applyRequiredHighlight(selectedCode);
-      $('clinicalSituation').textContent = selected?.situation || '-';
-      $('selectedIsotopeText').textContent = selected?.label || '-';
       $('referenceText').textContent = selected?.reference || '-';
       $('remarkText').textContent = selected?.remark || '-';
       $('effectivePeriodLabel').textContent = selectedCode === 'non_defini'
@@ -981,12 +954,8 @@
       const isBenign = selected.api_code === 'iode131_benin';
       toggleBenignRows(isBenign);
       applyRequiredHighlight(selected.api_code);
-
-      $('clinicalSituation').textContent = selected.situation || '-';
-      $('selectedIsotopeText').textContent = selected.label;
       const fallbackDoseRate = selected.api_code === 'iode131_benin' ? null : getNumberOrNull('doseRate');
       const displayDoseRate = result.computed_dose_rate ?? fallbackDoseRate;
-      $('dosePreview').textContent = formatNumber(displayDoseRate, 2);
       if (isBenign) {
         if (result.computed_dose_rate === null || result.computed_dose_rate === undefined) {
           $('doseRate').value = $('doseRate').value || '';
@@ -994,7 +963,6 @@
           $('doseRate').value = String(Number(result.computed_dose_rate.toFixed(4)));
         }
       }
-      $('sizePreview').textContent = formatNumber(Number($('patientSize').value), 0);
       $('referenceText').textContent = selected.reference || '-';
       $('remarkText').textContent = selected.remark || '-';
       renderSourceForMode(result);
@@ -1184,7 +1152,7 @@
       const payload = {
         generated_at: new Date().toISOString(),
         form: {
-          isotope_label: $('selectedIsotopeText').textContent,
+          isotope_label: $('isotope').selectedOptions[0]?.textContent || '',
           dose_rate: $('doseRate').value,
           patient_size_cm: $('patientSize').value,
           benign_activity_mbq: $('benignActivityMbq').value,
