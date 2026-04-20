@@ -515,6 +515,7 @@
 
     <div class="quick-actions no-print">
       <button type="button" class="print-btn" id="printBtn">Ouvrir la version imprimable (A4)</button>
+      <button type="button" class="print-btn" id="explainBtn">Ouvrir la version explicative</button>
       <a class="inline-link" href="contact.html"><strong>Contact</strong></a>
       <a class="inline-link" href="api-fonctionnement.html"><strong>Info API</strong></a>
     </div>
@@ -1198,7 +1199,31 @@
       window.open('print.html', '_blank');
     }
 
+    function openExplanatoryVersion() {
+      if (!lastResult) return;
+      const payload = {
+        generated_at: new Date().toISOString(),
+        form: {
+          isotope_label: $('isotope').selectedOptions[0]?.textContent || '',
+          dose_rate: $('doseRate').value,
+          patient_size_cm: $('patientSize').value,
+          benign_activity_mbq: $('benignActivityMbq').value,
+          benign_fixation_pct: $('benignFixation').value,
+          user_period_days: $('userPeriodDays').value,
+          user_hours_1: $('userHours1').value,
+          user_distance_1: $('userDistance1').value,
+          user_hours_2: $('userHours2').value,
+          user_limit: $('userLimit').value,
+          cure_count: selectedCureCount
+        },
+        result: lastResult
+      };
+      localStorage.setItem('radioprotection_explain_payload', JSON.stringify(payload));
+      window.open('explain.html', '_blank');
+    }
+
     $('printBtn').addEventListener('click', openPrintableVersion);
+    $('explainBtn').addEventListener('click', openExplanatoryVersion);
 
     bootstrap().catch((error) => {
       $('errorBox').style.display = 'block';
