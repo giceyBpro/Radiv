@@ -262,6 +262,23 @@
       display: block;
       margin-bottom: 4px;
     }
+    .opt-cell.opt-period {
+      background: #fff6cc;
+      border-top: 2px solid #d2b84f;
+      border-bottom: 2px solid #d2b84f;
+    }
+    .opt-cell.value.opt-period {
+      background: #fff1a8;
+    }
+    .opt-inline-pair {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .opt-inline-pair .small {
+      margin-bottom: 4px;
+    }
 
     .effective-box {
       margin-top: 12px;
@@ -488,7 +505,7 @@
   <main class="page">
     <h1><span id="siteNameBanner">[Nom du site]</span> : Calcul de durée de restriction des contacts<br>après radiothérapie interne vectorisée&nbsp;RIV</h1>
     <div class="subtitle">Établi le <span id="todayLabel"></span></div>
-    <div class="subtitle">Adaptation web du travail du groupe radioprotection de la  SFMN.</div>
+    <div class="subtitle">Adaptation web d’après le tableur SFMN / groupe radioprotection.</div>
 
     <div class="source-box">
       <strong>Source :</strong>
@@ -568,7 +585,8 @@
         <summary>
           <span class="summary-left">
             <span>Éléments optionnels : pour calculer un scénario d'exposition personnalisé</span>
-            </span>
+            <span class="summary-caption">Bloc replié par défaut. Structure reprise du tableur Excel : durée à la distance X, distance X, durée à 1 m et limite dosimétrique.</span>
+          </span>
           <span class="summary-arrow">▾</span>
         </summary>
 
@@ -582,38 +600,36 @@
             <div class="optional-col-header value">Valeur</div>
             <div class="optional-col-header repere">Repère / usage</div>
 
-            <div class="opt-cell">
+            <div class="opt-cell opt-period">
               <div>
                 <strong class="block" id="effectivePeriodLabel">Période effective (j) imposée par l'utilisateur (laisser vide sinon)</strong>
                 À remplir uniquement si vous souhaitez imposer manuellement une période effective différente de celle liée au radiopharmaceutique choisi.
               </div>
             </div>
-            <div class="opt-cell value">
+            <div class="opt-cell value opt-period">
               <input id="userPeriodDays" class="opt-row-value" type="number" min="0" step="0.01" placeholder="à renseigner si besoin">
             </div>
-            <div class="opt-cell repere">Laisser vide dans la plupart des cas.</div>
+            <div class="opt-cell repere opt-period">Laisser vide dans la plupart des cas.</div>
 
             <div class="opt-cell">
               <div>
-                <strong class="block">Scénario utilisateur (éventuel) — Durée à la distance X (h)</strong>
-                Première durée d’exposition personnalisée, à associer à la distance X ci-dessous.
+                <strong class="block">Scénario utilisateur (éventuel) — Étape 1 : Temps à Xm + Distance X</strong>
+                Renseignez ensemble la durée à la distance X et la distance correspondante.
               </div>
             </div>
             <div class="opt-cell value">
-              <input id="userHours1" class="opt-row-value" type="number" min="0" step="0.1" placeholder="ex. 8">
-            </div>
-            <div class="opt-cell repere">Correspond à la ligne « Durée à la distance X » du tableur.</div>
-
-            <div class="opt-cell">
-              <div>
-                <strong class="block">Scénario utilisateur (éventuel) — Distance X (m)</strong>
-                Distance associée à la durée précédente.
+              <div class="opt-inline-pair">
+                <div>
+                  <div class="small">Temps à Xm (h)</div>
+                  <input id="userHours1" class="opt-row-value" type="number" min="0" step="0.1" placeholder="ex. 8">
+                </div>
+                <div>
+                  <div class="small">Distance X (m)</div>
+                  <input id="userDistance1" class="opt-row-value" type="number" min="0.01" step="0.01" placeholder="ex. 0,3">
+                </div>
               </div>
             </div>
-            <div class="opt-cell value">
-              <input id="userDistance1" class="opt-row-value" type="number" min="0.01" step="0.01" placeholder="ex. 0,3">
-            </div>
-            <div class="opt-cell repere">Correspond à la colonne « Distance (m) » pour la durée à distance X.</div>
+            <div class="opt-cell repere">Correspond aux lignes « Durée à la distance X » et « Distance (m) » du tableur.</div>
 
             <div class="opt-cell">
               <div>
@@ -640,6 +656,12 @@
         </div>
       </details>
     </section>
+
+    <div class="note">
+      <strong>Utilisation recommandée :</strong>
+      si vous voulez uniquement obtenir les durées de restriction pour les scénarios standards, ne modifiez pas les champs bleus.
+      Modifiez-les seulement pour créer un scénario utilisateur personnalisé avec vos propres durées, distances et limite dosimétrique.
+    </div>
 
     <div class="error" id="errorBox"></div>
 
@@ -927,6 +949,14 @@
       return audienceMeta.scenario_utilisateur.condition;
     }
 
+    function hasUserScenarioDefined() {
+      const h1 = getNumberOrNull('userHours1');
+      const d1 = getNumberOrNull('userDistance1');
+      const h2 = getNumberOrNull('userHours2');
+      const limit = getNumberOrNull('userLimit');
+      return h1 !== null && d1 !== null && h2 !== null && limit !== null;
+    }
+
     function syncUiForSelectedIsotope() {
       const selectedCode = $('isotope').value;
       const selected = isotopes.find((iso) => iso.api_code === selectedCode);
@@ -1029,8 +1059,11 @@
               : (audienceMeta[audienceCode]?.condition || '-'),
             value
           }));
+      const filteredRows = hasUserScenarioDefined()
+        ? displayRows
+        : displayRows.filter((row) => row.audience_code !== 'scenario_utilisateur');
 
-      $('resultsBody').innerHTML = displayRows.map((row) => `
+      $('resultsBody').innerHTML = filteredRows.map((row) => `
         <tr>
           <td class="scenario">${row.label}</td>
           <td class="value">${row.value === null ? '-' : row.value}</td>
@@ -1086,6 +1119,7 @@
         .forEach((id) => $(id).addEventListener('input', renderResults));
 
       $('isotope').addEventListener('input', () => {
+        $('userPeriodDays').value = '';
         syncUiForSelectedIsotope();
         renderResults();
       });
