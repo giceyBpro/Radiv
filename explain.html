@@ -67,6 +67,21 @@
       return `${n} jour${n > 1 ? 's' : ''}`;
     }
 
+    function buildGuidance(audienceCode, duration) {
+      const withDuration = (text) => duration ? `${text} Pendant ${duration}.` : text;
+      const templates = {
+        conjoint_plus_60: withDuration('Si votre conjoint(e) a plus de 60 ans : évitez les contacts très rapprochés et prolongés ; privilégiez une certaine distance et, si possible, dormez dans une chambre séparée.'),
+        conjoint_moins_60: withDuration('Si votre conjoint(e) a moins de 60 ans : limitez les contacts collés pendant de longues périodes, les câlins prolongés et le sommeil côte à côte.'),
+        conjointe_enceinte: withDuration('Si votre conjointe est enceinte : évitez les contacts rapprochés prolongés, ne dormez pas dans le même lit et gardez une distance raisonnable la plupart du temps.'),
+        transport_commun: withDuration('Trajets : transports urbains courts possibles ; évitez les longs trajets en train/avion en proximité prolongée. Si déplacement long indispensable, augmentez la distance dès que possible.'),
+        enfant_moins_3_ans: withDuration('Enfant de moins de 3 ans : évitez de le garder longtemps sur vous, de le porter longtemps, les câlins prolongés, et de rester collé plusieurs heures. Si possible, confiez les soins rapprochés prolongés à un autre adulte.'),
+        enfant_3_11_ans: withDuration('Enfant de 3 à 11 ans : évitez les jeux très collés, les longs câlins, dormir à côté, et les moments serrés longtemps (ex. film collé sur le canapé). Gardez une distance raisonnable la plupart du temps.'),
+        collegues_travail: withDuration('Au travail : évitez le bureau côte à côte toute la journée, les réunions très longues en proximité et gardez un peu d’espace avec vos collègues.'),
+        scenario_utilisateur: withDuration('Scénario personnalisé : suivez la durée calculée pour votre situation spécifique et conservez autant que possible une distance avec les contacts proches.')
+      };
+      return templates[audienceCode] || withDuration('Respectez une limitation des contacts rapprochés prolongés et gardez une distance raisonnable.');
+    }
+
     function bootstrap() {
       const raw = localStorage.getItem('radioprotection_explain_payload') || sessionStorage.getItem('radioprotection_explain_payload');
       if (!raw) {
@@ -108,9 +123,10 @@
         ? filteredRows.map((row) => {
             const label = row.label || audienceMeta[row.audience_code] || row.audience_code;
             const duration = daysText(row.value);
-            return duration ? `${label} : limiter pendant ${duration}.` : `${label} : suivre la consigne donnée par l’équipe médicale.`;
+            const advice = buildGuidance(row.audience_code, duration);
+            return duration ? `${label} (${duration}) : ${advice}` : `${label} : ${advice}`;
           })
-        : ['Aucune durée calculée automatiquement. Contactez votre équipe soignante pour des consignes personnalisées.'];
+        : ['Aucune durée calculée automatiquement. Contactez votre équipe soignante pour obtenir des consignes personnalisées, simples et adaptées à votre vie quotidienne.'];
 
       document.getElementById('rulesList').innerHTML = readableRules.map((text) => `<li>${text}</li>`).join('');
       const copyText = [
