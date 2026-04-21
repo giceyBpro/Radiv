@@ -552,9 +552,6 @@
               <input id="patientSize" type="number" min="1" step="1" value="">
             </div>
             <div id="benignInlineBlock" hidden>
-              <div class="note" style="margin-top: 0;">
-                Champs spécifiques Iode-131-Bénin (calcul automatique du débit de dose à 1 m).
-              </div>
               <div class="field-title">Activité administrée</div>
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
@@ -658,10 +655,8 @@
       </details>
     </section>
 
-    <div class="note">
-      <strong>Utilisation recommandée :</strong>
-      si vous voulez uniquement obtenir les durées de restriction pour les scénarios standards, ne modifiez pas les champs bleus.
-      Modifiez-les seulement pour créer un scénario utilisateur personnalisé avec vos propres durées, distances et limite dosimétrique.
+    <div class="quick-actions no-print" style="justify-content:center;">
+      <button type="button" class="print-btn" id="calculateBtn">Calculer les durées de restriction</button>
     </div>
 
     <div class="error" id="errorBox"></div>
@@ -772,22 +767,38 @@
       const mbq = getNumberOrNull('benignActivityMbq');
       if (mbq === null) {
         $('benignActivityMci').value = '';
-        renderResults();
+        updateBenignDoseRateField();
+        clearDisplayedResults();
         return;
       }
       $('benignActivityMci').value = String(roundUnit(mbq / 37));
-      renderResults();
+      updateBenignDoseRateField();
+      clearDisplayedResults();
     }
 
     function syncActivityFromMci() {
       const mci = getNumberOrNull('benignActivityMci');
       if (mci === null) {
         $('benignActivityMbq').value = '';
-        renderResults();
+        updateBenignDoseRateField();
+        clearDisplayedResults();
         return;
       }
       $('benignActivityMbq').value = String(roundUnit(mci * 37));
-      renderResults();
+      updateBenignDoseRateField();
+      clearDisplayedResults();
+    }
+
+    function updateBenignDoseRateField() {
+      if ($('isotope').value !== 'iode131_benin') return;
+      const mbq = getNumberOrNull('benignActivityMbq');
+      const fixation = getNumberOrNull('benignFixation');
+      if (!(mbq > 0) || !(fixation > 0)) {
+        $('doseRate').value = '';
+        return;
+      }
+      const computed = (2.2 * mbq * fixation) / 37;
+      $('doseRate').value = String(Number(computed.toFixed(4)));
     }
 
     async function fetchConfig() {
@@ -856,6 +867,9 @@
       $('doseRateHelp').textContent = isBenign
         ? 'Débit calculé automatiquement : 2,2 × activité (MBq) × fixation (%) / 37.'
         : 'Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.';
+      if (isBenign) {
+        updateBenignDoseRateField();
+      }
     }
 
     function getRequiredFieldIds(isotopeCode) {
@@ -1034,14 +1048,7 @@
           errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
         }
       } else {
-        const isSfmnMode = (result.calculation_mode || selectedCalculationMode) === 'sfmn';
-        if (isSfmnMode && (result.computed_dose_rate === null || result.computed_dose_rate === undefined)) {
-          errorBox.style.display = 'block';
-          errorBox.innerHTML = '<strong>Information :</strong><br>- Calcul SFMN reçu sans débit explicite ; la valeur saisie est affichée.';
-          if (sfmnVerbose) {
-            errorBox.innerHTML += `<br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
-          }
-        } else if (sfmnVerbose) {
+        if (sfmnVerbose) {
           errorBox.style.display = 'block';
           errorBox.innerHTML = `<strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
         } else {
@@ -1116,13 +1123,15 @@
     }
 
     function bindEvents() {
-      ['doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit', 'benignActivityMbq', 'benignActivityMci', 'benignFixation']
-        .forEach((id) => $(id).addEventListener('input', renderResults));
+      ['doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit']
+        .forEach((id) => $(id).addEventListener('input', () => {
+          clearDisplayedResults();
+        }));
 
       $('isotope').addEventListener('input', () => {
         $('userPeriodDays').value = '';
         syncUiForSelectedIsotope();
-        renderResults();
+        clearDisplayedResults();
       });
 
       $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
@@ -1132,7 +1141,7 @@
           populateIsotopes($('isotope').value);
           syncUiForSelectedIsotope();
           renderSourceForMode();
-          renderResults();
+          clearDisplayedResults();
         });
       });
 
@@ -1143,18 +1152,24 @@
           if (!allowed.includes(cure)) return;
           selectedCureCount = cure;
           renderCureSelector($('isotope').value);
-          renderResults();
+          clearDisplayedResults();
         });
       });
       document.querySelectorAll('button[data-benign-fixation]').forEach((button) => {
         button.addEventListener('click', () => {
           $('benignFixation').value = button.dataset.benignFixation;
-          renderResults();
+          updateBenignDoseRateField();
+          clearDisplayedResults();
         });
       });
 
+      $('benignFixation').addEventListener('input', () => {
+        updateBenignDoseRateField();
+        clearDisplayedResults();
+      });
       $('benignActivityMbq').addEventListener('input', syncActivityFromMbq);
       $('benignActivityMci').addEventListener('input', syncActivityFromMci);
+      $('calculateBtn').addEventListener('click', renderResults);
     }
 
     async function bootstrap() {
