@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Version explicative patient - Dosimétrie RIV</title>
+  <style>
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f5f7fa; color: #111; }
+    .actions { max-width: 900px; margin: 14px auto 0; padding: 0 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions a, .actions button { border: 1px solid #111; background: #fff; padding: 8px 12px; cursor: pointer; text-decoration: none; color: #111; }
+    .sheet { max-width: 900px; margin: 10px auto 20px; background: #fff; border: 1px solid #ddd; padding: 18px; }
+    h1 { margin: 0 0 10px 0; font-size: 24px; }
+    .lead { background: #fff5c2; border-left: 4px solid #c0a100; padding: 10px 12px; margin-bottom: 14px; }
+    .block { margin-top: 14px; }
+    .block h2 { margin: 0 0 8px 0; font-size: 19px; }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin: 6px 0; line-height: 1.35; }
+    .copy-box { width: 100%; min-height: 220px; border: 1px solid #999; padding: 8px; font-family: inherit; font-size: 14px; }
+    .muted { color: #555; font-size: 13px; margin-top: 8px; }
+    @media print {
+      body { background: #fff; }
+      .actions { display: none; }
+      .sheet { margin: 0; border: none; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions">
+    <a href="/">← Retour à la racine du site</a>
+    <button type="button" id="printNowBtn">Imprimer</button>
+    <button type="button" id="copyTextBtn">Copier le texte</button>
+  </div>
+
+  <main class="sheet">
+    <h1>Consignes simples à suivre à la maison</h1>
+    <div class="lead">
+      Vous n’avez rien à calculer. Suivez simplement les durées ci-dessous. Si vous avez un doute, contactez votre équipe soignante.
+    </div>
+
+    <div class="block">
+      <h2>Votre traitement</h2>
+      <ul id="summaryList"></ul>
+    </div>
+
+    <div class="block">
+      <h2>Durées à respecter</h2>
+      <ul id="rulesList"></ul>
+    </div>
+
+    <div class="block">
+      <h2>Texte prêt à copier-coller</h2>
+      <textarea id="copyBox" class="copy-box" readonly></textarea>
+      <div class="muted">Astuce : vous pouvez aussi sélectionner le texte puis copier manuellement (Ctrl/Cmd + C).</div>
+    </div>
+  </main>
+
+  <script>
+    function safe(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      return String(value);
+    }
+
+    function daysText(value) {
+      if (value === null || value === undefined || value === '' || Number.isNaN(Number(value))) return null;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return `${n} jour${n > 1 ? 's' : ''}`;
+    }
+
+    function buildGuidance(audienceCode, duration) {
+      const withDuration = (text) => duration ? `${text} Pendant ${duration}.` : text;
+      const templates = {
+        conjoint_plus_60: withDuration('Si votre conjoint(e) a plus de 60 ans : évitez les contacts très rapprochés et prolongés ; privilégiez une certaine distance et, si possible, dormez dans une chambre séparée.'),
+        conjoint_moins_60: withDuration('Si votre conjoint(e) a moins de 60 ans : limitez les contacts collés pendant de longues périodes, les câlins prolongés et le sommeil côte à côte.'),
+        conjointe_enceinte: withDuration('Si votre conjointe est enceinte : évitez les contacts rapprochés prolongés, ne dormez pas dans le même lit et gardez une distance raisonnable la plupart du temps.'),
+        transport_commun: withDuration('Trajets : transports urbains courts possibles ; évitez les longs trajets en train/avion en proximité prolongée. Si déplacement long indispensable, augmentez la distance dès que possible.'),
+        enfant_moins_3_ans: withDuration('Enfant de moins de 3 ans : évitez de le garder longtemps sur vous, de le porter longtemps, les câlins prolongés, et de rester collé plusieurs heures. Si possible, confiez les soins rapprochés prolongés à un autre adulte.'),
+        enfant_3_11_ans: withDuration('Enfant de 3 à 11 ans : évitez les jeux très collés, les longs câlins, dormir à côté, et les moments serrés longtemps (ex. film collé sur le canapé). Gardez une distance raisonnable la plupart du temps.'),
+        collegues_travail: withDuration('Au travail : évitez le bureau côte à côte toute la journée, les réunions très longues en proximité et gardez un peu d’espace avec vos collègues.'),
+        scenario_utilisateur: withDuration('Scénario personnalisé : suivez la durée calculée pour votre situation spécifique et conservez autant que possible une distance avec les contacts proches.')
+      };
+      return templates[audienceCode] || withDuration('Respectez une limitation des contacts rapprochés prolongés et gardez une distance raisonnable.');
+    }
+
+    function bootstrap() {
+      const raw = localStorage.getItem('radioprotection_explain_payload') || sessionStorage.getItem('radioprotection_explain_payload');
+      if (!raw) {
+        document.getElementById('summaryList').innerHTML = '<li>Aucune donnée disponible.</li>';
+        return;
+      }
+      const payload = JSON.parse(raw);
+      const form = payload.form || {};
+      const result = payload.result || {};
+      const selected = result.selected || {};
+
+      const summaryItems = [
+        `Radiopharmaceutique : ${safe(form.isotope_label || selected.label)}`,
+        `Mode de calcul : ${result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local'}`,
+        `Période effective retenue : ${safe(result.effective_days)} jour(s) (${safe(result.effective_hours)} heure(s))`
+      ];
+      document.getElementById('summaryList').innerHTML = summaryItems.map((text) => `<li>${text}</li>`).join('');
+
+      const audienceMeta = {
+        conjoint_plus_60: 'Contact proche avec le/la conjoint(e) > 60 ans',
+        conjoint_moins_60: 'Contact proche avec le/la conjoint(e) < 60 ans',
+        conjointe_enceinte: 'Contact proche avec une femme enceinte',
+        transport_commun: 'Trajet en transport en commun',
+        enfant_moins_3_ans: 'Contact avec un enfant de moins de 3 ans',
+        enfant_3_11_ans: 'Contact avec un enfant de 3 à 11 ans',
+        collegues_travail: 'Contact avec les collègues de travail',
+        scenario_utilisateur: 'Scénario personnalisé'
+      };
+      const rows = Array.isArray(result.rows) && result.rows.length
+        ? result.rows
+        : Object.entries(result.recommendations_days || {}).map(([audience_code, value]) => ({
+            audience_code,
+            label: audienceMeta[audience_code] || audience_code,
+            value
+          }));
+
+      const filteredRows = rows.filter((row) => row.value !== null && row.value !== undefined && row.value !== '-');
+      const readableRules = filteredRows.length
+        ? filteredRows.map((row) => {
+            const label = row.label || audienceMeta[row.audience_code] || row.audience_code;
+            const duration = daysText(row.value);
+            const advice = buildGuidance(row.audience_code, duration);
+            return duration ? `${label} (${duration}) : ${advice}` : `${label} : ${advice}`;
+          })
+        : ['Aucune durée calculée automatiquement. Contactez votre équipe soignante pour obtenir des consignes personnalisées, simples et adaptées à votre vie quotidienne.'];
+
+      document.getElementById('rulesList').innerHTML = readableRules.map((text) => `<li>${text}</li>`).join('');
+      const copyText = [
+        'Consignes patient après traitement RIV',
+        '',
+        ...summaryItems.map((x) => `- ${x}`),
+        '',
+        'Durées à respecter :',
+        ...readableRules.map((x) => `- ${x}`),
+        '',
+        'En cas de doute ou de symptôme inhabituel, contactez votre équipe soignante.'
+      ].join('\n');
+      document.getElementById('copyBox').value = copyText;
+    }
+
+    document.getElementById('printNowBtn').addEventListener('click', () => window.print());
+    document.getElementById('copyTextBtn').addEventListener('click', async () => {
+      const text = document.getElementById('copyBox').value;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_) {
+        document.getElementById('copyBox').focus();
+        document.getElementById('copyBox').select();
+      }
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>
