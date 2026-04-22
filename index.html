@@ -398,6 +398,37 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    .calculate-btn {
+      background: #0d6d2f;
+      color: #fff;
+      border-color: #0a5424;
+      padding: 14px 22px;
+      font-size: 18px;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+    }
+    .calculate-btn:disabled {
+      opacity: 0.75;
+      cursor: wait;
+    }
+    .loading-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: #0d6d2f;
+    }
+    .loading-indicator.active {
+      display: inline-flex;
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #b8d7c2;
+      border-top-color: #0d6d2f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .required-field {
       border: 2px solid #c62828 !important;
@@ -656,7 +687,11 @@
     </section>
 
     <div class="quick-actions no-print" style="justify-content:center;">
-      <button type="button" class="print-btn" id="calculateBtn">Calculer les durées de restriction</button>
+      <button type="button" class="print-btn calculate-btn" id="calculateBtn">Calculer les durées de restriction</button>
+      <div id="loadingIndicator" class="loading-indicator" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Calcul en cours, merci de patienter…</span>
+      </div>
     </div>
 
     <div class="error" id="errorBox"></div>
@@ -768,12 +803,12 @@
       if (mbq === null) {
         $('benignActivityMci').value = '';
         updateBenignDoseRateField();
-        clearDisplayedResults();
+        markFormDirty();
         return;
       }
       $('benignActivityMci').value = String(roundUnit(mbq / 37));
       updateBenignDoseRateField();
-      clearDisplayedResults();
+      markFormDirty();
     }
 
     function syncActivityFromMci() {
@@ -781,12 +816,12 @@
       if (mci === null) {
         $('benignActivityMbq').value = '';
         updateBenignDoseRateField();
-        clearDisplayedResults();
+        markFormDirty();
         return;
       }
       $('benignActivityMbq').value = String(roundUnit(mci * 37));
       updateBenignDoseRateField();
-      clearDisplayedResults();
+      markFormDirty();
     }
 
     function updateBenignDoseRateField() {
@@ -953,6 +988,17 @@
       $('errorBox').textContent = '';
     }
 
+    function setLoadingState(isLoading) {
+      $('calculateBtn').disabled = isLoading;
+      $('loadingIndicator').classList.toggle('active', isLoading);
+    }
+
+    function markFormDirty() {
+      latestRequestId += 1;
+      setLoadingState(false);
+      clearDisplayedResults();
+    }
+
     function buildUserScenarioCondition() {
       const h1 = getNumberOrNull('userHours1');
       const d1 = getNumberOrNull('userDistance1');
@@ -1041,7 +1087,11 @@
       })();
       if (result.errors.length) {
         const friendlyErrors = buildFriendlyErrors(selected);
-        const displayedErrors = friendlyErrors.length ? friendlyErrors : result.errors;
+        const displayedErrors = (friendlyErrors.length ? friendlyErrors : result.errors).map((error) => (
+          String(error || '').includes('SFMN task=process inaccessible')
+            ? 'Le calcul SFMN est temporairement indisponible. Merci de réessayer dans quelques instants.'
+            : error
+        ));
         errorBox.style.display = 'block';
         errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${e}`).join('<br>')}`;
         if (sfmnVerbose) {
@@ -1111,6 +1161,7 @@
 
       const requestId = ++latestRequestId;
       clearDisplayedResults();
+      setLoadingState(true);
       try {
         const result = await fetchCalculation(buildPayload());
         if (requestId !== latestRequestId) return;
@@ -1119,19 +1170,23 @@
         if (requestId !== latestRequestId) return;
         $('errorBox').style.display = 'block';
         $('errorBox').innerHTML = `<strong>Erreur réseau/API :</strong><br>- ${error.message}`;
+      } finally {
+        if (requestId === latestRequestId) {
+          setLoadingState(false);
+        }
       }
     }
 
     function bindEvents() {
       ['doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit']
         .forEach((id) => $(id).addEventListener('input', () => {
-          clearDisplayedResults();
+          markFormDirty();
         }));
 
       $('isotope').addEventListener('input', () => {
         $('userPeriodDays').value = '';
         syncUiForSelectedIsotope();
-        clearDisplayedResults();
+        markFormDirty();
       });
 
       $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
@@ -1141,7 +1196,7 @@
           populateIsotopes($('isotope').value);
           syncUiForSelectedIsotope();
           renderSourceForMode();
-          clearDisplayedResults();
+          markFormDirty();
         });
       });
 
@@ -1152,20 +1207,20 @@
           if (!allowed.includes(cure)) return;
           selectedCureCount = cure;
           renderCureSelector($('isotope').value);
-          clearDisplayedResults();
+          markFormDirty();
         });
       });
       document.querySelectorAll('button[data-benign-fixation]').forEach((button) => {
         button.addEventListener('click', () => {
           $('benignFixation').value = button.dataset.benignFixation;
           updateBenignDoseRateField();
-          clearDisplayedResults();
+          markFormDirty();
         });
       });
 
       $('benignFixation').addEventListener('input', () => {
         updateBenignDoseRateField();
-        clearDisplayedResults();
+        markFormDirty();
       });
       $('benignActivityMbq').addEventListener('input', syncActivityFromMbq);
       $('benignActivityMci').addEventListener('input', syncActivityFromMci);
