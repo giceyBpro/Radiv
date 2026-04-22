@@ -122,7 +122,7 @@ function expectedPayloadByIsotope(selected) {
   if (selected.api_code === 'iode131_benin') {
     return {
       common,
-      isotope_specific_required: ['benign_activity_mbq', 'benign_fixation_pct (fraction, ex. 0.15)'],
+      isotope_specific_required: ['benign_activity_mbq', 'benign_fixation_pct'],
       isotope_specific_optional: ['dose_rate (ignore pour iode131_benin)']
     };
   }
