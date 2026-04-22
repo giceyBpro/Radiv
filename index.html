@@ -900,7 +900,7 @@
       $('doseRate').readOnly = isBenign;
       $('doseRate').placeholder = isBenign ? 'calculé automatiquement' : '';
       $('doseRateHelp').textContent = isBenign
-        ? 'Débit calculé automatiquement : 2,2 × activité (MBq) × fixation (fraction) / 37.'
+        ? 'Débit calculé automatiquement : 2,2 × activité (MBq) × fixation / 37.'
         : 'Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.';
       if (isBenign) {
         updateBenignDoseRateField();
