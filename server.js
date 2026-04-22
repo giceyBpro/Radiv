@@ -122,7 +122,7 @@ function expectedPayloadByIsotope(selected) {
   if (selected.api_code === 'iode131_benin') {
     return {
       common,
-      isotope_specific_required: ['benign_activity_mbq', 'benign_fixation_pct'],
+      isotope_specific_required: ['benign_activity_mbq', 'benign_fixation_pct (fraction, ex. 0.15)'],
       isotope_specific_optional: ['dose_rate (ignore pour iode131_benin)']
     };
   }
@@ -161,7 +161,7 @@ function calculate(payload) {
   const errors = [];
   if (selected.api_code === 'iode131_benin') {
     if (!(benignActivityMbq > 0)) errors.push('Pour iode131_benin, benign_activity_mbq doit être strictement positif.');
-    if (!(benignFixationPct > 0)) errors.push('Pour iode131_benin, benign_fixation_pct doit être strictement positif.');
+    if (!(benignFixationPct > 0 && benignFixationPct <= 1)) errors.push('Pour iode131_benin, benign_fixation_pct doit être une fraction strictement positive et ≤ 1 (ex. 0.15).');
     if ((benignActivityMbq > 0) && (benignFixationPct > 0) && !(doseRate > 0)) errors.push('Le débit calculé automatiquement pour iode131_benin est invalide. Vérifiez benign_activity_mbq et benign_fixation_pct.');
   } else if (!(doseRate > 0)) {
     errors.push('Pour cet isotope, dose_rate doit être strictement positif.');
@@ -202,7 +202,7 @@ function calculate(payload) {
         code: 'VALIDATION_ERROR',
         message: `Échec du calcul pour isotope_code=${selected.api_code}.`,
         reason: selected.api_code === 'iode131_benin'
-          ? 'Pour iode131_benin, les champs attendus diffèrent: benign_activity_mbq et benign_fixation_pct sont obligatoires (dose_rate est ignoré).'
+          ? 'Pour iode131_benin, benign_activity_mbq et benign_fixation_pct (fraction) sont obligatoires (dose_rate est ignoré).'
           : selected.api_code === 'non_defini'
             ? 'Pour non_defini, dose_rate et user_period_days sont obligatoires et strictement positifs.'
             : 'Pour cet isotope, dose_rate est obligatoire et doit être strictement positif.',
