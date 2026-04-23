@@ -362,6 +362,8 @@ async function calculateSfmn(payload) {
     form.set('jform[pathology]', pathology);
     form.set('jform[measured_estimated]', measuredEstimated);
     form.set('jform[dysthyroidism_iodine_uptake]', benignUptake);
+    form.set('jform[dysthyroidism_iodine_uptake_measured]', benignUptake);
+    form.set('jform[dysthyroidism_iodine_uptake_estimated]', benignUptake);
     form.set('boxchecked', '0');
     form.set(csrfName, '1');
     if (debugEnabled) {
@@ -384,6 +386,8 @@ async function calculateSfmn(payload) {
           pathology,
           measured_estimated: measuredEstimated,
           dysthyroidism_iodine_uptake: benignUptake,
+          dysthyroidism_iodine_uptake_measured: benignUptake,
+          dysthyroidism_iodine_uptake_estimated: benignUptake,
           csrf_name: csrfName,
           hidden_forwarded: hiddenFields
         }
@@ -540,6 +544,8 @@ async function calculateSfmn(payload) {
         ...browserHeaders,
         'Content-Type': 'application/x-www-form-urlencoded',
         Referer: sfmnCalculatorUrl,
+        Origin: new URL(sfmnCalculatorUrl).origin,
+        'Upgrade-Insecure-Requests': '1',
         ...(cookieHeader ? { Cookie: cookieHeader } : {})
       },
       body: formBody,
