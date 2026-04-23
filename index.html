@@ -594,13 +594,13 @@
                   <input id="benignActivityMci" type="number" min="0" step="1" placeholder="vide">
                 </div>
               </div>
-              <div class="field-title" style="margin-top:8px;">Taux de fixation (fraction, ex. 0,15)</div>
+              <div class="field-title" style="margin-top:8px;">Taux de fixation (%)</div>
               <div class="benign-fixation-row">
-                <input id="benignFixation" type="number" min="0" max="1" step="0.001" placeholder="ex. 0,15">
+                <input id="benignFixation" type="number" min="0" max="100" step="0.01" placeholder="ex. 15">
                 <div class="benign-presets">
-                  <button type="button" data-benign-fixation="0.15">Nodule chaud</button>
-                  <button type="button" data-benign-fixation="0.25">Goître multinodulaire</button>
-                  <button type="button" data-benign-fixation="0.30">Maladie de Basedow</button>
+                  <button type="button" data-benign-fixation="15">Nodule chaud</button>
+                  <button type="button" data-benign-fixation="25">Goître multinodulaire</button>
+                  <button type="button" data-benign-fixation="30">Maladie de Basedow</button>
                 </div>
               </div>
             </div>
@@ -832,7 +832,8 @@
         $('doseRate').value = '';
         return;
       }
-      const computed = (2.2 * mbq * fixation) / 37;
+      const fixationFraction = fixation / 100;
+      const computed = (2.2 * mbq * fixationFraction) / 37;
       $('doseRate').value = String(Number(computed.toFixed(4)));
     }
 
@@ -900,7 +901,7 @@
       $('doseRate').readOnly = isBenign;
       $('doseRate').placeholder = isBenign ? 'calculé automatiquement' : '';
       $('doseRateHelp').textContent = isBenign
-        ? 'Débit calculé automatiquement : 2,2 × activité (MBq) × fixation / 37.'
+        ? 'Débit calculé automatiquement : 2,2 × activité (MBq) × fixation (%) / 100 / 37.'
         : 'Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.';
       if (isBenign) {
         updateBenignDoseRateField();
