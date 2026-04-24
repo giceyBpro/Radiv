@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Dosimétrie RIV - informations utiles</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #eef1f3; color: #111; }
+    main { max-width: 980px; margin: 24px auto; background: #fff; padding: 28px; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); }
+    h1, h2 { margin-top: 0; }
+    pre { background: #f4f7f8; padding: 12px; border-radius: 6px; overflow: auto; }
+    code { font-family: Consolas, Monaco, monospace; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #d5dde1; padding: 8px 10px; text-align: left; }
+    th { background: #f4f7f8; }
+    .links { margin-top: 20px; display: flex; gap: 16px; flex-wrap: wrap; }
+    a { color: #1637b8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>API Dosimétrie RIV — informations utiles</h1>
+    <p>
+      Cette page est destinée aux personnes qui veulent <strong>envoyer une requête</strong> à l’API
+      et <strong>récupérer la réponse</strong>. Elle ne contient pas d’informations de débogage interne.
+    </p>
+
+    <h2>Endpoints utiles</h2>
+    <ul>
+      <li><code>GET /api/config</code> : liste des radiopharmaceutiques, options de cures, mode par défaut.</li>
+      <li><code>POST /api/calculate</code> : calcule les durées de restriction.</li>
+      <li><code>GET /api/public-config</code> : clé publique reCAPTCHA (page contact).</li>
+      <li><code>POST /api/contact</code> : envoi d’un message de contact.</li>
+      <li><code>GET /health</code> : vérification de disponibilité du service.</li>
+    </ul>
+
+    <h2>Payload attendu pour <code>POST /api/calculate</code></h2>
+    <pre><code>{
+  "calculation_mode": "sfmn",
+  "isotope_code": "iode131_25_fixation",
+  "dose_rate": 9.9,
+  "patient_size_cm": 150,
+  "user_period_days": null,
+  "user_hours_1": null,
+  "user_distance_1": null,
+  "user_hours_2": null,
+  "user_limit": null,
+  "benign_activity_mbq": null,
+  "benign_fixation_pct": null,
+  "cure_count": 1
+}</code></pre>
+
+    <h2>Règles importantes par cas</h2>
+    <ul>
+      <li><strong>Cas standard</strong> : fournir <code>dose_rate</code> et <code>patient_size_cm</code>.</li>
+      <li><strong>iode131_benin</strong> : fournir <code>benign_activity_mbq</code> et <code>benign_fixation_pct</code> (en %). <code>dose_rate</code> est ignoré.</li>
+      <li><strong>non_defini</strong> (mode local) : fournir aussi <code>user_period_days</code> strictement positif.</li>
+      <li><strong>cure_count</strong> : utile pour <code>psma_177lu</code> (1/4/6) et <code>lutetium177_net</code> (1/4). Pour <code>radium223</code> : 1 uniquement.</li>
+    </ul>
+
+    <h2>Réponse attendue (succès)</h2>
+    <pre><code>{
+  "ok": true,
+  "calculation_mode": "sfmn",
+  "selected": { "api_code": "...", "label": "..." },
+  "cure_count": 1,
+  "computed_dose_rate": 9.9,
+  "effective_days": 0.67,
+  "effective_hours": 16,
+  "errors": [],
+  "recommendations_days": {
+    "conjoint_plus_60": 0,
+    "conjoint_moins_60": 0,
+    "conjointe_enceinte": 0,
+    "transport_commun": 0,
+    "enfant_moins_3_ans": 0,
+    "enfant_3_11_ans": 0,
+    "collegues_travail": 0,
+    "scenario_utilisateur": null
+  }
+}</code></pre>
+
+    <h2>Réponse en cas d’erreur de validation</h2>
+    <pre><code>{
+  "ok": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "...",
+    "reason": "..."
+  },
+  "errors": ["..."]
+}</code></pre>
+
+    <h2>Isotopes disponibles (isotope_code)</h2>
+    <table>
+      <thead><tr><th>Libellé</th><th>Code API</th></tr></thead>
+      <tbody>
+        <tr><td>Iode-131-0%-fixation</td><td><code>iode131_0_fixation</code></td></tr>
+        <tr><td>Iode-131-5%-fixation</td><td><code>iode131_5_fixation</code></td></tr>
+        <tr><td>Iode-131-25%-fixation</td><td><code>iode131_25_fixation</code></td></tr>
+        <tr><td>Iode-131-Bénin</td><td><code>iode131_benin</code></td></tr>
+        <tr><td>Radium-223</td><td><code>radium223</code></td></tr>
+        <tr><td>PSMA-177Lu</td><td><code>psma_177lu</code></td></tr>
+        <tr><td>Synovectomie-90Y</td><td><code>synovectomie_90y</code></td></tr>
+        <tr><td>Synovectomie-186Re</td><td><code>synovectomie_186re</code></td></tr>
+        <tr><td>Synovectomie-169Er</td><td><code>synovectomie_169er</code></td></tr>
+        <tr><td>Microsphères-90Y</td><td><code>microspheres_90y</code></td></tr>
+        <tr><td>Microsphères-166Ho</td><td><code>microspheres_166ho</code></td></tr>
+        <tr><td>Lipiodol-131I</td><td><code>lipiodol_131i</code></td></tr>
+        <tr><td>Lutétium-177 NET</td><td><code>lutetium177_net</code></td></tr>
+        <tr><td>MIBG-131I</td><td><code>mibg_131i</code></td></tr>
+        <tr><td>Non défini (local)</td><td><code>non_defini</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="links">
+      <a href="test-api.html">Ouvrir la page de test API</a>
+      <a href="index.html">← Retour à la page principale</a>
+    </div>
+  </main>
+</body>
+</html>
