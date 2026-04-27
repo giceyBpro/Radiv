@@ -929,14 +929,13 @@ function isAdminAuthorized(req, urlObj) {
   const tokenFromQuery = urlObj.searchParams.get('token');
   return tokenFromHeader === adminToken || tokenFromQuery === adminToken;
 }
+function setCorsHeaders(res) {
+  res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+}
 function sendJson(res, statusCode, data) {
-  const origin = corsOrigin === '*' ? '*' : corsOrigin;
-  res.writeHead(statusCode, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-  });
+  res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data));
 }
 function sendHtml(res, statusCode, html) {
@@ -944,7 +943,8 @@ function sendHtml(res, statusCode, html) {
   res.end(html);
 }
 const server = http.createServer((req, res) => {
-  if (req.method === 'OPTIONS') return sendJson(res, 200, { ok: true });
+  setCorsHeaders(res);
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
   const urlObj = new URL(req.url, `http://127.0.0.1:${port}`);
   const pathname = urlObj.pathname;
   if (req.method === 'GET' && pathname === '/api/config') {
