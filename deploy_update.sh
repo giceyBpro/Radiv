@@ -277,26 +277,42 @@ chmod +x "$BACKEND_DIR/monitor_node.sh"
 log_step "Exécution d'un contrôle monitor immédiat"
 "$BACKEND_DIR/monitor_node.sh"
 
-if [[ "$INSTALL_CRON_MONITOR" == "true" ]]; then
+CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
+
+cron_present() {
+  command -v crontab >/dev/null 2>&1 && \
+    grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$(crontab -l 2>/dev/null || true)"
+}
+
+install_cron() {
   if ! command -v crontab >/dev/null 2>&1; then
-    log_warn "crontab indisponible, impossible d'installer la supervision cron automatiquement."
-    popd >/dev/null
-    log_ok "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
-    log_info "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
-    exit 0
+    log_warn "crontab indisponible sur ce système, installation automatique impossible."
+    return 1
   fi
-  log_step "Configuration cron de supervision"
-  CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
-  CURRENT_CRON="$(crontab -l 2>/dev/null || true)"
-  if ! grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$CURRENT_CRON"; then
-    { echo "$CURRENT_CRON"; echo "$CRON_LINE"; } | crontab -
-    log_ok "Entrée cron ajoutée: $CRON_LINE"
-  else
+  local current
+  current="$(crontab -l 2>/dev/null || true)"
+  if grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$current"; then
     log_info "Entrée cron déjà présente (aucune modification)."
+    return 0
   fi
+  { echo "$current"; echo "$CRON_LINE"; } | crontab -
+  log_ok "Entrée cron ajoutée: $CRON_LINE"
+}
+
+if [[ "$INSTALL_CRON_MONITOR" == "true" ]]; then
+  log_step "Configuration cron de supervision"
+  install_cron
 fi
 
 popd >/dev/null
 
 log_ok "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
 log_info "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
+
+# Validation finale — toujours vérifiée, quelle que soit la valeur de INSTALL_CRON_MONITOR
+if cron_present; then
+  log_ok "Supervision cron active."
+else
+  log_warn "Supervision cron ABSENTE. Ajoutez manuellement via 'crontab -e' :"
+  log_warn "  $CRON_LINE"
+fi
