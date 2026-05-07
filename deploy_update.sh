@@ -103,6 +103,19 @@ rsync -a --delete \
 
 log_ok "Frontend synchronisé vers $FRONTEND_DIR"
 
+log_step "Configuration .htaccess (règle /tox)"
+HTACCESS="$FRONTEND_DIR/.htaccess"
+TOX_RULE="RewriteRule ^tox/?$ tox.html [L]"
+if [[ ! -f "$HTACCESS" ]]; then
+  printf 'Options -Indexes\nRewriteEngine On\n%s\n' "$TOX_RULE" > "$HTACCESS"
+  log_ok ".htaccess créé avec la règle /tox."
+elif ! grep -Fq "tox.html" "$HTACCESS"; then
+  printf '\n# /tox\nRewriteEngine On\n%s\n' "$TOX_RULE" >> "$HTACCESS"
+  log_ok "Règle /tox ajoutée dans .htaccess."
+else
+  log_info "Règle /tox déjà présente dans .htaccess."
+fi
+
 log_step "Configuration frontend runtime"
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.RADIOPROTECTION_API_URL = "${API_PUBLIC_URL}";
