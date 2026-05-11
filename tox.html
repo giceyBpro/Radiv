@@ -3,50 +3,51 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CTCAE v6.0 — Toxicités de chimiothérapie</title>
+<title>CTCAE v6.0 — Toxicités — Radioprotection RIV</title>
 <style>
-:root{--bg:#f8fafc;--card:#ffffff;--txt:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#2563eb;--soft:#dbeafe;--warn:#fffbeb;--warnb:#fde68a}
+:root{--bg:#eef1f3;--card:#ffffff;--border:#1f1f1f;--txt:#111;--muted:#666;--line:#d5dde1;--accent:#1637b8;--soft:#cfe4eb;--yellow:#eceb8a;--warn:#fffbeb;--warnb:#fde68a}
 *{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt)}
-header{position:sticky;top:0;background:rgba(248,250,252,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:5}
-.wrap{max-width:1200px;margin:0 auto;padding:22px}
-h1{margin:0 0 6px;font-size:28px;letter-spacing:-.02em}
-.sub{color:var(--muted);font-size:14px;line-height:1.45;max-width:980px}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--txt)}
+header{position:sticky;top:0;background:#fff;border-bottom:2px solid var(--border);z-index:5}
+.wrap{max-width:1020px;margin:0 auto;padding:20px}
+h1{margin:0 0 6px;font-size:24px;font-weight:700;letter-spacing:0}
+.sub{color:var(--muted);font-size:14px;line-height:1.45;max-width:980px;margin-top:4px}
 .searchbar{display:flex;gap:10px;margin-top:18px;align-items:center}
-input{width:100%;font-size:18px;padding:15px 16px;border:1px solid #cbd5e1;border-radius:14px;outline:none;background:white}
-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--soft)}
-button{border:1px solid #cbd5e1;background:white;border-radius:12px;padding:12px 14px;cursor:pointer;font-weight:650;color:#0f172a}
-button:hover{filter:brightness(.98)}
+input{width:100%;font-size:15px;padding:10px 12px;border:2px solid #4a4a4a;border-radius:6px;outline:none;background:#fffef2}
+input:focus{border-color:#9a6f00;box-shadow:0 0 0 3px rgba(245,186,0,.35);background:#fffbe6}
+button{border:2px solid #4a4a4a;background:#fff;border-radius:6px;padding:9px 14px;cursor:pointer;font-weight:700;color:#111}
+button:hover{background:#f0f0f0}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-.pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:white;color:#334155;font-size:13px;cursor:pointer}
-.pill:hover{border-color:#93c5fd;background:#eff6ff}
-.notice{background:var(--warn);border:1px solid var(--warnb);color:#713f12;border-radius:14px;padding:11px 13px;font-size:13px;line-height:1.45;margin-top:12px}
-main.wrap{padding-top:18px}
+.pill{border:1px solid var(--border);border-radius:999px;padding:6px 10px;background:white;color:#333;font-size:13px;cursor:pointer}
+.pill:hover{border-color:var(--accent);background:var(--soft)}
+.notice{background:var(--yellow);border:1px solid #c9a800;color:#333;border-radius:4px;padding:11px 13px;font-size:13px;line-height:1.45;margin-top:12px}
+main.wrap{padding-top:18px;background:var(--card);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.12);margin-top:18px;margin-bottom:18px}
 .stats{color:var(--muted);font-size:14px;margin:0 0 14px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(345px,1fr));gap:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card{background:var(--card);border:2px solid var(--border);border-radius:6px;padding:16px;box-shadow:none}
 .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}
 .title{font-size:19px;font-weight:760;line-height:1.2}
-.alias{font-size:12px;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:3px 8px;display:inline-block;margin-top:6px}
-.soc{font-size:11px;color:#475569;background:#f1f5f9;border-radius:999px;padding:4px 8px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.grade{display:grid;grid-template-columns:72px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
-.gnum{font-weight:760;color:#1e40af}
+.alias{font-size:12px;color:var(--accent);background:var(--soft);border:1px solid #a0b8c8;border-radius:999px;padding:3px 8px;display:inline-block;margin-top:6px}
+.soc{font-size:11px;color:var(--muted);background:#eef1f3;border-radius:999px;padding:4px 8px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.grade{display:grid;grid-template-columns:72px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line);}
+.gnum{font-weight:700;color:var(--accent)}
 .gtext{font-size:14px;line-height:1.35}
-details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
-summary{cursor:pointer;color:#334155;font-weight:650;font-size:13px}
-.small{font-size:13px;color:#475569;line-height:1.4}
-.none{background:#fff;border:1px dashed #cbd5e1;border-radius:16px;padding:28px;text-align:center;color:var(--muted)}
-mark{background:#fef08a;padding:0 2px;border-radius:2px}
-footer{color:#64748b;font-size:12px;line-height:1.55;padding:24px 0}
-.sourcebox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:18px;color:#334155;font-size:13px;line-height:1.5}
-.sourcebox strong{color:#0f172a}
-@media(max-width:680px){.wrap{padding:16px}.grid{grid-template-columns:1fr}.searchbar{flex-direction:column}button{width:100%}.soc{max-width:150px}}
+details{margin-top:10px;border-top:1px solid #d5dde1;padding-top:8px}
+summary{cursor:pointer;color:#333;font-weight:700;font-size:13px}
+.small{font-size:13px;color:var(--muted);line-height:1.4}
+.none{background:#fff;border:2px dashed var(--border);border-radius:6px;padding:28px;text-align:center;color:var(--muted)}
+mark{background:#eceb8a;padding:0 2px;border-radius:2px}
+footer{color:var(--muted);font-size:12px;line-height:1.55;padding:16px 0;border-top:1px solid var(--line);margin-top:14px}
+.sourcebox{background:#f4f7f8;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin-top:18px;color:#333;font-size:13px;line-height:1.5}
+.sourcebox strong{color:#111}
+@media(max-width:680px){.wrap{padding:14px}.grid{grid-template-columns:1fr}.searchbar{flex-direction:column}button{width:100%}.soc{max-width:150px}}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>CTCAE v6.0 — toxicités de chimiothérapie</h1>
+    <a href="./" style="font-size:13px;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← Retour au calculateur</a>
+    <h1>CTCAE v6.0 — Toxicités de chimiothérapie</h1>
     <div class="sub">Recherche dans les termes français CTCAE v6.0. Les grades sont affichés tels qu’ils figurent dans l’onglet propre de traduction fourni.</div>
     <div class="searchbar"><input id="q" autocomplete="off" placeholder="Ex. Hb, PNN, PNM, leuco, plaquette, diarrhée, asthénie, xérostomie…"><button id="clear">Effacer</button></div>
     <div class="toolbar" id="quick"></div>
