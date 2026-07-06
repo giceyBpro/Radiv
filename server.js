@@ -31,6 +31,8 @@ const adminToken = process.env.ADMIN_TOKEN || '';
 const logsDir = path.join(__dirname, 'logs');
 const logsFile = path.join(logsDir, 'measurements.jsonl');
 const geoIpCache = new Map();
+const GEO_IP_CACHE_MAX = 500;
+const contactRateMap = new Map();
 const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
 const recaptchaSiteKey = process.env.RECAPTCHA_SITE_KEY || '';
 const smtpHost = process.env.SMTP_HOST || '';
@@ -704,6 +706,7 @@ async function resolveGeoFromIp(ip) {
         const data = await response.json();
         const geo = provider.parse(data);
         if (geo) {
+          if (geoIpCache.size >= GEO_IP_CACHE_MAX) geoIpCache.delete(geoIpCache.keys().next().value);
           geoIpCache.set(normalized, geo);
           return geo;
         }
@@ -898,7 +901,8 @@ async function smtpSendMail({ replyTo, subject, html }) {
     return { ok: true };
   } catch (error) {
     try { socket.end(); } catch {}
-    return { ok: false, error: error.message };
+    console.error('[SMTP] Erreur:', error.message);
+    return { ok: false, error: "Erreur lors de l'envoi." };
   }
 }
 
@@ -920,19 +924,28 @@ async function sendContactEmail({ email, message, ip, timestamp }) {
     </div>
   </div>`;
 
-  return smtpSendMail({ replyTo: email, subject: 'Contact formulaire web', html });
+  return smtpSendMail({ replyTo: email.replace(/[\r\n]/g, ''), subject: 'Contact formulaire web', html });
 }
 
-function isAdminAuthorized(req, urlObj) {
-  if (!adminToken) return true;
-  const tokenFromHeader = req.headers['x-admin-token'];
-  const tokenFromQuery = urlObj.searchParams.get('token');
-  return tokenFromHeader === adminToken || tokenFromQuery === adminToken;
+function checkContactRateLimit(ip) {
+  const now = Date.now();
+  const entry = contactRateMap.get(ip);
+  if (!entry || now > entry.resetAt) { contactRateMap.set(ip, { count: 1, resetAt: now + 60000 }); return true; }
+  if (entry.count >= 5) return false;
+  entry.count++;
+  return true;
+}
+function isAdminAuthorized(req) {
+  if (!adminToken) return false;
+  return req.headers['x-admin-token'] === adminToken;
 }
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', corsOrigin);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
 }
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -962,7 +975,7 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && pathname === '/api/calculate') {
     let body = '';
-    req.on('data', (chunk) => { body += chunk; });
+    req.on('data', (chunk) => { body += chunk; if (body.length > 65536) req.destroy(); });
     req.on('end', async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
@@ -981,14 +994,14 @@ const server = http.createServer((req, res) => {
         });
         sendJson(res, 200, result);
       } catch (error) {
-        sendJson(res, 400, { error: 'JSON invalide', details: error.message });
+        sendJson(res, 400, { error: 'JSON invalide' });
       }
     });
     return;
   }
   if (req.method === 'POST' && pathname === '/api/contact') {
     let body = '';
-    req.on('data', (chunk) => { body += chunk; });
+    req.on('data', (chunk) => { body += chunk; if (body.length > 65536) req.destroy(); });
     req.on('end', async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
@@ -998,6 +1011,12 @@ const server = http.createServer((req, res) => {
         const ip = getClientIp(req);
         if (!email || !message) {
           return sendJson(res, 400, { ok: false, error: 'email et message sont obligatoires.' });
+        }
+        if (!/^[^\s@\r\n]{1,64}@[^\s@\r\n]{1,255}$/.test(email)) {
+          return sendJson(res, 400, { ok: false, error: 'Format email invalide.' });
+        }
+        if (!checkContactRateLimit(ip)) {
+          return sendJson(res, 429, { ok: false, error: 'Trop de demandes. Réessayez dans une minute.' });
         }
         const recaptchaOk = await verifyRecaptcha(recaptchaTokenValue, ip);
         if (!recaptchaOk) {
@@ -1010,23 +1029,23 @@ const server = http.createServer((req, res) => {
           timestamp: new Date().toISOString()
         });
         if (!sent.ok) {
-          return sendJson(res, 500, { ok: false, error: sent.error || 'Échec envoi email.' });
+          return sendJson(res, 500, { ok: false, error: 'Échec envoi email.' });
         }
         return sendJson(res, 200, { ok: true });
       } catch (error) {
-        return sendJson(res, 400, { ok: false, error: 'JSON invalide', details: error.message });
+        return sendJson(res, 400, { ok: false, error: 'JSON invalide' });
       }
     });
     return;
   }
   if (req.method === 'GET' && pathname === '/api/admin/measurements') {
-    if (!isAdminAuthorized(req, urlObj)) return sendJson(res, 401, { error: 'Unauthorized' });
+    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
     const rows = readMeasurementLogs(year);
     return sendJson(res, 200, { rows, year: year || null, total: rows.length });
   }
   if (req.method === 'GET' && pathname === '/api/admin/measurements.csv') {
-    if (!isAdminAuthorized(req, urlObj)) return sendJson(res, 401, { error: 'Unauthorized' });
+    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
     const rows = readMeasurementLogs(year);
     const csv = toCsv(rows);
@@ -1037,6 +1056,7 @@ const server = http.createServer((req, res) => {
     return res.end(csv);
   }
   if (req.method === 'GET' && pathname === '/admin/mesures') {
+    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const adminPagePath = path.join(__dirname, 'admin-mesures.html');
     if (!fs.existsSync(adminPagePath)) return sendHtml(res, 404, 'Page admin introuvable');
     return sendHtml(res, 200, fs.readFileSync(adminPagePath, 'utf8'));

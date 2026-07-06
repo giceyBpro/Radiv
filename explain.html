@@ -57,7 +57,7 @@
   <script>
     function safe(value) {
       if (value === null || value === undefined || value === '') return '-';
-      return String(value);
+      return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function daysText(value) {

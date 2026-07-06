@@ -64,6 +64,7 @@ git remote set-url origin "$AUTH_REPO"
 git fetch --all --prune
 git checkout "$GIT_BRANCH"
 git pull --ff-only origin "$GIT_BRANCH"
+git remote set-url origin "$GIT_REPO"  # retire le token du .git/config
 
 log_step "Dépendances backend"
 npm install --omit=dev
@@ -117,6 +118,14 @@ else
 fi
 
 log_step "Configuration frontend runtime"
+# Valide que les valeurs ne contiennent pas de caractères dangereux pour JS
+for _var_name in API_PUBLIC_URL SITE_PUBLIC_URL SITE_NAME COPYRIGHT_OWNER; do
+  _var_val="${!_var_name}"
+  if [[ "$_var_val" =~ [\"\'\\] ]]; then
+    log_warn "$_var_name contient des caractères invalides (\", ', \\) — config.js non généré."
+    exit 1
+  fi
+done
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.RADIOPROTECTION_API_URL = "${API_PUBLIC_URL}";
 window.RADIOPROTECTION_SITE_URL = "${SITE_PUBLIC_URL}";
@@ -143,6 +152,9 @@ ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
 ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
 MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL}"
 RUNTIME
+
+chmod 600 "$BACKEND_DIR/.runtime.env"
+log_ok ".runtime.env protégé (600)."
 
 log_step "Génération du script monitor_node.sh"
 cat > "$BACKEND_DIR/monitor_node.sh" <<'MONITOR'
