@@ -94,7 +94,7 @@
       const selected = result.selected || {};
 
       const summaryItems = [
-        `Radiopharmaceutique : ${safe(form.isotope_label || selected.label)}`,
+        `Type d'exposition : ${safe(form.isotope_label || selected.label)}`,
         `Mode de calcul : ${result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local'}`,
         `Période effective retenue : ${safe(result.effective_days)} jour(s) (${safe(result.effective_hours)} heure(s))`
       ];
