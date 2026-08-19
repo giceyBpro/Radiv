@@ -21,25 +21,11 @@
       padding: 8px 18px; border-radius: 5px; font-size: 13px; font-weight: bold;
     }
     .btn-download:hover { background: #0f2890; }
-    .warning { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 4px; font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
-    .warning strong { color: #7a5c00; }
-    .steps { counter-reset: step; padding: 0; list-style: none; margin: 0; }
-    .steps li { counter-increment: step; display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
-    .steps li::before { content: counter(step); background: #1637b8; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; margin-top: 1px; }
-    code { background: #f0f3f5; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: Consolas, Monaco, monospace; }
-    .adapt-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-    .adapt-table th, .adapt-table td { border: 1px solid #d5dde1; padding: 7px 10px; text-align: left; vertical-align: top; }
-    .adapt-table th { background: #f4f7f8; }
-    .adapt-table td:first-child { font-family: Consolas, Monaco, monospace; font-size: 11px; white-space: nowrap; }
     .tag-info { display: inline-block; background: #e3eaff; color: #1637b8; font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
-    .tag-warn { display: inline-block; background: #fff3cd; color: #8a6200; font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
+    code { background: #f0f3f5; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: Consolas, Monaco, monospace; }
     .back { margin-bottom: 18px; }
     .back a { color: #1637b8; font-size: 13px; text-decoration: none; }
     .back a:hover { text-decoration: underline; }
-    .check { color: #2e7d32; font-weight: bold; }
-    .ok-list { list-style: none; padding: 0; margin: 0; }
-    .ok-list li { font-size: 13px; padding: 3px 0; }
-    .ok-list li::before { content: "✓ "; color: #2e7d32; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -48,11 +34,6 @@
 
     <h1>Questionnaires Xplore RIS</h1>
     <p class="subtitle">Modèles prêts à importer dans Xplore pour intégrer le calcul RadIV directement dans votre flux de travail.</p>
-
-    <div class="warning">
-      <strong>Vérification données sensibles :</strong> ces fichiers ont été contrôlés — ils ne contiennent aucune donnée patient, aucun identifiant nominatif.
-      Le code auteur est <code>xplore</code>, le site est vide et le numéro de questionnaire lié est un placeholder (<code>A0000000000</code>) — voir le tableau d'adaptation ci-dessous.
-    </div>
 
     <h2>Fichiers à télécharger</h2>
 
@@ -83,52 +64,6 @@
         <a class="btn-download" href="downloads/MN_Consignes-radioprotection_RadIV.xml" download>⬇ Télécharger l'insertion automatique</a>
       </div>
     </div>
-
-    <h2>Installation dans Xplore</h2>
-    <ol class="steps">
-      <li>Dans Xplore, aller dans <strong>Administration → Modèles de compte-rendu → Importer</strong>.</li>
-      <li>Importer d'abord le <strong>questionnaire QUDEM</strong> — Xplore lui attribue un nouveau numéro (ex. <code>A10xxxxxxx</code>).</li>
-      <li>Importer ensuite l'<strong>insertion automatique INSER</strong>.</li>
-      <li>Dans l'INSER importée, ouvrir les propriétés et renseigner le numéro du questionnaire QUDEM attribué à l'étape 2 dans le champ <strong>Questionnaire HTML lié</strong>.</li>
-      <li>Associer les deux modèles aux types d'examens souhaités (ex. <code>CS</code>, <code>TT</code>).</li>
-    </ol>
-
-    <h2>Points d'adaptation par centre</h2>
-    <table class="adapt-table">
-      <thead>
-        <tr><th>Champ</th><th>Valeur dans ce fichier</th><th>Action à prévoir</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>ListeSites</td>
-          <td><em>(vide)</em></td>
-          <td><span class="tag-warn">À adapter</span> Renseigner le code site de votre établissement après import.</td>
-        </tr>
-        <tr>
-          <td>QuestionnaireHtml (INSER)</td>
-          <td><code>A0000000000</code></td>
-          <td><span class="tag-warn">À adapter</span> Remplacer par le numéro attribué à votre QUDEM importé (étape 4 ci-dessus).</td>
-        </tr>
-        <tr>
-          <td>CodeUtilisateur</td>
-          <td><code>xplore</code></td>
-          <td>Information auteur — sans impact fonctionnel, mise à jour automatique à la première sauvegarde.</td>
-        </tr>
-        <tr>
-          <td>NumeroModeleCompteRendu</td>
-          <td><code>A10111108111</code> / <code>A10106903231</code></td>
-          <td>Numéros du centre source — remplacés automatiquement par Xplore à l'import.</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h2>Données sensibles vérifiées</h2>
-    <ul class="ok-list">
-      <li>Aucune donnée patient (nom, prénom, date de naissance, IPP…)</li>
-      <li>Aucun résultat de calcul ou consigne personnalisée</li>
-      <li>Aucun identifiant nominatif de soignant</li>
-      <li>Code auteur (<code>JBOURR</code>) et site (<code>CMN</code>) : métadonnées fonctionnelles uniquement</li>
-    </ul>
   </main>
 </body>
 </html>
