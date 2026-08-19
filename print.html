@@ -100,15 +100,15 @@
   </main>
 
   <script src="config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
   <script>
     const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
     const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_URL;
 
     function safe(value) {
       if (value === null || value === undefined || value === '') return '-';
-      return String(value);
+      return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function row(label, value) {
@@ -133,7 +133,7 @@
       const cureIsotopeSet = new Set(['psma_177lu', 'lutetium177_net']);
       const shouldShowCureCount = cureIsotopeSet.has(selectedApiCode);
       const inputEntries = [
-        ['Radiopharmaceutique', form.isotope_label],
+        ['Type d\'exposition', form.isotope_label],
         ['Débit de dose à 1 m (µSv/h)', form.dose_rate],
         ['Taille patient (cm)', form.patient_size_cm],
         ['Activité bénin (MBq)', form.benign_activity_mbq],
@@ -159,7 +159,7 @@
       document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
       const effDays = result.effective_days ?? '-';
       const effHours = result.effective_hours ?? '-';
-      document.getElementById('effectiveText').innerHTML = `<strong>Période effective :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
+      document.getElementById('effectiveText').innerHTML = `<strong>Période effective retenue :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
 
       const audienceMeta = {
         conjoint_plus_60: 'Contact avec le (la) conjoint(e) > 60 ans',

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Questionnaires Xplore — Dosimétrie RIV</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #eef1f3; color: #111; }
+    main { max-width: 860px; margin: 24px auto; background: #fff; padding: 28px 32px; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); }
+    h1 { margin: 0 0 6px 0; font-size: 22px; }
+    .subtitle { color: #555; margin: 0 0 24px 0; font-size: 14px; }
+    h2 { font-size: 16px; margin: 24px 0 8px 0; border-bottom: 1px solid #dde3e8; padding-bottom: 6px; }
+    .card { border: 1px solid #d5dde1; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 20px; align-items: flex-start; }
+    .card-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+    .card-body { flex: 1; }
+    .card-title { font-weight: bold; font-size: 15px; margin-bottom: 4px; }
+    .card-meta { font-size: 12px; color: #666; margin-bottom: 8px; }
+    .card-desc { font-size: 13px; color: #333; line-height: 1.5; margin-bottom: 12px; }
+    .btn-download {
+      display: inline-block; background: #1637b8; color: #fff; text-decoration: none;
+      padding: 8px 18px; border-radius: 5px; font-size: 13px; font-weight: bold;
+    }
+    .btn-download:hover { background: #0f2890; }
+    .warning { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 4px; font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
+    .warning strong { color: #7a5c00; }
+    .steps { counter-reset: step; padding: 0; list-style: none; margin: 0; }
+    .steps li { counter-increment: step; display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
+    .steps li::before { content: counter(step); background: #1637b8; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; margin-top: 1px; }
+    code { background: #f0f3f5; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: Consolas, Monaco, monospace; }
+    .adapt-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    .adapt-table th, .adapt-table td { border: 1px solid #d5dde1; padding: 7px 10px; text-align: left; vertical-align: top; }
+    .adapt-table th { background: #f4f7f8; }
+    .adapt-table td:first-child { font-family: Consolas, Monaco, monospace; font-size: 11px; white-space: nowrap; }
+    .tag-info { display: inline-block; background: #e3eaff; color: #1637b8; font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
+    .tag-warn { display: inline-block; background: #fff3cd; color: #8a6200; font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
+    .back { margin-bottom: 18px; }
+    .back a { color: #1637b8; font-size: 13px; text-decoration: none; }
+    .back a:hover { text-decoration: underline; }
+    .check { color: #2e7d32; font-weight: bold; }
+    .ok-list { list-style: none; padding: 0; margin: 0; }
+    .ok-list li { font-size: 13px; padding: 3px 0; }
+    .ok-list li::before { content: "✓ "; color: #2e7d32; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="back"><a href="/">← Retour à l'application</a></div>
+
+    <h1>Questionnaires Xplore RIS</h1>
+    <p class="subtitle">Modèles prêts à importer dans Xplore pour intégrer le calcul RadIV directement dans votre flux de travail.</p>
+
+    <div class="warning">
+      <strong>Vérification données sensibles :</strong> ces fichiers ont été contrôlés — ils ne contiennent aucune donnée patient, aucun identifiant nominatif.
+      Ils contiennent uniquement le code auteur (<code>JBOURR</code>), le site source (<code>CMN</code>) et un numéro de référence de questionnaire lié
+      (<code>A10111100209</code> dans l'insertion automatique) — voir le tableau d'adaptation ci-dessous.
+    </div>
+
+    <h2>Fichiers à télécharger</h2>
+
+    <div class="card">
+      <div class="card-icon">📋</div>
+      <div class="card-body">
+        <div class="card-title">Questionnaire QUDEM — Saisie dosimétrique RadIV</div>
+        <div class="card-meta"><span class="tag-info">QUDEM</span> <code>MN_Radiopro_API-RADIV_gener</code> · 87 Ko</div>
+        <div class="card-desc">
+          Questionnaire de saisie : type d'exposition, débit de dose, paramètres iode bénin, nombre de cures.
+          Bouton <em>Calculer les consignes avec RadIV</em> qui appelle l'API et remplit le champ résultat.
+          Sections 3 et 4 masquées automatiquement selon l'isotope sélectionné.
+        </div>
+        <a class="btn-download" href="downloads/MN_Radiopro_APIRADIV_generique.xml" download>⬇ Télécharger le questionnaire</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-icon">📄</div>
+      <div class="card-body">
+        <div class="card-title">Insertion automatique — Fiche consignes patient</div>
+        <div class="card-meta"><span class="tag-info">INSER</span> <code>MN_Consignes-radioprotection_RadIV</code> · 13 Ko</div>
+        <div class="card-desc">
+          Document de type <em>Insertion automatique</em> lié au questionnaire QUDEM.
+          Génère la fiche consignes patient (texte + en-tête réglementaire) en injectant
+          le contenu du champ <code>MN_CONSIGNES_RADIOPRO</code>.
+        </div>
+        <a class="btn-download" href="downloads/MN_Consignes-radioprotection_RadIV.xml" download>⬇ Télécharger l'insertion automatique</a>
+      </div>
+    </div>
+
+    <h2>Installation dans Xplore</h2>
+    <ol class="steps">
+      <li>Dans Xplore, aller dans <strong>Administration → Modèles de compte-rendu → Importer</strong>.</li>
+      <li>Importer d'abord le <strong>questionnaire QUDEM</strong> — Xplore lui attribue un nouveau numéro (ex. <code>A10xxxxxxx</code>).</li>
+      <li>Importer ensuite l'<strong>insertion automatique INSER</strong>.</li>
+      <li>Dans l'INSER importée, ouvrir les propriétés et renseigner le numéro du questionnaire QUDEM attribué à l'étape 2 dans le champ <strong>Questionnaire HTML lié</strong>.</li>
+      <li>Associer les deux modèles aux types d'examens souhaités (ex. <code>CS</code>, <code>TT</code>).</li>
+    </ol>
+
+    <h2>Points d'adaptation par centre</h2>
+    <table class="adapt-table">
+      <thead>
+        <tr><th>Champ</th><th>Valeur dans ce fichier</th><th>Action à prévoir</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ListeSites</td>
+          <td><code>CMN</code></td>
+          <td><span class="tag-warn">À adapter</span> Remplacer par le code site de votre établissement après import.</td>
+        </tr>
+        <tr>
+          <td>QuestionnaireHtml (INSER)</td>
+          <td><code>A10111100209</code></td>
+          <td><span class="tag-warn">À adapter</span> Remplacer par le numéro attribué à votre QUDEM importé (étape 4 ci-dessus).</td>
+        </tr>
+        <tr>
+          <td>CodeUtilisateur</td>
+          <td><code>JBOURR</code></td>
+          <td>Information auteur — sans impact fonctionnel, mise à jour automatique à la première sauvegarde.</td>
+        </tr>
+        <tr>
+          <td>NumeroModeleCompteRendu</td>
+          <td><code>A10111108111</code> / <code>A10106903231</code></td>
+          <td>Numéros du centre source — remplacés automatiquement par Xplore à l'import.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Données sensibles vérifiées</h2>
+    <ul class="ok-list">
+      <li>Aucune donnée patient (nom, prénom, date de naissance, IPP…)</li>
+      <li>Aucun résultat de calcul ou consigne personnalisée</li>
+      <li>Aucun identifiant nominatif de soignant</li>
+      <li>Code auteur (<code>JBOURR</code>) et site (<code>CMN</code>) : métadonnées fonctionnelles uniquement</li>
+    </ul>
+  </main>
+</body>
+</html>

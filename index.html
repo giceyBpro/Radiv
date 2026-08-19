@@ -549,6 +549,7 @@
       <button type="button" class="print-btn" id="explainBtn">Ouvrir la version explicative</button>
       <a class="inline-link" href="contact.html"><strong>Contact</strong></a>
       <a class="inline-link" href="api-fonctionnement.html"><strong>Info API</strong></a>
+      <a class="inline-link" href="xplore.html"><strong>Questionnaire Xplore</strong></a>
     </div>
 
     <section class="section mandatory">
@@ -564,7 +565,7 @@
               </div>
             </div>
             <div>
-              <div class="field-title">Radiopharmaceutique (menu déroulant)</div>
+              <div class="field-title">Type d'exposition (menu déroulant)</div>
               <select id="isotope"></select>
               <div id="cureSelector" class="cure-selector" aria-label="Nombre de cures">
                 <span class="small">Nombre de cures :</span>
@@ -731,7 +732,6 @@
       <div>Version web pour le calcul des durées de restriction RIV.</div>
     </div>
     <div class="copyright" id="copyrightText">© -</div>
-    <div style="text-align:center;margin-top:4px;"><a href="tox" style="font-size:0.7em;color:inherit;opacity:0.35;text-decoration:none;">tox</a></div>
   </main>
 
     <script src="config.js"></script>
@@ -1087,6 +1087,9 @@
         };
         return JSON.stringify(filtered, null, 2);
       })();
+      const sfmnVerboseEsc = sfmnVerbose
+        ? sfmnVerbose.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        : null;
       if (result.errors.length) {
         const friendlyErrors = buildFriendlyErrors(selected);
         const displayedErrors = (friendlyErrors.length ? friendlyErrors : result.errors).map((error) => (
@@ -1096,13 +1099,13 @@
         ));
         errorBox.style.display = 'block';
         errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${e}`).join('<br>')}`;
-        if (sfmnVerbose) {
-          errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
+        if (sfmnVerboseEsc) {
+          errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerboseEsc}</pre>`;
         }
       } else {
-        if (sfmnVerbose) {
+        if (sfmnVerboseEsc) {
           errorBox.style.display = 'block';
-          errorBox.innerHTML = `<strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerbose}</pre>`;
+          errorBox.innerHTML = `<strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerboseEsc}</pre>`;
         } else {
           errorBox.style.display = 'none';
           errorBox.textContent = '';
