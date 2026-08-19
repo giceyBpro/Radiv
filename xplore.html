@@ -51,8 +51,7 @@
 
     <div class="warning">
       <strong>Vérification données sensibles :</strong> ces fichiers ont été contrôlés — ils ne contiennent aucune donnée patient, aucun identifiant nominatif.
-      Ils contiennent uniquement le code auteur (<code>JBOURR</code>), le site source (<code>CMN</code>) et un numéro de référence de questionnaire lié
-      (<code>A10111100209</code> dans l'insertion automatique) — voir le tableau d'adaptation ci-dessous.
+      Le code auteur est <code>xplore</code>, le site est vide et le numéro de questionnaire lié est un placeholder (<code>A0000000000</code>) — voir le tableau d'adaptation ci-dessous.
     </div>
 
     <h2>Fichiers à télécharger</h2>
@@ -102,17 +101,17 @@
       <tbody>
         <tr>
           <td>ListeSites</td>
-          <td><code>CMN</code></td>
-          <td><span class="tag-warn">À adapter</span> Remplacer par le code site de votre établissement après import.</td>
+          <td><em>(vide)</em></td>
+          <td><span class="tag-warn">À adapter</span> Renseigner le code site de votre établissement après import.</td>
         </tr>
         <tr>
           <td>QuestionnaireHtml (INSER)</td>
-          <td><code>A10111100209</code></td>
+          <td><code>A0000000000</code></td>
           <td><span class="tag-warn">À adapter</span> Remplacer par le numéro attribué à votre QUDEM importé (étape 4 ci-dessus).</td>
         </tr>
         <tr>
           <td>CodeUtilisateur</td>
-          <td><code>JBOURR</code></td>
+          <td><code>xplore</code></td>
           <td>Information auteur — sans impact fonctionnel, mise à jour automatique à la première sauvegarde.</td>
         </tr>
         <tr>
