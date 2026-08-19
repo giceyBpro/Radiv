@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const net = require('net');
 const tls = require('tls');
+const crypto = require('crypto');
 function loadDotEnv(filePath) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, 'utf8');
@@ -26,13 +27,24 @@ const port = Number.isInteger(parsedPort) && parsedPort >= 0 && parsedPort <= 65
 if (!Number.isInteger(parsedPort) || parsedPort < 0 || parsedPort > 65535) {
   console.warn(`PORT invalide (${process.env.PORT}); fallback sur 3003`);
 }
-const corsOrigin = process.env.CORS_ORIGIN || '*';
+// API_CORS_ORIGIN est le nom utilisé par .env.example / deploy_update.sh;
+// CORS_ORIGIN reste accepté pour compatibilité.
+const corsOrigin = process.env.API_CORS_ORIGIN || process.env.CORS_ORIGIN || '*';
 const adminToken = process.env.ADMIN_TOKEN || '';
+// Proxies autorisés à définir X-Forwarded-For. Par défaut le reverse-proxy local
+// (Apache/passenger). Mettre TRUSTED_PROXIES="" pour ignorer totalement l'en-tête.
+const trustedProxies = (process.env.TRUSTED_PROXIES === undefined ? '127.0.0.1,::1' : process.env.TRUSTED_PROXIES)
+  .split(',')
+  .map((entry) => entry.trim())
+  .filter(Boolean);
 const logsDir = path.join(__dirname, 'logs');
 const logsFile = path.join(logsDir, 'measurements.jsonl');
 const geoIpCache = new Map();
 const GEO_IP_CACHE_MAX = 500;
 const contactRateMap = new Map();
+const calculateRateMap = new Map();
+const LOGS_MAX_BYTES = Number(process.env.LOGS_MAX_BYTES || 50 * 1024 * 1024);
+const CALCULATE_RATE_LIMIT = Number(process.env.CALCULATE_RATE_LIMIT || 60);
 const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
 const recaptchaSiteKey = process.env.RECAPTCHA_SITE_KEY || '';
 const smtpHost = process.env.SMTP_HOST || '';
@@ -42,6 +54,7 @@ const smtpUser = process.env.SMTP_USER || '';
 const smtpPass = process.env.SMTP_PASS || '';
 const smtpFrom = process.env.SMTP_FROM || '';
 const contactDest = process.env.CONTACT_DEST || '';
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 15000);
 const sfmnCalculatorUrl = process.env.SFMN_CALCULATOR_URL || '';
 const sfmnDebugDefault = String(process.env.SFMN_DEBUG || 'false').toLowerCase() === 'true';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
@@ -247,7 +260,9 @@ function emptyRecommendations() {
 }
 async function calculateSfmn(payload) {
   const selected = getIsotope(payload.isotope_code);
-  const debugEnabled = sfmnDebugDefault || String(payload.sfmn_debug || '').toLowerCase() === 'true';
+  // Le mode debug expose le HTML distant complet et les champs cachés du formulaire SFMN
+  // (jeton CSRF compris): il ne doit dépendre que de la configuration serveur, jamais du payload.
+  const debugEnabled = sfmnDebugDefault;
   const sfmnDebug = {
     enabled: debugEnabled,
     requests: [],
@@ -627,9 +642,14 @@ async function calculateSfmn(payload) {
   }
 }
 function getClientIp(req) {
+  const remote = req.socket?.remoteAddress || 'unknown';
+  // X-Forwarded-For n'est cru que si la connexion vient réellement d'un proxy déclaré:
+  // sinon n'importe qui peut usurper son IP (contournement du rate limit, empoisonnement des logs).
+  if (!trustedProxies.length) return remote;
+  if (!trustedProxies.includes(normalizeIpForLookup(remote))) return remote;
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length) return forwarded.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
+  return remote;
 }
 function normalizeIpForLookup(ip) {
   if (!ip) return '';
@@ -684,7 +704,7 @@ async function resolveGeoFromIp(ip) {
       },
       {
         name: 'ip-api.com',
-        url: `http://ip-api.com/json/${encodeURIComponent(normalized)}`,
+        url: `https://ip-api.com/json/${encodeURIComponent(normalized)}`,
         parse: (data) => (data?.status === 'success' ? {
           ip: normalized,
           provider: 'ip-api.com',
@@ -719,8 +739,37 @@ async function resolveGeoFromIp(ip) {
     return null;
   }
 }
+// Ne journalise que les champs attendus: le payload brut est contrôlé par l'appelant
+// et gonflerait le fichier autant qu'il le souhaite.
+const LOGGED_INPUT_FIELDS = [
+  'calculation_mode', 'isotope_code', 'dose_rate', 'patient_size_cm',
+  'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit',
+  'benign_activity_mbq', 'benign_fixation_pct', 'cure_count'
+];
+function sanitizeInputForLog(payload) {
+  const safe = {};
+  if (!payload || typeof payload !== 'object') return safe;
+  for (const field of LOGGED_INPUT_FIELDS) {
+    const value = payload[field];
+    if (value === undefined || value === null) continue;
+    safe[field] = typeof value === 'number' || typeof value === 'boolean'
+      ? value
+      : String(value).slice(0, 100);
+  }
+  return safe;
+}
+function rotateLogsIfNeeded() {
+  try {
+    if (!fs.existsSync(logsFile)) return;
+    if (fs.statSync(logsFile).size < LOGS_MAX_BYTES) return;
+    fs.renameSync(logsFile, `${logsFile}.1`);
+  } catch (error) {
+    console.error('Erreur rotation log mesures:', error.message);
+  }
+}
 function appendMeasurementLog(entry) {
   try {
+    rotateLogsIfNeeded();
     fs.appendFileSync(logsFile, `${JSON.stringify(entry)}\n`, 'utf8');
   } catch (error) {
     console.error('Erreur log mesures:', error.message);
@@ -742,8 +791,11 @@ function readMeasurementLogs(year) {
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 function csvEscape(value) {
-  const text = String(value ?? '');
-  if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+  let text = String(value ?? '');
+  // Neutralise l'injection de formules: Excel/LibreOffice interprètent = + - @ et les
+  // caractères de contrôle en tête de cellule comme le début d'une formule.
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  if (/[",\r\n]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
   }
   return text;
@@ -773,7 +825,12 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 async function verifyRecaptcha(token, ip) {
-  if (!recaptchaSecretKey) return true;
+  // Mode fermé: une clé absente ou mal orthographiée doit bloquer l'envoi,
+  // sinon le formulaire de contact devient un relais d'envoi ouvert.
+  if (!recaptchaSecretKey) {
+    console.error('[CONTACT] RECAPTCHA_SECRET_KEY absente: envoi refusé.');
+    return false;
+  }
   const params = new URLSearchParams();
   params.set('secret', recaptchaSecretKey);
   params.set('response', token || '');
@@ -806,10 +863,13 @@ async function smtpSendMail({ replyTo, subject, html }) {
     sock.once('error', onError);
   });
 
-  const socket = await connect();
+  // Réaffectée lors du passage en TLS via STARTTLS: readResponse/sendCmd lisent
+  // toujours la valeur courante de cette liaison.
+  let socket = await connect();
   socket.setEncoding('utf8');
 
   const readResponse = () => new Promise((resolve, reject) => {
+    const active = socket;
     let buffer = '';
     const onData = (chunk) => {
       buffer += chunk;
@@ -822,19 +882,22 @@ async function smtpSendMail({ replyTo, subject, html }) {
     };
     const onErr = (err) => { cleanup(); reject(err); };
     const onEnd = () => { cleanup(); reject(new Error('Connexion SMTP fermée')); };
+    // Sans délai d'attente, un serveur qui accepte la connexion puis reste muet
+    // suspend la requête HTTP indéfiniment.
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Délai SMTP dépassé')); }, SMTP_TIMEOUT_MS);
     const cleanup = () => {
-      socket.off('data', onData);
-      socket.off('error', onErr);
-      socket.off('end', onEnd);
+      clearTimeout(timer);
+      active.off('data', onData);
+      active.off('error', onErr);
+      active.off('end', onEnd);
     };
-    socket.on('data', onData);
-    socket.on('error', onErr);
-    socket.on('end', onEnd);
+    active.on('data', onData);
+    active.on('error', onErr);
+    active.on('end', onEnd);
   });
 
   const sendCmd = async (cmd, expectedPrefix = '2') => {
-    socket.write(`${cmd}
-`);
+    socket.write(`${cmd}\r\n`);
     const lines = await readResponse();
     const code = (lines[lines.length - 1] || '').slice(0, 1);
     if (code !== expectedPrefix) {
@@ -851,16 +914,23 @@ async function smtpSendMail({ replyTo, subject, html }) {
 
     const ehlo = await sendCmd('EHLO radioprotection-riv.local', '2');
 
-    if (!smtpSecure && ehlo.join('\n').includes('STARTTLS')) {
+    if (!smtpSecure) {
+      // TLS obligatoire: sans cette vérification, un attaquant en position d'intermédiaire
+      // supprime l'annonce STARTTLS de la réponse EHLO et le mot de passe part en clair.
+      if (!ehlo.join('\n').includes('STARTTLS')) {
+        throw new Error('Le serveur SMTP n’annonce pas STARTTLS: envoi refusé (SMTP_SECURE=true requis pour une connexion TLS directe).');
+      }
       await sendCmd('STARTTLS', '2');
-      const secureSocket = tls.connect({ socket, servername: smtpHost });
+      const plainSocket = socket;
+      const secureSocket = tls.connect({ socket: plainSocket, servername: smtpHost });
       await new Promise((resolve, reject) => {
         secureSocket.once('secureConnect', resolve);
         secureSocket.once('error', reject);
       });
       secureSocket.setEncoding('utf8');
-      // eslint-disable-next-line no-param-reassign
-      Object.assign(socket, secureSocket);
+      // Bascule complète sur le socket TLS: fusionner les deux objets laisserait les
+      // écritures suivantes (dont AUTH LOGIN) sur un socket dans un état indéfini.
+      socket = secureSocket;
       await sendCmd('EHLO radioprotection-riv.local', '2');
     }
 
@@ -927,17 +997,32 @@ async function sendContactEmail({ email, message, ip, timestamp }) {
   return smtpSendMail({ replyTo: email.replace(/[\r\n]/g, ''), subject: 'Contact formulaire web', html });
 }
 
-function checkContactRateLimit(ip) {
+function checkRateLimit(map, ip, maxPerMinute) {
   const now = Date.now();
-  const entry = contactRateMap.get(ip);
-  if (!entry || now > entry.resetAt) { contactRateMap.set(ip, { count: 1, resetAt: now + 60000 }); return true; }
-  if (entry.count >= 5) return false;
+  // Purge des fenêtres expirées: sans cela la table croît indéfiniment.
+  if (map.size > 5000) {
+    for (const [key, value] of map) {
+      if (now > value.resetAt) map.delete(key);
+    }
+  }
+  const entry = map.get(ip);
+  if (!entry || now > entry.resetAt) { map.set(ip, { count: 1, resetAt: now + 60000 }); return true; }
+  if (entry.count >= maxPerMinute) return false;
   entry.count++;
   return true;
 }
+function checkContactRateLimit(ip) {
+  return checkRateLimit(contactRateMap, ip, 5);
+}
 function isAdminAuthorized(req) {
   if (!adminToken) return false;
-  return req.headers['x-admin-token'] === adminToken;
+  const provided = req.headers['x-admin-token'];
+  if (typeof provided !== 'string') return false;
+  // Comparaison à temps constant pour ne pas divulguer le jeton octet par octet.
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(adminToken, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', corsOrigin);
@@ -946,9 +1031,14 @@ function setCorsHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
 function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=utf-8',
+    // Réponses de données uniquement: rien ne doit y être chargé ni exécuté.
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
+  });
   res.end(JSON.stringify(data));
 }
 function sendHtml(res, statusCode, html) {
@@ -978,18 +1068,21 @@ const server = http.createServer((req, res) => {
     req.on('data', (chunk) => { body += chunk; if (body.length > 65536) req.destroy(); });
     req.on('end', async () => {
       try {
+        const ip = getClientIp(req);
+        if (!checkRateLimit(calculateRateMap, ip, CALCULATE_RATE_LIMIT)) {
+          return sendJson(res, 429, { ok: false, error: 'Trop de requêtes. Réessayez dans une minute.' });
+        }
         const payload = body ? JSON.parse(body) : {};
         const calculationMode = String(payload.calculation_mode || 'sfmn').toLowerCase();
         const result = calculationMode === 'sfmn'
           ? await calculateSfmn(payload)
           : calculate(payload);
-        const ip = getClientIp(req);
         const ipGeo = await resolveGeoFromIp(ip);
         appendMeasurementLog({
           timestamp: new Date().toISOString(),
           ip,
           ip_geo: ipGeo,
-          input: payload,
+          input: sanitizeInputForLog(payload),
           result
         });
         sendJson(res, 200, result);
@@ -1067,8 +1160,12 @@ const server = http.createServer((req, res) => {
   sendJson(res, 404, { error: 'Not found' });
 });
 
+// Poursuivre après une exception non capturée laisserait le process dans un état
+// incohérent: on ferme proprement et le superviseur (monitor_node.sh / pm2) relance.
 process.on('uncaughtException', (error) => {
   console.error('[FATAL] uncaughtException:', error);
+  server.close(() => process.exit(1));
+  setTimeout(() => process.exit(1), 5000).unref();
 });
 
 process.on('unhandledRejection', (reason) => {

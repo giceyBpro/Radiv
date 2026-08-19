@@ -746,6 +746,20 @@
     })();
     const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME;
     const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    // N'accepte qu'un schéma http(s): une valeur javascript: s'exécuterait au clic.
+    const safeHttpUrl = (value) => {
+      if (!value) return null;
+      try {
+        const parsed = new URL(String(value), window.location.origin);
+        return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.href : null;
+      } catch { return null; }
+    };
 
     let isotopes = [];
     let cureOptionsByIsotope = {};
@@ -1097,7 +1111,7 @@
             : error
         ));
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${e}`).join('<br>')}`;
+        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${escapeHtml(e)}`).join('<br>')}`;
         if (sfmnVerboseEsc) {
           errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerboseEsc}</pre>`;
         }
@@ -1127,9 +1141,9 @@
 
       $('resultsBody').innerHTML = filteredRows.map((row) => `
         <tr>
-          <td class="scenario">${row.label}</td>
-          <td class="value">${row.value === null ? '-' : row.value}</td>
-          <td class="conditions">${row.condition}</td>
+          <td class="scenario">${escapeHtml(row.label)}</td>
+          <td class="value">${row.value === null ? '-' : escapeHtml(row.value)}</td>
+          <td class="conditions">${escapeHtml(row.condition)}</td>
         </tr>
       `).join('');
     }
@@ -1144,7 +1158,7 @@
       const link = $('sourceLink');
       const meta = $('sourceMeta');
       if (selectedCalculationMode === 'sfmn') {
-        const sfmnUrl = result?.sfmn_source?.url || sfmnCalculatorUrl || 'https://www.sfmn.org/';
+        const sfmnUrl = safeHttpUrl(result?.sfmn_source?.url || sfmnCalculatorUrl) || 'https://www.sfmn.org/';
         link.href = sfmnUrl;
         link.textContent = sfmnUrl;
         meta.textContent = '— source SFMN utilisée pour le calcul';
@@ -1173,7 +1187,7 @@
       } catch (error) {
         if (requestId !== latestRequestId) return;
         $('errorBox').style.display = 'block';
-        $('errorBox').innerHTML = `<strong>Erreur réseau/API :</strong><br>- ${error.message}`;
+        $('errorBox').innerHTML = `<strong>Erreur réseau/API :</strong><br>- ${escapeHtml(error.message)}`;
       } finally {
         if (requestId === latestRequestId) {
           setLoadingState(false);
@@ -1301,7 +1315,7 @@
 
     bootstrap().catch((error) => {
       $('errorBox').style.display = 'block';
-      $('errorBox').innerHTML = `<strong>Initialisation impossible :</strong><br>- ${error.message}`;
+      $('errorBox').innerHTML = `<strong>Initialisation impossible :</strong><br>- ${escapeHtml(error.message)}`;
     });
   </script>
 </body>

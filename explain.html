@@ -128,7 +128,7 @@
           })
         : ['Aucune durée calculée automatiquement. Contactez votre équipe soignante pour obtenir des consignes personnalisées, simples et adaptées à votre vie quotidienne.'];
 
-      document.getElementById('rulesList').innerHTML = readableRules.map((text) => `<li>${text}</li>`).join('');
+      document.getElementById('rulesList').innerHTML = readableRules.map((text) => `<li>${safe(text)}</li>`).join('');
       const copyText = [
         'Consignes patient après traitement RIV',
         '',
