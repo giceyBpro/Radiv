@@ -1,1 +1,8 @@
 logs/
+node_modules/
+.env
+.runtime.env
+*.env
+!.env.example
+*.log
+*.pid

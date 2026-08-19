@@ -122,7 +122,9 @@ Chaque appel `POST /api/calculate` est loggé dans `logs/measurements.jsonl` (ba
 - API JSON : `GET /api/admin/measurements?year=2026`
 - Export CSV : `GET /api/admin/measurements.csv?year=2026`
 
-Si `ADMIN_TOKEN` est défini : fournir via header `X-Admin-Token` ou query `?token=…`.
+L'accès requiert `ADMIN_TOKEN` fourni via le header `X-Admin-Token`.
+Le jeton ne doit jamais être passé en query string : il serait enregistré dans les journaux
+d'accès du serveur, l'historique du navigateur et l'en-tête `Referer`.
 
 ## Modèles Xplore RIS
 

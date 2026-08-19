@@ -24,10 +24,11 @@ BACKEND_DIR="${BACKEND_DIR/#\~/$HOME}"
 FRONTEND_DIR="${FRONTEND_DIR/#\~/$HOME}"
 CHECKOUT_DIR="${CHECKOUT_DIR/#\~/$HOME}"
 API_PORT="${API_PORT:-3003}"
-API_CORS_ORIGIN="${API_CORS_ORIGIN:-*}"
 API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
 MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-${API_PUBLIC_URL%/}/config}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
+# Défaut restrictif: retomber sur "*" ouvrirait l'API à toutes les origines.
+API_CORS_ORIGIN="${API_CORS_ORIGIN:-${SITE_PUBLIC_URL}}"
 SITE_NAME="${SITE_NAME:-$(sed -E 's#^https?://##; s#/.*$##; s#^www\.##' <<< "${SITE_PUBLIC_URL}")}"
 COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_NAME}}"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
@@ -41,14 +42,35 @@ log_step "Initialisation"
 log_info "Répertoires cibles: backend=$BACKEND_DIR | frontend=$FRONTEND_DIR"
 mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
 
-AUTH_REPO="$GIT_REPO"
+# Le token ne doit jamais apparaître dans argv (lisible via `ps` par tout utilisateur
+# local) ni être écrit dans .git/config. On passe par un askpass temporaire en 600
+# qui lit la variable d'environnement, supprimé par le trap EXIT quoi qu'il arrive.
+ASKPASS_FILE=""
+cleanup_askpass() {
+  [[ -n "$ASKPASS_FILE" && -f "$ASKPASS_FILE" ]] && rm -f "$ASKPASS_FILE"
+  return 0
+}
+trap cleanup_askpass EXIT
+
 if [[ "$GIT_REPO" == https://* ]]; then
-  AUTH_REPO="https://${GIT_TOKEN}@${GIT_REPO#https://}"
+  ASKPASS_FILE="$(umask 077 && mktemp "${TMPDIR:-/tmp}/deploy-askpass.XXXXXX")"
+  cat > "$ASKPASS_FILE" <<'ASKPASS'
+#!/usr/bin/env bash
+case "$1" in
+  *Username*) echo "$GIT_ASKPASS_USER" ;;
+  *)          echo "$GIT_ASKPASS_TOKEN" ;;
+esac
+ASKPASS
+  chmod 700 "$ASKPASS_FILE"
+  export GIT_ASKPASS="$ASKPASS_FILE"
+  export GIT_ASKPASS_USER="x-access-token"
+  export GIT_ASKPASS_TOKEN="$GIT_TOKEN"
+  export GIT_TERMINAL_PROMPT=0
 fi
 
 if [[ ! -d "$CHECKOUT_DIR/.git" ]]; then
   log_info "Clone initial du dépôt dans $CHECKOUT_DIR"
-  git clone "$AUTH_REPO" "$CHECKOUT_DIR"
+  git clone "$GIT_REPO" "$CHECKOUT_DIR"
 fi
 
 pushd "$CHECKOUT_DIR" >/dev/null
@@ -60,11 +82,11 @@ fi
 
 log_step "Mise à jour Git"
 log_info "Branche: $GIT_BRANCH"
-git remote set-url origin "$AUTH_REPO"
+# L'URL stockée reste toujours propre: l'authentification passe par GIT_ASKPASS.
+git remote set-url origin "$GIT_REPO"
 git fetch --all --prune
 git checkout "$GIT_BRANCH"
 git pull --ff-only origin "$GIT_BRANCH"
-git remote set-url origin "$GIT_REPO"  # retire le token du .git/config
 
 log_step "Dépendances backend"
 npm install --omit=dev
@@ -86,20 +108,36 @@ fi
 # Synchronisation frontend avec suppression contrôlée des fichiers supprimés du repo,
 # sans supprimer les fichiers de configuration statiques du vhost.
 log_step "Synchronisation frontend"
+# --delete efface tout ce qui n'est pas dans la liste blanche: on refuse de pointer
+# vers un répertoire qui contient manifestement autre chose que ce déploiement.
+if [[ "$FRONTEND_DIR" == "$HOME" || "$FRONTEND_DIR" == "/" ]]; then
+  log_warn "FRONTEND_DIR=$FRONTEND_DIR est trop large pour un rsync --delete. Abandon."
+  exit 1
+fi
+if [[ -n "$(ls -A "$FRONTEND_DIR" 2>/dev/null)" ]] && [[ ! -f "$FRONTEND_DIR/index.html" ]]; then
+  log_warn "FRONTEND_DIR=$FRONTEND_DIR n'est pas vide et ne contient pas index.html."
+  log_warn "Vérifiez la valeur avant de relancer (rsync --delete effacerait son contenu). Abandon."
+  exit 1
+fi
+# Liste blanche: tout ce qui n'est pas listé ici n'est PAS publié. Une liste noire
+# échouerait en mode ouvert, publiant automatiquement tout nouveau fichier du dépôt.
+# admin-mesures.html est volontairement absent: il est servi par l'API (/admin/mesures).
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
-  --exclude='.git/' \
-  --exclude='node_modules/' \
-  --exclude='logs/' \
-  --exclude='.env' \
-  --exclude='.runtime.env' \
-  --exclude='server.js' \
-  --exclude='formules.txt' \
-  --exclude='deploy_update.sh' \
-  --exclude='monitor_node.sh' \
-  --exclude='package.json' \
-  --exclude='package-lock.json' \
+  --include='index.html' \
+  --include='print.html' \
+  --include='explain.html' \
+  --include='contact.html' \
+  --include='api-fonctionnement.html' \
+  --include='test-api.html' \
+  --include='tox.html' \
+  --include='xplore.html' \
+  --include='favicon.ico' \
+  --include='config.js' \
+  --include='downloads/' \
+  --include='downloads/**' \
+  --exclude='*' \
   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
 log_ok "Frontend synchronisé vers $FRONTEND_DIR"
@@ -121,8 +159,10 @@ log_step "Configuration frontend runtime"
 # Valide que les valeurs ne contiennent pas de caractères dangereux pour JS
 for _var_name in API_PUBLIC_URL SITE_PUBLIC_URL SITE_NAME COPYRIGHT_OWNER; do
   _var_val="${!_var_name}"
-  if [[ "$_var_val" =~ [\"\'\\] ]]; then
-    log_warn "$_var_name contient des caractères invalides (\", ', \\) — config.js non généré."
+  # Les sauts de ligne doivent être rejetés aussi: une valeur multiligne injecterait
+  # du JS arbitraire dans config.js, servi à tous les visiteurs.
+  if [[ "$_var_val" =~ [\"\'\\$'\n'$'\r'] ]]; then
+    log_warn "$_var_name contient des caractères invalides (\", ', \\, saut de ligne) — config.js non généré."
     exit 1
   fi
 done
@@ -134,9 +174,13 @@ window.RADIOPROTECTION_COPYRIGHT_OWNER = "${COPYRIGHT_OWNER}";
 FRONTCFG
 
 log_step "Configuration backend runtime (.runtime.env)"
+# Le fichier doit être en 600 dès sa création: une redirection simple le crée en 644
+# et laisse une fenêtre où ADMIN_TOKEN/SMTP_PASS sont lisibles par tout le monde.
+install -m 600 /dev/null "$BACKEND_DIR/.runtime.env"
 cat > "$BACKEND_DIR/.runtime.env" <<RUNTIME
 PORT="${API_PORT}"
-CORS_ORIGIN="${API_CORS_ORIGIN}"
+API_CORS_ORIGIN="${API_CORS_ORIGIN}"
+TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1,::1}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 RECAPTCHA_SECRET_KEY="${RECAPTCHA_SECRET_KEY:-}"
 RECAPTCHA_SITE_KEY="${RECAPTCHA_SITE_KEY:-}"
@@ -218,14 +262,21 @@ Healthcheck: ${HEALTH_URL}
 EOF
 )"
 
-  if curl -fsS --url "$smtp_url" \
-    --user "${SMTP_USER}:${SMTP_PASS}" \
+  # Les identifiants passent par un fichier de config temporaire en 600 plutôt que par
+  # --user: la ligne de commande est lisible via `ps` par tout utilisateur local, et ce
+  # script tourne toutes les minutes via cron.
+  curl_cfg="$(umask 077 && mktemp "${TMPDIR:-/tmp}/monitor-smtp.XXXXXX")"
+  printf 'user = "%s:%s"\n' "$SMTP_USER" "$SMTP_PASS" > "$curl_cfg"
+
+  if curl -fsS --config "$curl_cfg" --url "$smtp_url" \
     --mail-from "<${envelope_from}>" \
     --mail-rcpt "<${CONTACT_DEST}>" \
     --upload-file - <<< "$mail_payload" >/dev/null 2>&1; then
+    rm -f "$curl_cfg"
     echo "$now_ts" > "$ALERT_STATE_FILE"
     ok "Email d'alerte indisponibilité envoyé à ${CONTACT_DEST}."
   else
+    rm -f "$curl_cfg"
     warn "Échec envoi email d'alerte indisponibilité."
   fi
 }
@@ -252,10 +303,15 @@ kill_managed_processes() {
     fi
   fi
 
-  pids="$(pgrep -f "node .*${BACKEND_DIR}/server.js" 2>/dev/null || true)"
+  # pgrep -f interprète son motif comme une regex: un chemin contenant . + ( [ élargirait
+  # la correspondance. On échappe les métacaractères, puis on revérifie la cmdline exacte.
+  backend_re="$(printf '%s' "${BACKEND_DIR}/server.js" | sed -E 's/[][(){}.*+?^$|\\\/]/\\&/g')"
+  pids="$(pgrep -f "node .*${backend_re}" 2>/dev/null || true)"
   if [[ -n "$pids" ]]; then
     while IFS= read -r pid; do
       [[ -n "$pid" ]] || continue
+      pid_cmdline="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+      [[ "$pid_cmdline" == *"$BACKEND_DIR/server.js"* ]] || continue
       kill "$pid" >/dev/null 2>&1 || true
     done <<< "$pids"
   fi

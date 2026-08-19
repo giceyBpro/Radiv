@@ -157,17 +157,22 @@
       return `${recos || '<span class="small">Aucune recommandation</span>'}${errors}`;
     }
 
+    // Le jeton ne doit jamais transiter par l'URL: il finirait dans les journaux d'accès
+    // du serveur, l'historique du navigateur et l'en-tête Referer.
     function q() {
       const year = document.getElementById('yearInput').value.trim();
-      const token = document.getElementById('tokenInput').value.trim();
       const params = new URLSearchParams();
       if (year) params.set('year', year);
-      if (token) params.set('token', token);
       return params.toString() ? `?${params.toString()}` : '';
     }
 
+    function authHeaders() {
+      const token = document.getElementById('tokenInput').value.trim();
+      return token ? { 'X-Admin-Token': token } : {};
+    }
+
     async function loadRows() {
-      const resp = await fetch(`${API_BASE}/admin/measurements${q()}`);
+      const resp = await fetch(`${API_BASE}/admin/measurements${q()}`, { headers: authHeaders() });
       if (!resp.ok) {
         statusEl.textContent = `Erreur ${resp.status} lors du chargement.`;
         rowsEl.innerHTML = '';
@@ -190,8 +195,22 @@
       `).join('');
     }
 
-    function exportCsv() {
-      window.location.href = `${API_BASE}/admin/measurements.csv${q()}`;
+    async function exportCsv() {
+      // Téléchargement via fetch + blob: une navigation directe exposerait le jeton dans l'URL.
+      const resp = await fetch(`${API_BASE}/admin/measurements.csv${q()}`, { headers: authHeaders() });
+      if (!resp.ok) {
+        statusEl.textContent = `Erreur ${resp.status} lors de l'export.`;
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `mesures_${document.getElementById('yearInput').value.trim() || 'all'}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
     }
 
     document.getElementById('loadBtn').addEventListener('click', loadRows);
