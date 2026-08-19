@@ -115,12 +115,21 @@ CONTACT_DEST
 
 ## Journalisation des mesures
 
-Chaque appel `POST /api/calculate` est loggé dans `logs/measurements.jsonl` (backend) :
-`timestamp`, `ip`, `input`, `result`.
+Chaque appel `POST /api/calculate` est loggé dans `logs/measurements-AAAA-MM.jsonl` (un
+fichier par mois, backend) : `timestamp`, `ip`, `input`, `result`. Le découpage mensuel
+et la lecture en flux évitent de bloquer le serveur le temps de charger un historique
+qui grossit sans limite. Un ancien `logs/measurements.jsonl` (avant ce découpage) est
+scindé automatiquement en fichiers mensuels au démarrage, puis archivé en `.migrated`.
+Chaque fichier mensuel est en plus limité par `LOGS_MAX_BYTES` (défaut 50 Mo) : au-delà,
+il est basculé en `.1` avant de reprendre à zéro.
 
 - Page web : `GET /admin/mesures` → `admin-mesures.html`
-- API JSON : `GET /api/admin/measurements?year=2026`
-- Export CSV : `GET /api/admin/measurements.csv?year=2026`
+- Périodes disponibles : `GET /api/admin/measurements/periods`
+- API JSON : `GET /api/admin/measurements?year=2026&month=08`
+- Export CSV : `GET /api/admin/measurements.csv?year=2026&month=08`
+
+`year` seul renvoie tous les mois de cette année ; sans aucun paramètre, le mois en
+cours. `month` sans `year` est ignoré.
 
 L'accès requiert `ADMIN_TOKEN` fourni via le header `X-Admin-Token`.
 Le jeton ne doit jamais être passé en query string : il serait enregistré dans les journaux

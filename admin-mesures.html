@@ -33,9 +33,9 @@
 <body>
   <main>
     <h1>Mesures RIV collectées</h1>
-    <p class="muted">Filtre par année appliqué côté backend. Export CSV généré côté backend.</p>
+    <p class="muted">Les mesures sont journalisées par mois. Sélectionnez une période pour éviter de charger tout l'historique d'un coup.</p>
     <div class="controls">
-      <label>Année <input id="yearInput" type="number" min="2000" max="2100" placeholder="ex. 2026"></label>
+      <label>Période <select id="periodInput"><option value="">(chargement…)</option></select></label>
       <label>Token admin <input id="tokenInput" type="password" placeholder="si configuré"></label>
       <button id="loadBtn">Charger</button>
       <button id="exportBtn">Exporter CSV</button>
@@ -157,18 +157,41 @@
       return `${recos || '<span class="small">Aucune recommandation</span>'}${errors}`;
     }
 
+    const periodSelect = document.getElementById('periodInput');
+    const MONTH_LABELS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
     // Le jeton ne doit jamais transiter par l'URL: il finirait dans les journaux d'accès
     // du serveur, l'historique du navigateur et l'en-tête Referer.
     function q() {
-      const year = document.getElementById('yearInput').value.trim();
+      const [year, month] = (periodSelect.value || '').split('-');
       const params = new URLSearchParams();
       if (year) params.set('year', year);
+      if (month) params.set('month', month);
       return params.toString() ? `?${params.toString()}` : '';
     }
 
     function authHeaders() {
       const token = document.getElementById('tokenInput').value.trim();
       return token ? { 'X-Admin-Token': token } : {};
+    }
+
+    async function loadPeriods() {
+      const resp = await fetch(`${API_BASE}/admin/measurements/periods`, { headers: authHeaders() });
+      if (!resp.ok) {
+        periodSelect.innerHTML = '<option value="">(indisponible sans jeton)</option>';
+        return;
+      }
+      const data = await resp.json();
+      const periods = data.periods || [];
+      if (!periods.length) {
+        const now = new Date();
+        periods.push({ year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 });
+      }
+      periodSelect.innerHTML = periods.map((p) => {
+        const value = `${p.year}-${String(p.month).padStart(2, '0')}`;
+        const label = `${MONTH_LABELS[p.month - 1]} ${p.year}`;
+        return `<option value="${value}">${escapeHtml(label)}</option>`;
+      }).join('');
     }
 
     async function loadRows() {
@@ -206,7 +229,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `mesures_${document.getElementById('yearInput').value.trim() || 'all'}.csv`;
+      link.download = `mesures_${periodSelect.value || 'periode'}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -215,6 +238,11 @@
 
     document.getElementById('loadBtn').addEventListener('click', loadRows);
     document.getElementById('exportBtn').addEventListener('click', exportCsv);
+    document.getElementById('tokenInput').addEventListener('change', async () => {
+      await loadPeriods();
+      if (periodSelect.value) loadRows();
+    });
+    loadPeriods();
   </script>
 </body>
 </html>

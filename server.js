@@ -4,6 +4,7 @@ const path = require('path');
 const net = require('net');
 const tls = require('tls');
 const crypto = require('crypto');
+const readline = require('readline');
 function loadDotEnv(filePath) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, 'utf8');
@@ -38,7 +39,7 @@ const trustedProxies = (process.env.TRUSTED_PROXIES === undefined ? '127.0.0.1,:
   .map((entry) => entry.trim())
   .filter(Boolean);
 const logsDir = path.join(__dirname, 'logs');
-const logsFile = path.join(logsDir, 'measurements.jsonl');
+const legacyLogsFile = path.join(logsDir, 'measurements.jsonl');
 const geoIpCache = new Map();
 const GEO_IP_CACHE_MAX = 500;
 const contactRateMap = new Map();
@@ -58,6 +59,7 @@ const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 15000);
 const sfmnCalculatorUrl = process.env.SFMN_CALCULATOR_URL || '';
 const sfmnDebugDefault = String(process.env.SFMN_DEBUG || 'false').toLowerCase() === 'true';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+migrateLegacyLogFile();
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
 const isotopes = [
@@ -758,37 +760,101 @@ function sanitizeInputForLog(payload) {
   }
   return safe;
 }
-function rotateLogsIfNeeded() {
+// Un seul measurements.jsonl grossit sans limite et readFileSync doit le charger et le
+// parser entièrement en un seul appel synchrone: sur un fichier de plusieurs dizaines de
+// Mo, ça bloque la boucle d'événements (donc toute l'API, y compris /health) pendant
+// plusieurs secondes. Le découpage par mois borne la taille de chaque fichier, et la
+// lecture en flux (readline) répartit le travail sur de nombreux petits ticks asynchrones
+// au lieu d'un seul bloc.
+function logFilePathForPeriod(year, month) {
+  return path.join(logsDir, `measurements-${year}-${String(month).padStart(2, '0')}.jsonl`);
+}
+function listLogPeriods() {
+  if (!fs.existsSync(logsDir)) return [];
+  const re = /^measurements-(\d{4})-(\d{2})\.jsonl$/;
+  const periods = [];
+  for (const name of fs.readdirSync(logsDir)) {
+    const m = name.match(re);
+    if (m) periods.push({ year: Number(m[1]), month: Number(m[2]) });
+  }
+  periods.sort((a, b) => (b.year - a.year) || (b.month - a.month));
+  return periods;
+}
+function rotateLogFileIfNeeded(file) {
   try {
-    if (!fs.existsSync(logsFile)) return;
-    if (fs.statSync(logsFile).size < LOGS_MAX_BYTES) return;
-    fs.renameSync(logsFile, `${logsFile}.1`);
+    if (!fs.existsSync(file)) return;
+    if (fs.statSync(file).size < LOGS_MAX_BYTES) return;
+    fs.renameSync(file, `${file}.1`);
   } catch (error) {
     console.error('Erreur rotation log mesures:', error.message);
   }
 }
 function appendMeasurementLog(entry) {
   try {
-    rotateLogsIfNeeded();
-    fs.appendFileSync(logsFile, `${JSON.stringify(entry)}\n`, 'utf8');
+    const date = new Date(entry.timestamp);
+    const file = logFilePathForPeriod(date.getUTCFullYear(), date.getUTCMonth() + 1);
+    rotateLogFileIfNeeded(file);
+    fs.appendFileSync(file, `${JSON.stringify(entry)}\n`, 'utf8');
   } catch (error) {
     console.error('Erreur log mesures:', error.message);
   }
 }
-function readMeasurementLogs(year) {
-  if (!fs.existsSync(logsFile)) return [];
-  const lines = fs.readFileSync(logsFile, 'utf8').split(/\r?\n/).filter(Boolean);
-  return lines
-    .map((line) => {
-      try { return JSON.parse(line); } catch { return null; }
-    })
-    .filter(Boolean)
-    .filter((row) => {
-      if (!year) return true;
-      const y = new Date(row.timestamp).getFullYear();
-      return Number.isFinite(y) && y === Number(year);
-    })
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+function readLogFileStream(file) {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(file)) return resolve([]);
+    const rows = [];
+    const rl = readline.createInterface({
+      input: fs.createReadStream(file, { encoding: 'utf8' }),
+      crlfDelay: Infinity
+    });
+    rl.on('line', (line) => {
+      if (!line) return;
+      try { rows.push(JSON.parse(line)); } catch { /* ligne corrompue ignorée */ }
+    });
+    rl.on('close', () => resolve(rows));
+    rl.on('error', reject);
+  });
+}
+async function readMeasurementLogs(year, month) {
+  let files;
+  if (year && month) {
+    files = [logFilePathForPeriod(Number(year), Number(month))];
+  } else if (year) {
+    files = listLogPeriods()
+      .filter((p) => p.year === Number(year))
+      .map((p) => logFilePathForPeriod(p.year, p.month));
+  } else {
+    const now = new Date();
+    files = [logFilePathForPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1)];
+  }
+  const rows = [];
+  for (const file of files) {
+    rows.push(...await readLogFileStream(file));
+    if (fs.existsSync(`${file}.1`)) rows.push(...await readLogFileStream(`${file}.1`));
+  }
+  return rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+// Migration ponctuelle: avant le découpage mensuel, tout était écrit dans un seul
+// measurements.jsonl. Exécutée une fois au démarrage, avant server.listen(), donc sans
+// impact sur des clients déjà connectés.
+function migrateLegacyLogFile() {
+  if (!fs.existsSync(legacyLogsFile)) return;
+  try {
+    const lines = fs.readFileSync(legacyLogsFile, 'utf8').split(/\r?\n/).filter(Boolean);
+    for (const line of lines) {
+      let entry;
+      try { entry = JSON.parse(line); } catch { continue; }
+      if (!entry || !entry.timestamp) continue;
+      const date = new Date(entry.timestamp);
+      if (Number.isNaN(date.getTime())) continue;
+      const file = logFilePathForPeriod(date.getUTCFullYear(), date.getUTCMonth() + 1);
+      fs.appendFileSync(file, `${JSON.stringify(entry)}\n`, 'utf8');
+    }
+    fs.renameSync(legacyLogsFile, `${legacyLogsFile}.migrated`);
+    console.log('[MIGRATION] logs/measurements.jsonl scindé par mois (measurements-AAAA-MM.jsonl), archivé en .migrated.');
+  } catch (error) {
+    console.error('[MIGRATION] Échec migration logs legacy:', error.message);
+  }
 }
 function csvEscape(value) {
   let text = String(value ?? '');
@@ -1131,22 +1197,41 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'GET' && pathname === '/api/admin/measurements/periods') {
+    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+    return sendJson(res, 200, { periods: listLogPeriods() });
+  }
   if (req.method === 'GET' && pathname === '/api/admin/measurements') {
     if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
-    const rows = readMeasurementLogs(year);
-    return sendJson(res, 200, { rows, year: year || null, total: rows.length });
+    const month = urlObj.searchParams.get('month');
+    readMeasurementLogs(year, month)
+      .then((rows) => sendJson(res, 200, { rows, year: year || null, month: month || null, total: rows.length }))
+      .catch((error) => {
+        console.error('Erreur lecture mesures:', error.message);
+        sendJson(res, 500, { error: 'Erreur lecture des mesures.' });
+      });
+    return;
   }
   if (req.method === 'GET' && pathname === '/api/admin/measurements.csv') {
     if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
-    const rows = readMeasurementLogs(year);
-    const csv = toCsv(rows);
-    res.writeHead(200, {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="mesures_${year || 'all'}.csv"`
-    });
-    return res.end(csv);
+    const month = urlObj.searchParams.get('month');
+    readMeasurementLogs(year, month)
+      .then((rows) => {
+        const csv = toCsv(rows);
+        const label = year && month ? `${year}-${String(month).padStart(2, '0')}` : (year || 'periode');
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="mesures_${label}.csv"`
+        });
+        res.end(csv);
+      })
+      .catch((error) => {
+        console.error('Erreur export mesures:', error.message);
+        sendJson(res, 500, { error: 'Erreur lecture des mesures.' });
+      });
+    return;
   }
   if (req.method === 'GET' && pathname === '/admin/mesures') {
     if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
