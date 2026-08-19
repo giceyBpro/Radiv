@@ -1,26 +1,44 @@
 # dosimetrieRIV
 
-## Architecture
+Application web de calcul des durées de restriction de contact après Radiothérapie Interne Vectorisée (RIV), intégrant l'API RadIV / SFMN et des modèles Xplore téléchargeables.
 
-- `index.html` : page principale utilisateur (visuel identique), sans formules métier.
-- `index-legacy.html` : copie rétro-compatible de l'ancienne page principale.
-- `api-fonctionnement.html` : page explicative du contrat API.
-- `contact.html` : formulaire de contact protégé par Google reCAPTCHA, envoi email côté backend.
-- `server.js` : API Node.js qui contient toutes les formules de calcul.
-- `admin-mesures.html` : page de consultation/export des mesures collectées.
-- `deploy_update.sh` : script autonome et idempotent de déploiement/mise à jour.
-- `monitor_node.sh` : script généré automatiquement dans le backend pour superviser l'API et la relancer si elle tombe.
-- `.env.example` : modèle de configuration pour le déploiement.
+## Pages et fichiers frontend
+
+| Fichier | Description |
+|---|---|
+| `index.html` | Application principale : saisie dosimétrique, calcul des consignes, résultat interactif. |
+| `print.html` | Version imprimable A4 du résultat (PDF, image, copie). |
+| `explain.html` | Version explicative simplifiée destinée au patient. |
+| `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
+| `contact.html` | Formulaire de contact protégé par reCAPTCHA, envoi email côté backend. |
+| `admin-mesures.html` | Consultation et export des mesures journalisées. |
+| `api-fonctionnement.html` | Documentation publique du contrat API. |
+| `test-api.html` | Page de test manuel des endpoints API. |
+| `tox.html` | Page de diagnostic interne (accessible via `/tox`, sans lien depuis l'interface). |
+| `config.js` | Configuration runtime (URLs API/site) injectée par `deploy_update.sh` en production. |
+| `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
+
+## Backend
+
+| Fichier | Description |
+|---|---|
+| `server.js` | API Node.js : formules de calcul, proxy SFMN, journalisation, contact. |
+| `deploy_update.sh` | Script de déploiement/mise à jour idempotent. |
+| `monitor_node.sh` | Script de supervision généré par `deploy_update.sh` (health-check + relance). |
+| `.env.example` | Modèle de configuration pour le déploiement. |
+| `formules.txt` | Documentation interne des formules et méthodes de calcul. |
 
 ## API
 
 ### `GET /api/config`
+
 Retourne les radiopharmaceutiques disponibles et l'isotope par défaut.
 
 ### `POST /api/calculate`
-Calcule les durées recommandées.
 
-Exemple de payload JSON :
+Calcule les durées de restriction recommandées.
+
+Payload JSON :
 
 ```json
 {
@@ -35,22 +53,20 @@ Exemple de payload JSON :
   "user_limit": null,
   "benign_activity_mbq": null,
   "benign_fixation_pct": null,
-  "cure_count": 4
+  "cure_count": 1
 }
 ```
-Les valeurs possibles de `isotope_code` sont listées dans `api-fonctionnement.html`.
-Les champs à `null` peuvent être omis : les champs absents sont traités comme `null` par l'API.
-`calculation_mode` accepte `local` (par défaut) ou `sfmn` (fonction spécifique SFMN).
-En mode `sfmn`, le backend interroge le formulaire SFMN distant configuré dans `SFMN_CALCULATOR_URL` puis parse la page HTML de résultats.
-Pour diagnostiquer le flux SFMN, ajoutez `sfmn_debug=true` dans `POST /api/calculate` (ou `SFMN_DEBUG=true` côté serveur) pour obtenir des traces verbeuses dans la réponse (`sfmn_debug`).
 
-Cas particulier : pour `isotope_code=iode131_benin`, les champs obligatoires sont `benign_activity_mbq` et `benign_fixation_pct`; `dose_rate` est ignoré.
-Pour `isotope_code=non_defini`, `user_period_days` est aussi obligatoire et doit être strictement positif.
-`cure_count` est optionnel (défaut `1`). Il est pris en charge pour `radium223` (1/4/6), `psma_177lu` (1/4/6), `lutetium177_net` (1/4).
+- Les champs absents sont traités comme `null`.
+- `calculation_mode` : `local` (défaut) ou `sfmn` (interroge le formulaire SFMN distant).
+- Pour `iode131_benin` : `benign_activity_mbq` et `benign_fixation_pct` sont obligatoires ; `dose_rate` est ignoré.
+- Pour `non_defini` : `user_period_days` est obligatoire (> 0).
+- `cure_count` : optionnel (défaut `1`). Pris en compte pour `radium223`, `psma_177lu`, `lutetium177_net`.
 
-La réponse contient aussi `recommendations_days` : dictionnaire des recommandations en jours par type de public (`conjoint_plus_60`, `conjoint_moins_60`, `conjointe_enceinte`, `transport_commun`, `enfant_moins_3_ans`, `enfant_3_11_ans`, `collegues_travail`, `scenario_utilisateur`).
+En mode `sfmn`, le backend interroge `SFMN_CALCULATOR_URL` et parse le HTML de résultats.
+Ajouter `sfmn_debug: true` dans le payload (ou `SFMN_DEBUG=true` côté serveur) pour des traces détaillées.
 
-### Exemple de retour (`POST /api/calculate`)
+### Exemple de réponse
 
 ```json
 {
@@ -75,71 +91,49 @@ La réponse contient aussi `recommendations_days` : dictionnaire des recommandat
 }
 ```
 
+En cas d'erreur : `ok: false` + `error.code`, `error.message`, `error.reason`, `error.expected_payload`.
 
-En cas d'erreur, l'API renvoie un objet explicite :
-- `ok: false`
-- `error.code`
-- `error.message`
-- `error.reason`
-- `error.expected_payload`
+## Formulaire de contact
 
-## Formulaire de contact (backend)
-
-- Page : `contact.html` (lien depuis `index.html`)
-- Endpoint config publique : `GET /api/public-config` (retourne `recaptcha_site_key`)
-- Endpoint envoi : `POST /api/contact`
-
-Sécurité / confidentialité :
-- adresse destinataire non exposée au frontend,
-- vérification reCAPTCHA faite côté backend,
-- envoi email réalisé côté backend.
+- Page : `contact.html`
+- `GET /api/public-config` : retourne `recaptcha_site_key`
+- `POST /api/contact` : envoi email côté backend (destinataire non exposé au frontend)
 
 Variables `.env` requises :
 
-### Configuration Google reCAPTCHA (v2 Checkbox)
+```
+RECAPTCHA_SITE_KEY
+RECAPTCHA_SECRET_KEY
+SMTP_HOST
+SMTP_PORT
+SMTP_SECURE
+SMTP_USER
+SMTP_PASS
+SMTP_FROM
+CONTACT_DEST
+```
 
-1. Ouvrir Google reCAPTCHA Admin : https://www.google.com/recaptcha/admin/create
-2. Type recommandé : **reCAPTCHA v2** puis **"Je ne suis pas un robot" (Checkbox)**.
-3. Ajouter votre/vos domaine(s) (ex: `www.example.org`).
-4. Récupérer :
-   - **Site key** → `RECAPTCHA_SITE_KEY`
-   - **Secret key** → `RECAPTCHA_SECRET_KEY`
-5. Redéployer (`./deploy_update.sh`) pour injecter les clés côté backend.
+## Journalisation des mesures
 
-Documentation Google : https://developers.google.com/recaptcha/docs/display
+Chaque appel `POST /api/calculate` est loggé dans `logs/measurements.jsonl` (backend) :
+`timestamp`, `ip`, `input`, `result`.
 
-- `RECAPTCHA_SITE_KEY`
-- `RECAPTCHA_SECRET_KEY`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_SECURE`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_FROM`
-- `CONTACT_DEST`
-
-## Journal des mesures (backend)
-
-Chaque appel `POST /api/calculate` est journalisé côté backend dans :
-- `logs/measurements.jsonl`
-
-Champs loggés :
-- date/heure (`timestamp`),
-- IP demandeur (`ip`),
-- données d'entrée (`input`),
-- résultats (`result`).
-
-## Consultation des mesures (backend)
-
-- Page web : `GET /admin/mesures`
+- Page web : `GET /admin/mesures` → `admin-mesures.html`
 - API JSON : `GET /api/admin/measurements?year=2026`
 - Export CSV : `GET /api/admin/measurements.csv?year=2026`
 
-Le filtre année est appliqué côté backend (non traité côté frontend).
+Si `ADMIN_TOKEN` est défini : fournir via header `X-Admin-Token` ou query `?token=…`.
 
-Si `ADMIN_TOKEN` est défini, fournir le token :
-- header `X-Admin-Token`, ou
-- query string `?token=...`
+## Modèles Xplore RIS
+
+Le dossier `downloads/` contient deux modèles prêts à importer dans Xplore :
+
+| Fichier | Type | Description |
+|---|---|---|
+| `MN_Radiopro_APIRADIV_generique.xml` | QUDEM | Questionnaire de saisie dosimétrique avec bouton RadIV intégré. |
+| `MN_Consignes-radioprotection_RadIV.xml` | INSER | Insertion automatique générant la fiche consignes patient. |
+
+Voir `xplore.html` pour les instructions d'installation et les points d'adaptation par centre.
 
 ## Lancement local
 
@@ -150,68 +144,41 @@ npm start
 
 ## Déploiement
 
-1. Copier `deploy_update.sh` et un `.env` (basé sur `.env.example`) dans votre répertoire d'exploitation.
-2. Personnaliser au minimum dans `.env` :
-   - `API_PORT`
-   - `BACKEND_DIR`
-   - `FRONTEND_DIR` (par défaut: `$HOME/public_html/frontend`)
-   - `SITE_PUBLIC_URL`
-   - `API_PUBLIC_URL`
-   - `ADMIN_TOKEN` (recommandé)
+1. Copier `deploy_update.sh` et un `.env` (basé sur `.env.example`) dans le répertoire d'exploitation.
+2. Configurer dans `.env` :
+
+```
+API_PORT
+BACKEND_DIR
+FRONTEND_DIR          # défaut : $HOME/public_html/frontend
+SITE_PUBLIC_URL
+API_PUBLIC_URL
+ADMIN_TOKEN           # recommandé
+```
+
 3. Lancer :
 
 ```bash
-cd ~/[Backend]
 ./deploy_update.sh
 ```
 
-### Important (hébergements avec interface type cPanel/o2switch)
+Le script : crée les dossiers, fait un `git pull`, synchronise backend/frontend, protège `.env` / `.htaccess`, génère `config.js` et `monitor_node.sh`, et lance la supervision.
 
-`deploy_update.sh` **ne crée pas** automatiquement une application Node.js dans l’interface d’hébergement.
+> **Hébergements cPanel / o2switch** : le script ne crée pas l'application Node dans le panel. Le routage proxy/passenger doit être configuré manuellement au moins une fois. Si `/api` n'est pas routé automatiquement, définir `API_PUBLIC_URL` avec une URL absolue.
 
-Il déploie le code, génère la configuration runtime, lance le monitor et redémarre l’API via `pm2`/`nohup`, mais la partie “création/routage” de l’app Node (proxy/passenger) dans le panel doit être faite **au moins une fois** manuellement.
+## Supervision
 
-> Si votre hébergement ne route pas automatiquement `/api` vers Node.js, définissez `API_PUBLIC_URL` avec une URL absolue joignable (ex: `https://api.votre-domaine.tld/api`).
-
-Le script :
-- crée les dossiers nécessaires,
-- fait un `git pull` sur la branche configurée,
-- synchronise backend/frontend vers les bons répertoires (les fichiers frontend du repo sont remplacés/supprimés selon l'état git),
-- supprime localement les fichiers supprimés du repo,
-- protège les fichiers de configuration statiques locaux (`.env`, `.runtime.env`, `.htaccess`, etc.),
-- écrit `config.js` côté frontend avec l'URL API publique,
-- génère `monitor_node.sh` et le lance (contrôle santé + relance automatique),
-- affiche des messages `[DEPLOY]` pendant l’exécution pour suivre chaque étape.
-
-## Supervision Node.js (site toujours actif)
-
-Le script de déploiement génère :
-
-```bash
-$BACKEND_DIR/monitor_node.sh
-```
-
-Ce script :
+`deploy_update.sh` génère `monitor_node.sh` qui :
 - vérifie `http://127.0.0.1:$API_PORT/health`,
-- vérifie aussi `MONITOR_PUBLIC_CONFIG_URL` (par défaut: `$API_PUBLIC_URL/config`) pour détecter un proxy public cassé,
-- redémarre via `pm2` si disponible,
-- sinon relance via `nohup node server.js`.
+- vérifie `MONITOR_PUBLIC_CONFIG_URL` (défaut : `$API_PUBLIC_URL/config`) pour détecter un proxy cassé,
+- redémarre via `pm2` si disponible, sinon via `nohup node server.js`.
 
-### Mise en place cron (manuel)
-
-Ajouter cette ligne au crontab utilisateur :
+### Cron (manuel)
 
 ```bash
 * * * * * /home/votre_user/[Backend]/monitor_node.sh >/dev/null 2>&1
 ```
 
-Commandes :
+### Cron (automatique)
 
-```bash
-crontab -e
-crontab -l
-```
-
-### Mise en place cron (automatique)
-
-Si vous mettez `INSTALL_CRON_MONITOR=true` dans `.env`, `deploy_update.sh` ajoute la ligne cron automatiquement (sans doublon).
+Définir `INSTALL_CRON_MONITOR=true` dans `.env` : `deploy_update.sh` ajoute la ligne sans doublon.
