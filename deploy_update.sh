@@ -137,6 +137,7 @@ rsync -a --delete \
   --include='xplore.html' \
   --include='admin-mesures.html' \
   --include='favicon.ico' \
+  --include='robots.txt' \
   --include='config.js' \
   --include='downloads/' \
   --include='downloads/**' \
@@ -175,6 +176,31 @@ window.RADIOPROTECTION_SITE_URL = "${SITE_PUBLIC_URL}";
 window.RADIOPROTECTION_SITE_NAME = "${SITE_NAME}";
 window.RADIOPROTECTION_COPYRIGHT_OWNER = "${COPYRIGHT_OWNER}";
 FRONTCFG
+
+# sitemap.xml exige une URL absolue (spécification du protocole Sitemaps), donc générée
+# ici avec le vrai domaine plutôt que commitée dans le dépôt avec un domaine factice.
+# Seule la page d'accueil y figure: c'est la seule que robots.txt autorise à indexer.
+xml_escape() {
+  local s="$1"
+  s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"
+  printf '%s' "$s"
+}
+SITEMAP_HOME_URL="$(xml_escape "${SITE_PUBLIC_URL%/}/")"
+cat > "$FRONTEND_DIR/sitemap.xml" <<SITEMAP
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${SITEMAP_HOME_URL}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+SITEMAP
+
+SITEMAP_ABS_URL="$(xml_escape "${SITE_PUBLIC_URL%/}/sitemap.xml")"
+if ! grep -Fq "Sitemap:" "$FRONTEND_DIR/robots.txt" 2>/dev/null; then
+  printf '\nSitemap: %s\n' "$SITEMAP_ABS_URL" >> "$FRONTEND_DIR/robots.txt"
+fi
 
 log_step "Configuration backend runtime (.runtime.env)"
 # Le fichier doit être en 600 dès sa création: une redirection simple le crée en 644
