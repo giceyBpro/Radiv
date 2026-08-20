@@ -97,10 +97,10 @@ npm install --omit=dev
 # Synchronisation backend avec suppression des fichiers supprimés du repo
 # tout en protégeant les fichiers de configuration/runtime locaux.
 log_step "Synchronisation backend"
-rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='formules.txt'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
+rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='formules.txt'   --include='deploy.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
 
-log_info "Mise à jour des droits d'exécution deploy_update.sh"
-chmod +x "$BACKEND_DIR/deploy_update.sh"
+log_info "Mise à jour des droits d'exécution deploy.sh"
+chmod +x "$BACKEND_DIR/deploy.sh"
 
 mkdir -p "$BACKEND_DIR/node_modules"
 if [[ -d "$CHECKOUT_DIR/node_modules" ]]; then
