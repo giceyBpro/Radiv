@@ -208,11 +208,15 @@ for _var_name in API_PUBLIC_URL SITE_PUBLIC_URL SITE_NAME COPYRIGHT_OWNER; do
     exit 1
   fi
 done
+# Format ISO (indépendant de la locale du serveur, souvent absente en fr_FR sur un
+# hébergement mutualisé) — le formatage lisible en français se fait côté navigateur.
+LAST_DEPLOYED_AT="$(date +%F)"
 cat > "$FRONTEND_DIR/config.js" <<FRONTCFG
 window.RADIOPROTECTION_API_URL = "${API_PUBLIC_URL}";
 window.RADIOPROTECTION_SITE_URL = "${SITE_PUBLIC_URL}";
 window.RADIOPROTECTION_SITE_NAME = "${SITE_NAME}";
 window.RADIOPROTECTION_COPYRIGHT_OWNER = "${COPYRIGHT_OWNER}";
+window.RADIOPROTECTION_LAST_DEPLOYED_AT = "${LAST_DEPLOYED_AT}";
 FRONTCFG
 
 # sitemap.xml exige une URL absolue (spécification du protocole Sitemaps), donc générée

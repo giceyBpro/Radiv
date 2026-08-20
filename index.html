@@ -735,7 +735,7 @@
 
     <div class="meta">
       <div>Version web pour le calcul des durées de restriction RIV.</div>
-      <div class="small">Maj le <span id="todayLabel"></span></div>
+      <div class="small" id="lastUpdatedRow">Maj le <span id="lastUpdatedLabel"></span></div>
     </div>
     <div class="copyright" id="copyrightText">© -</div>
   </main>
@@ -791,11 +791,22 @@
       return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(value);
     }
 
-    function setToday() {
-      const now = new Date();
-      $('todayLabel').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    function setFooterMeta() {
+      // window.RADIOPROTECTION_LAST_DEPLOYED_AT est la date réelle du dernier déploiement
+      // (injectée par deploy.sh), pas la date du jour de consultation.
+      const lastDeployedAt = window.RADIOPROTECTION_LAST_DEPLOYED_AT;
+      const lastUpdatedRow = $('lastUpdatedRow');
+      if (lastDeployedAt) {
+        const parsed = new Date(`${lastDeployedAt}T00:00:00`);
+        $('lastUpdatedLabel').textContent = Number.isNaN(parsed.getTime())
+          ? lastDeployedAt
+          : parsed.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        lastUpdatedRow.style.display = '';
+      } else {
+        lastUpdatedRow.style.display = 'none';
+      }
       $('siteNameBanner').textContent = SITE_NAME;
-      $('copyrightText').textContent = `© ${now.getFullYear()} ${COPYRIGHT_OWNER}`;
+      $('copyrightText').textContent = `© ${new Date().getFullYear()} ${COPYRIGHT_OWNER}`;
     }
 
     function getNumberOrNull(id) {
@@ -1253,7 +1264,7 @@
     }
 
     async function bootstrap() {
-      setToday();
+      setFooterMeta();
       try {
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
