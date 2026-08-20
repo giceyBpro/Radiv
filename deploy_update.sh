@@ -184,6 +184,30 @@ else
   log_info "SITE_PUBLIC_URL (${SITE_HOST}) n'est pas en www: pas de redirection forcée."
 fi
 
+log_step "Configuration .htaccess (blocage HTTP des fichiers backend)"
+# Sur certains hébergements (cPanel/Passenger), FRONTEND_DIR et BACKEND_DIR pointent
+# vers le même dossier (PassengerAppRoot): .env, server.js, node_modules/, logs/ se
+# retrouvent alors physiquement dans le docroot public. Ce bloc les rend inaccessibles
+# en HTTP sans toucher au routage Passenger (aucune règle de portée globale: seuls ces
+# noms de fichiers précis sont concernés, tout le reste — y compris les routes /api/*
+# gérées par le Node app — n'est pas affecté). Inoffensif si FRONTEND_DIR est déjà un
+# dossier purement statique séparé.
+DENY_MARKER="# /deny-backend-files"
+if grep -Fq "$DENY_MARKER" "$HTACCESS"; then
+  log_info "Blocage des fichiers backend déjà présent dans .htaccess."
+else
+  cat >> "$HTACCESS" <<'DENYRULES'
+
+# /deny-backend-files
+RewriteEngine On
+<FilesMatch "^\.env|^\.runtime\.env$|^package(-lock)?\.json$|^server\.js$|^deploy_update\.sh$|^monitor_node\.sh$|^formules\.txt$">
+  Require all denied
+</FilesMatch>
+RewriteRule ^(logs|node_modules)/ - [F,L]
+DENYRULES
+  log_ok "Blocage HTTP des fichiers backend (.env, server.js, node_modules/, logs/...) ajouté dans .htaccess."
+fi
+
 log_step "Configuration frontend runtime"
 # Valide que les valeurs ne contiennent pas de caractères dangereux pour JS
 for _var_name in API_PUBLIC_URL SITE_PUBLIC_URL SITE_NAME COPYRIGHT_OWNER; do
