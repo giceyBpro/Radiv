@@ -1107,10 +1107,6 @@ function sendJson(res, statusCode, data) {
   });
   res.end(JSON.stringify(data));
 }
-function sendHtml(res, statusCode, html) {
-  res.writeHead(statusCode, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(html);
-}
 const server = http.createServer((req, res) => {
   setCorsHeaders(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
@@ -1232,12 +1228,6 @@ const server = http.createServer((req, res) => {
         sendJson(res, 500, { error: 'Erreur lecture des mesures.' });
       });
     return;
-  }
-  if (req.method === 'GET' && pathname === '/admin/mesures') {
-    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
-    const adminPagePath = path.join(__dirname, 'admin-mesures.html');
-    if (!fs.existsSync(adminPagePath)) return sendHtml(res, 404, 'Page admin introuvable');
-    return sendHtml(res, 200, fs.readFileSync(adminPagePath, 'utf8'));
   }
   if (req.method === 'GET' && pathname === '/health') {
     return sendJson(res, 200, { ok: true, time: new Date().toISOString() });
