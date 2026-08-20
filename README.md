@@ -15,7 +15,7 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
 | `tox.html` | Page de diagnostic interne (accessible via `/tox`, sans lien depuis l'interface). |
-| `config.js` | Configuration runtime (URLs API/site) injectée par `deploy_update.sh` en production. |
+| `config.js` | Configuration runtime (URLs API/site) injectée par `deploy.sh` en production. |
 | `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
 | `robots.txt` | Autorise l'indexation de la page d'accueil uniquement (voir [Référencement](#référencement)). |
 
@@ -31,7 +31,7 @@ niveaux de protection, indépendants l'un de l'autre :
 - Chaque page sauf l'accueil porte `<meta name="robots" content="noindex, nofollow">`,
   qui bloque l'indexation même si un lien externe venait un jour à pointer vers elle.
 
-`sitemap.xml` est généré par `deploy_update.sh` (comme `config.js`) car il doit contenir
+`sitemap.xml` est généré par `deploy.sh` (comme `config.js`) car il doit contenir
 une URL absolue (`SITE_PUBLIC_URL`) — inutile de le commiter avec un domaine factice.
 Il ne référence que la page d'accueil.
 
@@ -46,8 +46,8 @@ suffisent pas rétroactivement.
 | Fichier | Description |
 |---|---|
 | `server.js` | API Node.js : formules de calcul, proxy SFMN, journalisation, contact. |
-| `deploy_update.sh` | Script de déploiement/mise à jour idempotent. |
-| `monitor_node.sh` | Script de supervision généré par `deploy_update.sh` (health-check + relance). |
+| `deploy.sh` | Script de déploiement/mise à jour idempotent. |
+| `monitor_node.sh` | Script de supervision généré par `deploy.sh` (health-check + relance). |
 | `.env.example` | Modèle de configuration pour le déploiement. |
 | `formules.txt` | Documentation interne des formules et méthodes de calcul. |
 
@@ -178,7 +178,7 @@ npm start
 
 ## Déploiement
 
-1. Copier `deploy_update.sh` et un `.env` (basé sur `.env.example`) dans le répertoire d'exploitation.
+1. Copier `deploy.sh` et un `.env` (basé sur `.env.example`) dans le répertoire d'exploitation.
 2. Configurer dans `.env` :
 
 ```
@@ -193,7 +193,7 @@ ADMIN_TOKEN           # recommandé
 3. Lancer :
 
 ```bash
-./deploy_update.sh
+./deploy.sh
 ```
 
 Le script : crée les dossiers, fait un `git pull`, synchronise backend/frontend, protège `.env` / `.htaccess`, génère `config.js` et `monitor_node.sh`, et lance la supervision.
@@ -216,7 +216,7 @@ si `FRONTEND_DIR` est déjà un dossier purement statique séparé.
 
 ## Supervision
 
-`deploy_update.sh` génère `monitor_node.sh` qui :
+`deploy.sh` génère `monitor_node.sh` qui :
 - vérifie `http://127.0.0.1:$API_PORT/health`,
 - vérifie `MONITOR_PUBLIC_CONFIG_URL` (défaut : `$API_PUBLIC_URL/config`) pour détecter un proxy cassé,
 - redémarre via `pm2` si disponible, sinon via `nohup node server.js`.
@@ -229,4 +229,4 @@ si `FRONTEND_DIR` est déjà un dossier purement statique séparé.
 
 ### Cron (automatique)
 
-Définir `INSTALL_CRON_MONITOR=true` dans `.env` : `deploy_update.sh` ajoute la ligne sans doublon.
+Définir `INSTALL_CRON_MONITOR=true` dans `.env` : `deploy.sh` ajoute la ligne sans doublon.
