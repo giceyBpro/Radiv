@@ -48,6 +48,8 @@ mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
 # Le token ne doit jamais apparaître dans argv (lisible via `ps` par tout utilisateur
 # local) ni être écrit dans .git/config. On passe par un askpass temporaire en 600
 # qui lit la variable d'environnement, supprimé par le trap EXIT quoi qu'il arrive.
+# Placé sous BACKEND_DIR plutôt que /tmp: sur cPanel/CloudLinux, /tmp est souvent monté
+# noexec (chmod +x réussit, mais l'exécution est refusée par le montage lui-même).
 ASKPASS_FILE=""
 cleanup_askpass() {
   [[ -n "$ASKPASS_FILE" && -f "$ASKPASS_FILE" ]] && rm -f "$ASKPASS_FILE"
@@ -56,7 +58,7 @@ cleanup_askpass() {
 trap cleanup_askpass EXIT
 
 if [[ "$GIT_REPO" == https://* ]]; then
-  ASKPASS_FILE="$(umask 077 && mktemp "${TMPDIR:-/tmp}/deploy-askpass.XXXXXX")"
+  ASKPASS_FILE="$(umask 077 && mktemp "${BACKEND_DIR}/.deploy-askpass.XXXXXX")"
   cat > "$ASKPASS_FILE" <<'ASKPASS'
 #!/usr/bin/env bash
 case "$1" in
