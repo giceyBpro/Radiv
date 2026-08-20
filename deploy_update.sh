@@ -31,6 +31,9 @@ SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
 API_CORS_ORIGIN="${API_CORS_ORIGIN:-${SITE_PUBLIC_URL}}"
 SITE_NAME="${SITE_NAME:-$(sed -E 's#^https?://##; s#/.*$##; s#^www\.##' <<< "${SITE_PUBLIC_URL}")}"
 COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_NAME}}"
+# Host complet (avec le www éventuel) déduit de SITE_PUBLIC_URL, utilisé pour la
+# redirection 301 vers www ci-dessous.
+SITE_HOST="$(sed -E 's#^https?://##; s#/.*$##' <<< "${SITE_PUBLIC_URL}")"
 INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
 log_step() { echo -e "\n[DEPLOY][STEP] $1"; }
@@ -157,6 +160,28 @@ elif ! grep -Fq "tox.html" "$HTACCESS"; then
   log_ok "Règle /tox ajoutée dans .htaccess."
 else
   log_info "Règle /tox déjà présente dans .htaccess."
+fi
+
+log_step "Configuration .htaccess (redirection 301 vers www)"
+# N'active la redirection que si SITE_PUBLIC_URL est explicitement en www: on ne force
+# jamais un choix de domaine canonique que l'opérateur n'a pas fait lui-même.
+WWW_MARKER="# /www-redirect (${SITE_HOST})"
+if [[ "$SITE_HOST" == www.* ]]; then
+  if grep -Fq "$WWW_MARKER" "$HTACCESS"; then
+    log_info "Redirection www déjà présente dans .htaccess pour ${SITE_HOST}."
+  else
+    if grep -Fq '# /www-redirect' "$HTACCESS"; then
+      log_warn "Une redirection www existante dans .htaccess ne correspond plus à SITE_PUBLIC_URL (${SITE_HOST}). Vérifiez/nettoyez .htaccess manuellement; l'ancienne règle n'est pas supprimée automatiquement."
+    fi
+    # Le point du nom de domaine doit être échappé dans le motif regex de RewriteCond
+    # (non échappé, il matcherait n'importe quel caractère, pas seulement ".").
+    SITE_HOST_RE="${SITE_HOST//./\\.}"
+    printf '\n%s\nRewriteEngine On\nRewriteCond %%{HTTPS} off [OR]\nRewriteCond %%{HTTP_HOST} !^%s$ [NC]\nRewriteRule ^ https://%s%%{REQUEST_URI} [L,R=301]\n' \
+      "$WWW_MARKER" "$SITE_HOST_RE" "$SITE_HOST" >> "$HTACCESS"
+    log_ok "Redirection 301 vers https://${SITE_HOST} ajoutée dans .htaccess."
+  fi
+else
+  log_info "SITE_PUBLIC_URL (${SITE_HOST}) n'est pas en www: pas de redirection forcée."
 fi
 
 log_step "Configuration frontend runtime"
