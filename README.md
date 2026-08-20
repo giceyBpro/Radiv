@@ -205,6 +205,13 @@ redirection n'est forcée. En cas de changement de domaine entre deux déploieme
 l'ancienne règle n'est pas supprimée automatiquement : le script avertit et il faut
 nettoyer `.htaccess` à la main.
 
+Le script bloque aussi, toujours dans `.htaccess`, l'accès HTTP direct à `.env`,
+`.runtime.env`, `server.js`, `package(-lock).json`, `logs/`, `node_modules/`, etc.
+Sur les hébergements cPanel/Passenger où `FRONTEND_DIR` et `BACKEND_DIR` pointent vers
+le même dossier (`PassengerAppRoot`), ces fichiers backend se retrouvent physiquement
+dans le docroot public — ce blocage évite qu'ils soient servis tels quels. Sans effet
+si `FRONTEND_DIR` est déjà un dossier purement statique séparé.
+
 > **Hébergements cPanel / o2switch** : le script ne crée pas l'application Node dans le panel. Le routage proxy/passenger doit être configuré manuellement au moins une fois. Si `/api` n'est pas routé automatiquement, définir `API_PUBLIC_URL` avec une URL absolue.
 
 ## Supervision
