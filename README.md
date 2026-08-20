@@ -123,7 +123,7 @@ scindé automatiquement en fichiers mensuels au démarrage, puis archivé en `.m
 Chaque fichier mensuel est en plus limité par `LOGS_MAX_BYTES` (défaut 50 Mo) : au-delà,
 il est basculé en `.1` avant de reprendre à zéro.
 
-- Page web : `GET /admin/mesures` → `admin-mesures.html`
+- Page web : `admin-mesures.html` (page statique sans lien de navigation, comme `tox.html`/`xplore.html` — accessible en tapant l'URL)
 - Périodes disponibles : `GET /api/admin/measurements/periods`
 - API JSON : `GET /api/admin/measurements?year=2026&month=08`
 - Export CSV : `GET /api/admin/measurements.csv?year=2026&month=08`

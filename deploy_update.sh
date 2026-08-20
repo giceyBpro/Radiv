@@ -94,7 +94,7 @@ npm install --omit=dev
 # Synchronisation backend avec suppression des fichiers supprimés du repo
 # tout en protégeant les fichiers de configuration/runtime locaux.
 log_step "Synchronisation backend"
-rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='admin-mesures.html'   --include='formules.txt'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
+rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='formules.txt'   --include='deploy_update.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
 
 log_info "Mise à jour des droits d'exécution deploy_update.sh"
 chmod +x "$BACKEND_DIR/deploy_update.sh"
@@ -121,7 +121,9 @@ if [[ -n "$(ls -A "$FRONTEND_DIR" 2>/dev/null)" ]] && [[ ! -f "$FRONTEND_DIR/ind
 fi
 # Liste blanche: tout ce qui n'est pas listé ici n'est PAS publié. Une liste noire
 # échouerait en mode ouvert, publiant automatiquement tout nouveau fichier du dépôt.
-# admin-mesures.html est volontairement absent: il est servi par l'API (/admin/mesures).
+# admin-mesures.html ne contient aucun secret: seuls les appels qu'elle fait vers
+# /api/admin/* exigent le jeton (header X-Admin-Token, saisi dans la page). Page
+# statique sans lien de navigation, comme tox.html/xplore.html.
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
@@ -133,6 +135,7 @@ rsync -a --delete \
   --include='test-api.html' \
   --include='tox.html' \
   --include='xplore.html' \
+  --include='admin-mesures.html' \
   --include='favicon.ico' \
   --include='config.js' \
   --include='downloads/' \
