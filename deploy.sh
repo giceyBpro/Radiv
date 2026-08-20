@@ -46,36 +46,24 @@ log_info "Répertoires cibles: backend=$BACKEND_DIR | frontend=$FRONTEND_DIR"
 mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
 
 # Le token ne doit jamais apparaître dans argv (lisible via `ps` par tout utilisateur
-# local) ni être écrit dans .git/config. On passe par un askpass temporaire en 600
-# qui lit la variable d'environnement, supprimé par le trap EXIT quoi qu'il arrive.
-# Placé sous BACKEND_DIR plutôt que /tmp: sur cPanel/CloudLinux, /tmp est souvent monté
-# noexec (chmod +x réussit, mais l'exécution est refusée par le montage lui-même).
-ASKPASS_FILE=""
-cleanup_askpass() {
-  [[ -n "$ASKPASS_FILE" && -f "$ASKPASS_FILE" ]] && rm -f "$ASKPASS_FILE"
-  return 0
+# local) ni être écrit dans .git/config, ni sur disque sous forme d'un script exécutable:
+# un fichier askpass fraîchement créé (même chmod 700, même hors /tmp) peut être bloqué à
+# l'exécution par un antivirus temps réel type Imunify360, courant sur CloudLinux, qui
+# reconnaît ce pattern comme un collecteur d'identifiants. On passe donc par
+# `credential.helper` en ligne de commande: git l'exécute via un simple `sh -c`, sans
+# jamais créer de fichier — GIT_TOKEN reste dans l'environnement, jamais dans argv.
+export GIT_TOKEN
+run_git() {
+  if [[ "$GIT_REPO" == https://* ]]; then
+    git -c credential.helper='!f() { echo "username=x-access-token"; echo "password=$GIT_TOKEN"; }; f' "$@"
+  else
+    git "$@"
+  fi
 }
-trap cleanup_askpass EXIT
-
-if [[ "$GIT_REPO" == https://* ]]; then
-  ASKPASS_FILE="$(umask 077 && mktemp "${BACKEND_DIR}/.deploy-askpass.XXXXXX")"
-  cat > "$ASKPASS_FILE" <<'ASKPASS'
-#!/usr/bin/env bash
-case "$1" in
-  *Username*) echo "$GIT_ASKPASS_USER" ;;
-  *)          echo "$GIT_ASKPASS_TOKEN" ;;
-esac
-ASKPASS
-  chmod 700 "$ASKPASS_FILE"
-  export GIT_ASKPASS="$ASKPASS_FILE"
-  export GIT_ASKPASS_USER="x-access-token"
-  export GIT_ASKPASS_TOKEN="$GIT_TOKEN"
-  export GIT_TERMINAL_PROMPT=0
-fi
 
 if [[ ! -d "$CHECKOUT_DIR/.git" ]]; then
   log_info "Clone initial du dépôt dans $CHECKOUT_DIR"
-  git clone "$GIT_REPO" "$CHECKOUT_DIR"
+  run_git clone "$GIT_REPO" "$CHECKOUT_DIR"
 fi
 
 pushd "$CHECKOUT_DIR" >/dev/null
@@ -87,11 +75,10 @@ fi
 
 log_step "Mise à jour Git"
 log_info "Branche: $GIT_BRANCH"
-# L'URL stockée reste toujours propre: l'authentification passe par GIT_ASKPASS.
 git remote set-url origin "$GIT_REPO"
-git fetch --all --prune
+run_git fetch --all --prune
 git checkout "$GIT_BRANCH"
-git pull --ff-only origin "$GIT_BRANCH"
+run_git pull --ff-only origin "$GIT_BRANCH"
 
 log_step "Dépendances backend"
 npm install --omit=dev
