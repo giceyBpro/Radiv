@@ -198,6 +198,13 @@ ADMIN_TOKEN           # recommandé
 
 Le script : crée les dossiers, fait un `git pull`, synchronise backend/frontend, protège `.env` / `.htaccess`, génère `config.js` et `monitor_node.sh`, et lance la supervision.
 
+Si `SITE_PUBLIC_URL` commence par `www.`, le script ajoute automatiquement dans `.htaccess`
+une redirection 301 (http et non-www confondus) vers ce domaine canonique — idempotent,
+sans effet si la règle existe déjà. Si `SITE_PUBLIC_URL` n'est pas en `www.`, aucune
+redirection n'est forcée. En cas de changement de domaine entre deux déploiements,
+l'ancienne règle n'est pas supprimée automatiquement : le script avertit et il faut
+nettoyer `.htaccess` à la main.
+
 > **Hébergements cPanel / o2switch** : le script ne crée pas l'application Node dans le panel. Le routage proxy/passenger doit être configuré manuellement au moins une fois. Si `/api` n'est pas routé automatiquement, définir `API_PUBLIC_URL` avec une URL absolue.
 
 ## Supervision
