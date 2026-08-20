@@ -17,6 +17,29 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `tox.html` | Page de diagnostic interne (accessible via `/tox`, sans lien depuis l'interface). |
 | `config.js` | Configuration runtime (URLs API/site) injectée par `deploy_update.sh` en production. |
 | `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
+| `robots.txt` | Autorise l'indexation de la page d'accueil uniquement (voir [Référencement](#référencement)). |
+
+## Référencement
+
+Seule `index.html` (l'accueil) doit être indexée par les moteurs de recherche. Deux
+niveaux de protection, indépendants l'un de l'autre :
+
+- `robots.txt` interdit le crawl de tout le reste (`Disallow: /` avec deux exceptions
+  `Allow: /$` et `Allow: /index.html$`). Les noms des pages cachées (`tox.html`,
+  `admin-mesures.html`, `xplore.html`…) n'y sont volontairement pas listés : ce fichier
+  est public, les y nommer reviendrait à les annoncer.
+- Chaque page sauf l'accueil porte `<meta name="robots" content="noindex, nofollow">`,
+  qui bloque l'indexation même si un lien externe venait un jour à pointer vers elle.
+
+`sitemap.xml` est généré par `deploy_update.sh` (comme `config.js`) car il doit contenir
+une URL absolue (`SITE_PUBLIC_URL`) — inutile de le commiter avec un domaine factice.
+Il ne référence que la page d'accueil.
+
+**Important** : ces mécanismes empêchent l'indexation *future*. Ils ne retirent pas une
+page déjà indexée. Si une des pages actuellement en `noindex` a pu être trouvée par
+Google avant ce changement, il faut vérifier la Google Search Console du domaine et
+demander une suppression manuelle si nécessaire — `robots.txt`/`noindex` seuls n'y
+suffisent pas rétroactivement.
 
 ## Backend
 
