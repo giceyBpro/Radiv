@@ -107,7 +107,12 @@ const scenarios = [
   { audience_code: 'transport_commun', label: 'Transport en commun', exposures: [{ hours: 3, distance: 0.5, unit_factor_at_1m: false }], limit: 1, condition: '3 h à 0,5 m,\nlimite 1 mSv' },
   { audience_code: 'enfant_moins_3_ans', label: 'Contact avec un enfant (<3 ans) au retour à la maison', exposures: [{ hours: 9, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '9 h à 1 m,\nlimite 1 mSv' },
   { audience_code: 'enfant_3_11_ans', label: 'Contact avec un enfant (entre 3 et 11 ans) au retour à la maison', exposures: [{ hours: 2, distance: 0.5, unit_factor_at_1m: false }, { hours: 2, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
-  { audience_code: 'collegues_travail', label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: false }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
+  // unit_factor_at_1m corrigé à true (2026-09-02): c'était la seule exposition à 1 m sur les
+  // 6 du tableau à avoir false, ce qui appliquait par erreur le facteur géométrique complet
+  // (~0,86 pour un patient de 150 cm) au lieu de la référence 1 à cette distance — écart de
+  // 2 jours constaté par comparaison directe avec l'outil SFMN de référence (Radium-223,
+  // 100 µSv/h, 150 cm: 38 j attendus, 36 j calculés avant ce correctif).
+  { audience_code: 'collegues_travail', label: 'Contact avec des collègues de travail', exposures: [{ hours: 6, distance: 1, unit_factor_at_1m: true }], limit: 1, condition: '6 h à 1 m,\nlimite 1 mSv' }
 ];
 const cureOptionsByIsotope = {
   radium223: [1],
