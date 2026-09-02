@@ -86,6 +86,11 @@ Payload JSON :
 - Pour `non_defini` : `user_period_days` est obligatoire (> 0).
 - `cure_count` : optionnel (défaut `1`). Pris en compte pour `radium223`, `psma_177lu`, `lutetium177_net`.
 
+En mode `local`, l'arrondi des durées de restriction (en jours) dépend de `RESTRICTION_ROUNDING_MODE` :
+`round` (défaut, arrondit au jour le plus proche — légèrement plus protecteur) ou `floor`
+(troncature, reproduit exactement les valeurs de l'outil SFMN de référence — vérifié sur les
+7 scénarios avec Radium-223, 100 µSv/h, 150 cm).
+
 En mode `sfmn`, le backend interroge `SFMN_CALCULATOR_URL` et parse le HTML de résultats.
 Ajouter `sfmn_debug: true` dans le payload (ou `SFMN_DEBUG=true` côté serveur) pour des traces détaillées.
 

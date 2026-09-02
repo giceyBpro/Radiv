@@ -46,6 +46,14 @@ const contactRateMap = new Map();
 const calculateRateMap = new Map();
 const LOGS_MAX_BYTES = Number(process.env.LOGS_MAX_BYTES || 50 * 1024 * 1024);
 const CALCULATE_RATE_LIMIT = Number(process.env.CALCULATE_RATE_LIMIT || 60);
+// "round" (défaut): Math.round, légèrement plus protecteur (arrondit au jour supérieur dès
+// que la fraction dépasse 0,5). "floor": troncature, reproduit exactement les valeurs de
+// l'outil SFMN de référence (vérifié le 2026-09-02 sur les 7 scénarios, Radium-223).
+const RESTRICTION_ROUNDING_MODE = (process.env.RESTRICTION_ROUNDING_MODE || 'round').trim().toLowerCase();
+if (RESTRICTION_ROUNDING_MODE !== 'round' && RESTRICTION_ROUNDING_MODE !== 'floor') {
+  console.warn(`RESTRICTION_ROUNDING_MODE invalide (${RESTRICTION_ROUNDING_MODE}); fallback sur "round"`);
+}
+const roundRestrictionDays = RESTRICTION_ROUNDING_MODE === 'floor' ? Math.floor : Math.round;
 const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
 const recaptchaSiteKey = process.env.RECAPTCHA_SITE_KEY || '';
 const smtpHost = process.env.SMTP_HOST || '';
@@ -141,7 +149,7 @@ const restrictionDays = (effectiveDays, doseRate, patientSizeCm, exposures, limi
   const ratio = (limit * 1000) / denominator;
   const day = -(effectiveDays / Math.log(2)) * Math.log(ratio / doseRate);
   if (!Number.isFinite(day)) return null;
-  return Math.max(0, Math.round(day));
+  return Math.max(0, roundRestrictionDays(day));
 };
 const computeDoseRate = (selected, benignActivityMbq, benignFixationPct, doseRate) => {
   if (selected.api_code !== 'iode131_benin') return toNumberOrNull(doseRate);
