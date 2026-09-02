@@ -231,6 +231,12 @@ si `FRONTEND_DIR` est déjà un dossier purement statique séparé.
 - vérifie `MONITOR_PUBLIC_CONFIG_URL` (défaut : `$API_PUBLIC_URL/config`) pour détecter un proxy cassé,
 - redémarre via `pm2` si disponible, sinon via `nohup node server.js`.
 
+En usage cron (sans argument), `monitor_node.sh` ne redémarre que si ces contrôles échouent —
+un service déjà sain n'est pas interrompu à chaque passage. `deploy.sh` l'appelle lui-même avec
+`--force-restart` en fin de déploiement : un service déjà sain n'a jamais de raison de repasser
+le health-check en échec, donc sans cet argument le nouveau `server.js`/`.runtime.env` tout juste
+synchronisés sur le disque ne seraient jamais chargés par le process en cours d'exécution.
+
 ### Cron (manuel)
 
 ```bash
