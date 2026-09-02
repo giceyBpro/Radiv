@@ -67,6 +67,9 @@ migrateLegacyLogFile();
 // exposure constraints for relatives following targeted radionuclide therapy: a French
 // perspective. Médecine Nucléaire 2026;50:131-136. DOI: 10.1016/j.mednuc.2026.03.002
 // (reprend et prolonge le modèle de calcul de Carlier et al., Radioprotection 2004;39:481-92).
+// Valeurs du Tableau 1 de cet article reprises telles quelles, SAUF mibg_131i: sa source
+// primaire (Wafelman et al. 1995, vérifiée intégralement) contredit la valeur du Tableau 1 —
+// voir le commentaire sur cette entrée ci-dessous.
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
 const isotopes = [
   { api_code: 'iode131_0_fixation', label: 'Iode-131-0%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: '-', situation: 'Cancer opéré' },
@@ -82,7 +85,15 @@ const isotopes = [
   { api_code: 'microspheres_166ho', label: 'Microsphères-166Ho', periodHours: 26.81, reference: 'Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1) — demi-vie physique', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lipiodol_131i', label: 'Lipiodol-131I', periodHours: 8.04 * 24, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lutetium177_net', label: 'Lutétium-177 NET', periodHours: 100, reference: 'Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019', remark: 'Demi vie effective', situation: '' },
-  { api_code: 'mibg_131i', label: 'MIBG-131I', periodHours: 30.6, reference: 'Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772, valeur retenue par Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1)', remark: 'Corrigée en 2026 (ancienne valeur locale : 10,6 h)', situation: '' },
+  // 11,5 h = t½,elim moyen (n=11, adultes+enfants), tel qu'énoncé dans les Résultats ET les
+  // Conclusions de la source primaire elle-même (Wafelman et al. 1995, lu intégralement le
+  // 2026-08-20): "ranged from 9.1 to 14.3 h (mean +/- S.D.: 11.5 +/- 1.7 h, n = 11)". Le
+  // Tableau 1 de Carlier et al. 2026 cite ce même article pour une valeur de 30,60 h, qui
+  // n'apparaît nulle part dans le texte, les tableaux ou les résultats de la source primaire
+  // (plage complète des 11 patients: 9,1 à 14,3 h) — écart non expliqué, probable erreur de
+  // saisie dans le Tableau 1 de l'article 2026. La valeur 30,6 h déployée un temps sur la
+  // seule foi du Tableau 1 de 2026 est donc corrigée ici après lecture de la source primaire.
+  { api_code: 'mibg_131i', label: 'MIBG-131I', periodHours: 11.5, reference: 'Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim moyen, n=11, résultats et conclusion)', remark: 'Plage individuelle 9,1-14,3 h; écart non résolu avec la valeur 30,60 h du Tableau 1 de Carlier et al. 2026, qui cite pourtant la même source', situation: '' },
   { api_code: 'non_defini', label: 'Non défini', periodHours: null, reference: '-', remark: '-', situation: '' }
 ];
 // 2) scenarios: paramètres d'exposition ligne par ligne (heures, distance, facteur 1m spécifique)
