@@ -451,6 +451,15 @@ log_step "Redémarrage du service (prise en compte du nouveau code/config)"
 # sur le disque mais ne sont jamais chargés tant que le process n'est pas redémarré.
 "$BACKEND_DIR/monitor_node.sh" --force-restart
 
+# Sur cPanel/Passenger, l'app Node est démarrée/gérée par Passenger lui-même (PassengerAppRoot),
+# indépendamment du process nohup/pm2 que monitor_node.sh vient de relancer ci-dessus: les deux
+# peuvent tourner en parallèle, et c'est celui de Passenger qui sert réellement le site public.
+# Convention Passenger: toucher tmp/restart.txt déclenche son redémarrage à la requête suivante.
+# Sans effet (fichier ignoré) si Passenger n'est pas utilisé pour ce déploiement.
+mkdir -p "$BACKEND_DIR/tmp"
+touch "$BACKEND_DIR/tmp/restart.txt"
+log_info "tmp/restart.txt touché (redémarrage Passenger si applicable)."
+
 CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
 
 cron_present() {
