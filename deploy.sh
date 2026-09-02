@@ -410,7 +410,25 @@ restart_service() {
   start_nohup
 }
 
-if ! is_healthy || ! is_public_ok; then
+# --force-restart (utilisé par deploy.sh juste après une resynchronisation): redémarre
+# inconditionnellement, sans attendre un échec du health-check. Sans cet argument (usage
+# cron normal, toutes les minutes), le comportement reste conditionnel comme avant — un
+# service déjà sain ne doit pas être redémarré à chaque passage cron.
+FORCE_RESTART=0
+[[ "${1:-}" == "--force-restart" ]] && FORCE_RESTART=1
+
+if [[ "$FORCE_RESTART" == "1" ]]; then
+  log "Redémarrage forcé demandé (déploiement)."
+  restart_service
+  sleep 3
+  if ! is_healthy || ! is_public_ok; then
+    echo "[$(date -Is)] Échec redémarrage API (forcé)" >> "$LOG_FILE"
+    warn "Redémarrage échoué. Voir le log: $LOG_FILE"
+    send_api_down_alert
+    exit 1
+  fi
+  ok "API redémarrée et opérationnelle (nouvelle configuration/code pris en compte)."
+elif ! is_healthy || ! is_public_ok; then
   warn "API indisponible (local/public). Tentative de redémarrage..."
   restart_service
   sleep 3
@@ -427,8 +445,11 @@ fi
 MONITOR
 
 chmod +x "$BACKEND_DIR/monitor_node.sh"
-log_step "Exécution d'un contrôle monitor immédiat"
-"$BACKEND_DIR/monitor_node.sh"
+log_step "Redémarrage du service (prise en compte du nouveau code/config)"
+# Sans --force-restart, un service déjà en bonne santé (donc l'ancien process, avant ce
+# déploiement) n'est jamais relancé: le nouveau server.js et le nouveau .runtime.env restent
+# sur le disque mais ne sont jamais chargés tant que le process n'est pas redémarré.
+"$BACKEND_DIR/monitor_node.sh" --force-restart
 
 CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
 
