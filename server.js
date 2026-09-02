@@ -66,6 +66,10 @@ const contactDest = process.env.CONTACT_DEST || '';
 const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 15000);
 const sfmnCalculatorUrl = process.env.SFMN_CALCULATOR_URL || '';
 const sfmnDebugDefault = String(process.env.SFMN_DEBUG || 'false').toLowerCase() === 'true';
+// Coupure complète du mode SFMN (calcul distant): quand désactivé, /api/config ne l'annonce
+// plus (bouton de sélection masqué côté frontend), /api/calculate le refuse explicitement,
+// et calculateSfmn() refuse également en interne par sécurité (défense en profondeur).
+const SFMN_MODE_ENABLED = String(process.env.SFMN_MODE_ENABLED ?? 'true').toLowerCase() !== 'false';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 migrateLegacyLogFile();
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
@@ -295,6 +299,16 @@ function emptyRecommendations() {
 }
 async function calculateSfmn(payload) {
   const selected = getIsotope(payload.isotope_code);
+  if (!SFMN_MODE_ENABLED) {
+    return {
+      ok: false,
+      calculation_mode: 'sfmn',
+      selected,
+      errors: ['Mode SFMN désactivé sur ce déploiement.'],
+      error: { code: 'SFMN_MODE_DISABLED', message: 'SFMN_MODE_ENABLED=false côté serveur.' },
+      recommendations_days: emptyRecommendations()
+    };
+  }
   // Le mode debug expose le HTML distant complet et les champs cachés du formulaire SFMN
   // (jeton CSRF compris): il ne doit dépendre que de la configuration serveur, jamais du payload.
   const debugEnabled = sfmnDebugDefault;
@@ -1150,9 +1164,9 @@ const server = http.createServer((req, res) => {
       isotopes,
       default_isotope_code: 'iode131_25_fixation',
       cure_options_by_isotope: cureOptionsByIsotope,
-      calculation_modes: ['local', 'sfmn'],
-      default_calculation_mode: 'sfmn',
-      sfmn_calculator_url: sfmnCalculatorUrl
+      calculation_modes: SFMN_MODE_ENABLED ? ['local', 'sfmn'] : ['local'],
+      default_calculation_mode: SFMN_MODE_ENABLED ? 'sfmn' : 'local',
+      sfmn_calculator_url: SFMN_MODE_ENABLED ? sfmnCalculatorUrl : ''
     });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {
@@ -1168,7 +1182,16 @@ const server = http.createServer((req, res) => {
           return sendJson(res, 429, { ok: false, error: 'Trop de requêtes. Réessayez dans une minute.' });
         }
         const payload = body ? JSON.parse(body) : {};
-        const calculationMode = String(payload.calculation_mode || 'sfmn').toLowerCase();
+        const calculationMode = String(payload.calculation_mode || (SFMN_MODE_ENABLED ? 'sfmn' : 'local')).toLowerCase();
+        if (calculationMode === 'sfmn' && !SFMN_MODE_ENABLED) {
+          return sendJson(res, 400, {
+            ok: false,
+            calculation_mode: 'sfmn',
+            errors: ['Mode SFMN désactivé sur ce déploiement.'],
+            error: { code: 'SFMN_MODE_DISABLED', message: 'SFMN_MODE_ENABLED=false côté serveur.' },
+            recommendations_days: emptyRecommendations()
+          });
+        }
         const result = calculationMode === 'sfmn'
           ? await calculateSfmn(payload)
           : calculate(payload);
