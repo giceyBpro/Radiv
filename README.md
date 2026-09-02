@@ -237,6 +237,13 @@ un service déjà sain n'est pas interrompu à chaque passage. `deploy.sh` l'app
 le health-check en échec, donc sans cet argument le nouveau `server.js`/`.runtime.env` tout juste
 synchronisés sur le disque ne seraient jamais chargés par le process en cours d'exécution.
 
+> **Hébergements cPanel/Passenger** : Passenger démarre et gère sa propre instance de l'app
+> Node (`PassengerAppRoot`), indépendamment du process nohup/pm2 que `monitor_node.sh` relance
+> ci-dessus — les deux peuvent tourner en parallèle, et c'est celui de Passenger qui sert
+> réellement le site public. `deploy.sh` touche donc aussi `tmp/restart.txt` en fin de
+> déploiement (convention Passenger : redémarrage à la requête suivante). Sans effet si
+> Passenger n'est pas utilisé pour ce déploiement.
+
 ### Cron (manuel)
 
 ```bash
