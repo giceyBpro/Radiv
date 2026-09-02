@@ -155,7 +155,7 @@
       const calculationMode = result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local';
       const sourceRef = result.calculation_mode === 'sfmn'
         ? (result.sfmn_source?.url || 'https://www.sfmn.org/')
-        : 'https://www.cnp-mn.fr/reco_riv/';
+        : 'Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002';
       document.getElementById('methodText').innerHTML = `<strong>Méthode de calcul :</strong> ${safe(calculationMode)}`;
       document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
       const effDays = result.effective_days ?? '-';
