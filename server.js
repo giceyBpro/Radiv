@@ -61,6 +61,12 @@ const sfmnDebugDefault = String(process.env.SFMN_DEBUG || 'false').toLowerCase()
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 migrateLegacyLogFile();
 // ===== DONNÉES DE CALCUL (SOURCE PRINCIPALE BACKEND) =====
+// Formalisme général, scénarios (durées/distances/limites) et tableau des demi-vies
+// effectives harmonisés au niveau national par le groupe Radioprotection de la SFMN:
+// Carlier T, Denizot B, Prevot-Bitot N, Nioche C, Courbon F, Cachin F. Harmonization of
+// exposure constraints for relatives following targeted radionuclide therapy: a French
+// perspective. Médecine Nucléaire 2026;50:131-136. DOI: 10.1016/j.mednuc.2026.03.002
+// (reprend et prolonge le modèle de calcul de Carlier et al., Radioprotection 2004;39:481-92).
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
 const isotopes = [
   { api_code: 'iode131_0_fixation', label: 'Iode-131-0%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: '-', situation: 'Cancer opéré' },
@@ -72,14 +78,19 @@ const isotopes = [
   { api_code: 'synovectomie_90y', label: 'Synovectomie-90Y', periodHours: 2.67 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
   { api_code: 'synovectomie_186re', label: 'Synovectomie-186Re', periodHours: 3.7 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
   { api_code: 'synovectomie_169er', label: 'Synovectomie-169Er', periodHours: 9.4 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'microspheres_90y', label: 'Microsphères-90Y', periodHours: 64.2, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'microspheres_166ho', label: 'Microsphères-166Ho', periodHours: 26.8, reference: 'Demi-vie physique du Holmium-166', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'microspheres_90y', label: 'Microsphères-90Y', periodHours: 64.05, reference: 'Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1) — demi-vie physique', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'microspheres_166ho', label: 'Microsphères-166Ho', periodHours: 26.81, reference: 'Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1) — demi-vie physique', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lipiodol_131i', label: 'Lipiodol-131I', periodHours: 8.04 * 24, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lutetium177_net', label: 'Lutétium-177 NET', periodHours: 100, reference: 'Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019', remark: 'Demi vie effective', situation: '' },
-  { api_code: 'mibg_131i', label: 'MIBG-131I', periodHours: 10.6, reference: 'Nucl. Med. Commun. 16 (1995) 767–772', remark: 'un peu plus longue chez l’adulte que chez l’enfant', situation: '' },
+  { api_code: 'mibg_131i', label: 'MIBG-131I', periodHours: 30.6, reference: 'Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772, valeur retenue par Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1)', remark: 'Corrigée en 2026 (ancienne valeur locale : 10,6 h)', situation: '' },
   { api_code: 'non_defini', label: 'Non défini', periodHours: null, reference: '-', remark: '-', situation: '' }
 ];
 // 2) scenarios: paramètres d'exposition ligne par ligne (heures, distance, facteur 1m spécifique)
+// Vérifiés contre la Fig. 1 de Carlier et al. 2026 (voir ci-dessus): durées/distances/limites
+// identiques pour les 6 scénarios lisibles sur la figure. Le scénario "collègues de travail" n'a
+// pas pu être revérifié sur la figure (rendu de capture d'écran illisible pour cette ligne dans
+// l'article) — valeur conservée du modèle 2004 (6 h à 1 m, limite 1 mSv), cohérente avec les
+// 6 autres scénarios qui, eux, correspondent exactement.
 const scenarios = [
   { audience_code: 'conjoint_plus_60', label: 'Contact avec le (la) conjoint(e) > 60 ans', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 15, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
   { audience_code: 'conjoint_moins_60', label: 'Contact avec le (la) conjoint(e) < 60 ans', exposures: [{ hours: 8, distance: 0.3, unit_factor_at_1m: false }, { hours: 3, distance: 1, unit_factor_at_1m: true }], limit: 3, condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
