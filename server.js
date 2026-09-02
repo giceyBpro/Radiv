@@ -15,8 +15,18 @@ function loadDotEnv(filePath) {
     if (idx === -1) return;
     const key = trimmed.slice(0, idx).trim();
     let value = trimmed.slice(idx + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
+    if (value.startsWith('"') || value.startsWith("'")) {
+      // Valeur entre guillemets: tout ce qui suit la guillemet fermante (commentaire compris)
+      // est ignoré, sans risque de tronquer un '#' légitime à l'intérieur de la valeur.
+      const quoteChar = value[0];
+      const closingIdx = value.indexOf(quoteChar, 1);
+      if (closingIdx !== -1) value = value.slice(1, closingIdx);
+    } else {
+      // Commentaire en fin de ligne (KEY=valeur  # commentaire): uniquement un '#' précédé
+      // d'un espace, pour ne pas tronquer une valeur non quotée qui en contiendrait un
+      // légitimement (ex. une URL avec un fragment #ancre, jamais précédé d'espace).
+      const commentIdx = value.search(/\s#/);
+      if (commentIdx !== -1) value = value.slice(0, commentIdx).trim();
     }
     if (!process.env[key]) process.env[key] = value;
   });
