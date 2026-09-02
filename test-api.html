@@ -84,6 +84,21 @@
 
     $('apiBase').value = normalizeBase(window.RADIOPROTECTION_API_URL || $('apiBase').value);
 
+    // Si le mode SFMN est désactivé côté serveur, l'exemple de payload par défaut ne doit
+    // pas suggérer une valeur qui échouera systématiquement.
+    (async () => {
+      try {
+        const resp = await fetch(`${$('apiBase').value}/config`);
+        const config = await resp.json();
+        const modes = config.calculation_modes || ['local', 'sfmn'];
+        if (!modes.includes('sfmn')) {
+          $('payload').value = $('payload').value.replace('"calculation_mode": "sfmn"', '"calculation_mode": "local"');
+        }
+      } catch (_) {
+        // Config indisponible au chargement: l'exemple par défaut reste tel quel.
+      }
+    })();
+
     async function send() {
       const apiBase = normalizeBase($('apiBase').value);
       const endpoint = $('endpoint').value;

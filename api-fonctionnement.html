@@ -37,7 +37,7 @@
 
     <h2>Payload attendu pour <code>POST /api/calculate</code></h2>
     <pre><code>{
-  "calculation_mode": "sfmn",
+  "calculation_mode": "<span id="modeExamplePayload">sfmn</span>",
   "isotope_code": "iode131_25_fixation",
   "dose_rate": 9.9,
   "patient_size_cm": 150,
@@ -62,7 +62,7 @@
     <h2>Réponse attendue (succès)</h2>
     <pre><code>{
   "ok": true,
-  "calculation_mode": "sfmn",
+  "calculation_mode": "<span id="modeExampleResponse">sfmn</span>",
   "selected": { "api_code": "...", "label": "..." },
   "cure_count": 1,
   "computed_dose_rate": 9.9,
@@ -119,5 +119,24 @@
       <a href="index.html">← Retour à la page principale</a>
     </div>
   </main>
+  <script src="config.js"></script>
+  <script>
+    // Si le mode SFMN est désactivé côté serveur, les exemples ne doivent pas suggérer
+    // une valeur qui échouera systématiquement.
+    (async () => {
+      try {
+        const apiBase = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
+        const resp = await fetch(`${apiBase}/config`);
+        const config = await resp.json();
+        const modes = config.calculation_modes || ['local', 'sfmn'];
+        if (!modes.includes('sfmn')) {
+          document.getElementById('modeExamplePayload').textContent = 'local';
+          document.getElementById('modeExampleResponse').textContent = 'local';
+        }
+      } catch (_) {
+        // Config indisponible au chargement: les exemples par défaut restent tels quels.
+      }
+    })();
+  </script>
 </body>
 </html>
