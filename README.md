@@ -45,7 +45,8 @@ suffisent pas rétroactivement.
 
 | Fichier | Description |
 |---|---|
-| `server.js` | API Node.js : formules de calcul, proxy SFMN, journalisation, contact. |
+| `server.js` | API Node.js : routage HTTP, proxy SFMN, journalisation, contact, sécurité. |
+| `calculation.js` | Mode de calcul « local » : données (isotopes, scénarios), formalisme et validation. Fichier autonome (aucune dépendance au reste du serveur), pensé pour être audité ou testé isolément. |
 | `deploy.sh` | Script de déploiement/mise à jour idempotent. |
 | `monitor_node.sh` | Script de supervision généré par `deploy.sh` (health-check + relance). |
 | `.env.example` | Modèle de configuration pour le déploiement. |
