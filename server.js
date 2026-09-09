@@ -975,16 +975,11 @@ const server = http.createServer((req, res) => {
           return sendJson(res, 429, { ok: false, error: 'Trop de requêtes. Réessayez dans une minute.' });
         }
         const payload = body ? JSON.parse(body) : {};
-        const calculationMode = String(payload.calculation_mode || (SFMN_MODE_ENABLED ? 'sfmn' : 'local')).toLowerCase();
-        if (calculationMode === 'sfmn' && !SFMN_MODE_ENABLED) {
-          return sendJson(res, 400, {
-            ok: false,
-            calculation_mode: 'sfmn',
-            errors: ['Mode SFMN désactivé sur ce déploiement.'],
-            error: { code: 'SFMN_MODE_DISABLED', message: 'SFMN_MODE_ENABLED=false côté serveur.' },
-            recommendations_days: emptyRecommendations()
-          });
-        }
+        const requestedMode = String(payload.calculation_mode || (SFMN_MODE_ENABLED ? 'sfmn' : 'local')).toLowerCase();
+        // SFMN désactivé côté serveur: on ne fait plus échouer la requête, on bascule sur le
+        // calcul local (les deux formalismes sont désormais alignés) plutôt que d'imposer à
+        // chaque client (RIS, scripts externes) de gérer lui-même ce repli.
+        const calculationMode = requestedMode === 'sfmn' && !SFMN_MODE_ENABLED ? 'local' : requestedMode;
         const result = calculationMode === 'sfmn'
           ? await calculateSfmn(payload)
           : calculate(payload);

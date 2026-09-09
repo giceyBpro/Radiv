@@ -96,9 +96,11 @@ En mode `sfmn`, le backend interroge `SFMN_CALCULATOR_URL` et parse le HTML de r
 Ajouter `sfmn_debug: true` dans le payload (ou `SFMN_DEBUG=true` côté serveur) pour des traces détaillées.
 
 `SFMN_MODE_ENABLED=false` désactive entièrement ce mode : absent de `GET /api/config`
-(`calculation_modes`, `default_calculation_mode` retombe sur `local`), refusé explicitement
-par `POST /api/calculate` (`error.code: SFMN_MODE_DISABLED`), sélecteur de mode masqué sur
-la page d'accueil, exemples de payload adaptés sur `test-api.html` et `api-fonctionnement.html`.
+(`calculation_modes`, `default_calculation_mode` retombe sur `local`), toute requête
+`POST /api/calculate` avec `calculation_mode: "sfmn"` bascule silencieusement sur le calcul
+local (réponse avec `calculation_mode: "local"`, sans erreur — les deux formalismes sont
+alignés), sélecteur de mode masqué sur la page d'accueil, exemples de payload adaptés sur
+`test-api.html` et `api-fonctionnement.html`.
 
 ### Exemple de réponse
 
