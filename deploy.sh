@@ -160,17 +160,41 @@ log_step "Configuration .htaccess (redirection 301 vers www)"
 # suivent de toute façon pas les redirections cross-origin d'un fetch/XHR. L'API doit donc
 # rester joignable telle quelle avec et sans www; seules les pages du site restent forcées
 # sur le domaine canonique.
-WWW_MARKER="# /www-redirect (${SITE_HOST}) v2"
 if [[ "$SITE_HOST" == www.* ]]; then
+  # Le point du nom de domaine doit être échappé dans le motif regex de RewriteCond
+  # (non échappé, il matcherait n'importe quel caractère, pas seulement ".").
+  SITE_HOST_RE="${SITE_HOST//./\\.}"
+  WWW_MARKER="# /www-redirect (${SITE_HOST}) v2"
+  OLD_WWW_MARKER="# /www-redirect (${SITE_HOST})"
+
+  # Remplace automatiquement l'ancien bloc (sans exclusion /api) s'il correspond
+  # exactement à la signature générée par les versions précédentes de ce script: pas de
+  # suppression aveugle d'un bloc .htaccess, seulement de celui que ce script a lui-même
+  # écrit. Un bloc modifié à la main sous le même commentaire déclenche l'avertissement
+  # ci-dessous à la place et n'est pas touché.
+  OLD_MARKER_LINE="$(grep -nFx "$OLD_WWW_MARKER" "$HTACCESS" 2>/dev/null | head -1 | cut -d: -f1 || true)"
+  if [[ -n "${OLD_MARKER_LINE:-}" ]] && [[ -f "$HTACCESS" ]]; then
+    EXPECTED_OLD_BLOCK="$(printf 'RewriteEngine On\nRewriteCond %%{HTTPS} off [OR]\nRewriteCond %%{HTTP_HOST} !^%s$ [NC]\nRewriteRule ^ https://%s%%{REQUEST_URI} [L,R=301]' "$SITE_HOST_RE" "$SITE_HOST")"
+    ACTUAL_OLD_BLOCK="$(sed -n "$((OLD_MARKER_LINE+1)),$((OLD_MARKER_LINE+4))p" "$HTACCESS")"
+    if [[ "$ACTUAL_OLD_BLOCK" == "$EXPECTED_OLD_BLOCK" ]]; then
+      DELETE_START="$OLD_MARKER_LINE"
+      DELETE_END="$((OLD_MARKER_LINE+4))"
+      PREV_LINE_NUM="$((OLD_MARKER_LINE-1))"
+      # Supprime aussi la ligne vide séparatrice ajoutée devant le bloc par le printf
+      # d'origine, si présente, pour ne pas laisser un blanc orphelin.
+      if [[ "$PREV_LINE_NUM" -ge 1 ]] && [[ -z "$(sed -n "${PREV_LINE_NUM}p" "$HTACCESS")" ]]; then
+        DELETE_START="$PREV_LINE_NUM"
+      fi
+      sed -i "${DELETE_START},${DELETE_END}d" "$HTACCESS"
+      log_ok "Ancienne redirection www (sans exclusion /api) supprimée automatiquement de .htaccess."
+    else
+      log_warn "Un bloc /www-redirect existant dans .htaccess ne correspond pas exactement au format attendu; laissé tel quel. Vérifiez/nettoyez .htaccess manuellement."
+    fi
+  fi
+
   if grep -Fq "$WWW_MARKER" "$HTACCESS"; then
     log_info "Redirection www déjà présente dans .htaccess pour ${SITE_HOST}."
   else
-    if grep -Fq '# /www-redirect' "$HTACCESS"; then
-      log_warn "Une redirection www existante dans .htaccess ne correspond plus à la version attendue (host ou exclusion /api). Vérifiez/nettoyez .htaccess manuellement; l'ancienne règle n'est pas supprimée automatiquement."
-    fi
-    # Le point du nom de domaine doit être échappé dans le motif regex de RewriteCond
-    # (non échappé, il matcherait n'importe quel caractère, pas seulement ".").
-    SITE_HOST_RE="${SITE_HOST//./\\.}"
     API_URI_PATH="$(sed -E 's#^https?://[^/]+##' <<< "${API_PUBLIC_URL%/}")"
     API_URI_PATH="${API_URI_PATH:-/api}"
     API_URI_PATH_RE="${API_URI_PATH//./\\.}"
