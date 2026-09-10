@@ -947,6 +947,47 @@ function sendJson(res, statusCode, data) {
   });
   res.end(JSON.stringify(data));
 }
+function wantsHtml(req) {
+  const accept = req.headers.accept || '';
+  return accept.includes('text/html');
+}
+// L'API est appelée par des scripts (fetch/XHR: sendJson ci-dessus, inchangé) mais aussi
+// parfois ouverte directement dans un navigateur (lien copié, faute de frappe). Dans ce cas
+// mieux vaut une page lisible que le JSON brut {"error":"..."}."
+function sendHtmlError(res, statusCode, statusLabel, message) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
+  });
+  res.end(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>${statusCode} - API Dosimétrie RIV</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eef1f3;color:#111;display:flex;min-height:100vh;align-items:center;justify-content:center}
+main{max-width:520px;margin:24px;background:#fff;padding:28px;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.12);text-align:center}
+h1{margin:0 0 8px;font-size:2rem;color:#c00000}
+p{margin:8px 0}
+.links{margin-top:20px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+a{color:#1637b8}
+</style>
+</head>
+<body>
+<main>
+<h1>${statusCode}</h1>
+<p><strong>${statusLabel}</strong></p>
+<p>${message}</p>
+<div class="links">
+<a href="/api-fonctionnement.html">Documentation de l'API</a>
+<a href="/">Retour à l'accueil</a>
+</div>
+</main>
+</body>
+</html>`);
+}
 const server = http.createServer((req, res) => {
   setCorsHeaders(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
@@ -1075,6 +1116,9 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'GET' && pathname === '/health') {
     return sendJson(res, 200, { ok: true, time: new Date().toISOString() });
+  }
+  if (wantsHtml(req)) {
+    return sendHtmlError(res, 404, 'Page introuvable', 'Cette adresse ne correspond à aucune ressource de l\'API RadIV.');
   }
   sendJson(res, 404, { error: 'Not found' });
 });
