@@ -154,20 +154,29 @@ fi
 log_step "Configuration .htaccess (redirection 301 vers www)"
 # N'active la redirection que si SITE_PUBLIC_URL est explicitement en www: on ne force
 # jamais un choix de domaine canonique que l'opérateur n'a pas fait lui-même.
-WWW_MARKER="# /www-redirect (${SITE_HOST})"
+# v2: exclut le chemin de l'API de la redirection www. Certains clients tiers (RIS,
+# scripts externes) appellent l'API en dur sans www; une redirection 301 sur un POST lui
+# fait perdre son corps (méthode réécrite en GET) et certains environnements embarqués ne
+# suivent de toute façon pas les redirections cross-origin d'un fetch/XHR. L'API doit donc
+# rester joignable telle quelle avec et sans www; seules les pages du site restent forcées
+# sur le domaine canonique.
+WWW_MARKER="# /www-redirect (${SITE_HOST}) v2"
 if [[ "$SITE_HOST" == www.* ]]; then
   if grep -Fq "$WWW_MARKER" "$HTACCESS"; then
     log_info "Redirection www déjà présente dans .htaccess pour ${SITE_HOST}."
   else
     if grep -Fq '# /www-redirect' "$HTACCESS"; then
-      log_warn "Une redirection www existante dans .htaccess ne correspond plus à SITE_PUBLIC_URL (${SITE_HOST}). Vérifiez/nettoyez .htaccess manuellement; l'ancienne règle n'est pas supprimée automatiquement."
+      log_warn "Une redirection www existante dans .htaccess ne correspond plus à la version attendue (host ou exclusion /api). Vérifiez/nettoyez .htaccess manuellement; l'ancienne règle n'est pas supprimée automatiquement."
     fi
     # Le point du nom de domaine doit être échappé dans le motif regex de RewriteCond
     # (non échappé, il matcherait n'importe quel caractère, pas seulement ".").
     SITE_HOST_RE="${SITE_HOST//./\\.}"
-    printf '\n%s\nRewriteEngine On\nRewriteCond %%{HTTPS} off [OR]\nRewriteCond %%{HTTP_HOST} !^%s$ [NC]\nRewriteRule ^ https://%s%%{REQUEST_URI} [L,R=301]\n' \
-      "$WWW_MARKER" "$SITE_HOST_RE" "$SITE_HOST" >> "$HTACCESS"
-    log_ok "Redirection 301 vers https://${SITE_HOST} ajoutée dans .htaccess."
+    API_URI_PATH="$(sed -E 's#^https?://[^/]+##' <<< "${API_PUBLIC_URL%/}")"
+    API_URI_PATH="${API_URI_PATH:-/api}"
+    API_URI_PATH_RE="${API_URI_PATH//./\\.}"
+    printf '\n%s\nRewriteEngine On\nRewriteCond %%{HTTPS} off\nRewriteRule ^ https://%%{HTTP_HOST}%%{REQUEST_URI} [L,R=301]\nRewriteCond %%{HTTP_HOST} !^%s$ [NC]\nRewriteCond %%{REQUEST_URI} !^%s(/|$)\nRewriteRule ^ https://%s%%{REQUEST_URI} [L,R=301]\n' \
+      "$WWW_MARKER" "$SITE_HOST_RE" "$API_URI_PATH_RE" "$SITE_HOST" >> "$HTACCESS"
+    log_ok "Redirection 301 vers https://${SITE_HOST} ajoutée dans .htaccess (hors ${API_URI_PATH}, accessible avec et sans www)."
   fi
 else
   log_info "SITE_PUBLIC_URL (${SITE_HOST}) n'est pas en www: pas de redirection forcée."
