@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Mesures RIV collectées</title>
+  <title>Accès</title>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; background: #eef1f3; margin: 0; padding: 20px; }
     main { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; }
@@ -33,51 +33,68 @@
 </head>
 <body>
   <main>
-    <h1>Mesures RIV collectées</h1>
-    <p class="muted">Les mesures sont journalisées par mois. Sélectionnez une période pour éviter de charger tout l'historique d'un coup.</p>
-    <div class="controls">
-      <label>Période <select id="periodInput"><option value="">(chargement…)</option></select></label>
-      <label>Token admin <input id="tokenInput" type="password" placeholder="si configuré"></label>
-      <button id="loadBtn">Charger</button>
-      <button id="exportBtn">Exporter CSV</button>
+    <div id="gate">
+      <h1>Accès</h1>
+      <div class="controls">
+        <label>Jeton <input id="tokenInput" type="password" placeholder="Jeton d'accès" autocomplete="off"></label>
+        <button id="unlockBtn">Valider</button>
+      </div>
+      <div id="gateStatus" class="muted"></div>
     </div>
-    <div id="status" class="muted">Aucune donnée chargée.</div>
-    <div class="legend">
-      <strong>Carte des sollicitations</strong>
-      <span><span class="legend-dot" style="background:#2f6eb7;"></span> 1-2 requêtes</span>
-      <span><span class="legend-dot" style="background:#e57f1f;"></span> 3-5 requêtes</span>
-      <span><span class="legend-dot" style="background:#b22222;"></span> 6+ requêtes</span>
-    </div>
-    <div id="map"></div>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>IP</th>
-          <th>Lieu</th>
-          <th>Isotope</th>
-          <th>Entrées</th>
-          <th>Résultats</th>
-          <th>OK</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
+    <div id="adminContent"></div>
   </main>
 
   <script src="config.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
+    // Tant que le jeton n'est pas validé, aucune trace du contenu réel (structure des
+    // données, colonnes, libellés) ne doit être présente dans le HTML: le simple fait de
+    // masquer en CSS resterait visible via "Afficher le code source". Le contenu admin
+    // n'est donc injecté dans le DOM qu'après une réponse serveur positive.
     const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
-    const rowsEl = document.getElementById('rows');
-    const statusEl = document.getElementById('status');
-    const map = L.map('map', { worldCopyJump: true }).setView([46.5, 2.2], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
-    const markersLayer = L.layerGroup().addTo(map);
+    const gateEl = document.getElementById('gate');
+    const adminContentEl = document.getElementById('adminContent');
+    const gateStatusEl = document.getElementById('gateStatus');
+    const tokenInput = document.getElementById('tokenInput');
+    let adminToken = '';
+    let map = null;
+    let markersLayer = null;
+    let rowsEl = null;
+    let statusEl = null;
+    let periodSelect = null;
+
+    const ADMIN_CONTENT_HTML = `
+      <h1>Mesures RIV collectées</h1>
+      <p class="muted">Les mesures sont journalisées par mois. Sélectionnez une période pour éviter de charger tout l'historique d'un coup.</p>
+      <div class="controls">
+        <label>Période <select id="periodInput"><option value="">(chargement…)</option></select></label>
+        <button id="loadBtn">Charger</button>
+        <button id="exportBtn">Exporter CSV</button>
+      </div>
+      <div id="status" class="muted">Aucune donnée chargée.</div>
+      <div class="legend">
+        <strong>Carte des sollicitations</strong>
+        <span><span class="legend-dot" style="background:#2f6eb7;"></span> 1-2 requêtes</span>
+        <span><span class="legend-dot" style="background:#e57f1f;"></span> 3-5 requêtes</span>
+        <span><span class="legend-dot" style="background:#b22222;"></span> 6+ requêtes</span>
+      </div>
+      <div id="map"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>IP</th>
+            <th>Lieu</th>
+            <th>Isotope</th>
+            <th>Entrées</th>
+            <th>Résultats</th>
+            <th>OK</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    `;
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -158,7 +175,6 @@
       return `${recos || '<span class="small">Aucune recommandation</span>'}${errors}`;
     }
 
-    const periodSelect = document.getElementById('periodInput');
     const MONTH_LABELS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
     // Le jeton ne doit jamais transiter par l'URL: il finirait dans les journaux d'accès
@@ -172,8 +188,19 @@
     }
 
     function authHeaders() {
-      const token = document.getElementById('tokenInput').value.trim();
-      return token ? { 'X-Admin-Token': token } : {};
+      return adminToken ? { 'X-Admin-Token': adminToken } : {};
+    }
+
+    function applyPeriods(periods) {
+      if (!periods.length) {
+        const now = new Date();
+        periods = [{ year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 }];
+      }
+      periodSelect.innerHTML = periods.map((p) => {
+        const value = `${p.year}-${String(p.month).padStart(2, '0')}`;
+        const label = `${MONTH_LABELS[p.month - 1]} ${p.year}`;
+        return `<option value="${value}">${escapeHtml(label)}</option>`;
+      }).join('');
     }
 
     async function loadPeriods() {
@@ -183,16 +210,7 @@
         return;
       }
       const data = await resp.json();
-      const periods = data.periods || [];
-      if (!periods.length) {
-        const now = new Date();
-        periods.push({ year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 });
-      }
-      periodSelect.innerHTML = periods.map((p) => {
-        const value = `${p.year}-${String(p.month).padStart(2, '0')}`;
-        const label = `${MONTH_LABELS[p.month - 1]} ${p.year}`;
-        return `<option value="${value}">${escapeHtml(label)}</option>`;
-      }).join('');
+      applyPeriods(data.periods || []);
     }
 
     async function loadRows() {
@@ -237,13 +255,52 @@
       URL.revokeObjectURL(url);
     }
 
-    document.getElementById('loadBtn').addEventListener('click', loadRows);
-    document.getElementById('exportBtn').addEventListener('click', exportCsv);
-    document.getElementById('tokenInput').addEventListener('change', async () => {
-      await loadPeriods();
-      if (periodSelect.value) loadRows();
+    function revealAdminContent(periods) {
+      adminContentEl.innerHTML = ADMIN_CONTENT_HTML;
+      document.title = 'Mesures RIV collectées';
+      gateEl.hidden = true;
+
+      rowsEl = document.getElementById('rows');
+      statusEl = document.getElementById('status');
+      periodSelect = document.getElementById('periodInput');
+
+      map = L.map('map', { worldCopyJump: true }).setView([46.5, 2.2], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+      markersLayer = L.layerGroup().addTo(map);
+
+      applyPeriods(periods);
+
+      document.getElementById('loadBtn').addEventListener('click', loadRows);
+      document.getElementById('exportBtn').addEventListener('click', exportCsv);
+    }
+
+    async function unlock() {
+      const token = tokenInput.value.trim();
+      if (!token) return;
+      gateStatusEl.textContent = 'Vérification…';
+      let resp;
+      try {
+        resp = await fetch(`${API_BASE}/admin/measurements/periods`, { headers: { 'X-Admin-Token': token } });
+      } catch (e) {
+        gateStatusEl.textContent = 'Accès refusé.';
+        return;
+      }
+      if (!resp.ok) {
+        gateStatusEl.textContent = 'Accès refusé.';
+        return;
+      }
+      const data = await resp.json();
+      adminToken = token;
+      revealAdminContent(data.periods || []);
+    }
+
+    document.getElementById('unlockBtn').addEventListener('click', unlock);
+    tokenInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') unlock();
     });
-    loadPeriods();
   </script>
 </body>
 </html>
