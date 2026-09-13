@@ -928,8 +928,9 @@ function checkContactRateLimit(ip) {
 function isAdminAuthorized(req) {
   if (!adminToken) return false;
   // Limite les tentatives (jeton correct ou non) avant même la comparaison, pour rendre
-  // un brute-force impraticable; la réponse 401 déjà renvoyée aux appelants ne distingue
-  // pas "jeton invalide" de "trop de tentatives", pour ne rien signaler à un attaquant.
+  // un brute-force impraticable; la réponse 404 déjà renvoyée aux appelants (voir plus
+  // bas) ne distingue ni "jeton invalide" de "trop de tentatives", ni ces deux cas d'une
+  // route inexistante, pour ne rien signaler à un attaquant.
   if (!checkRateLimit(adminRateMap, getClientIp(req), 10)) return false;
   const provided = req.headers['x-admin-token'];
   if (typeof provided !== 'string') return false;
@@ -1088,11 +1089,11 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'GET' && pathname === '/api/admin/measurements/periods' && ADMIN_MEASUREMENTS_ENABLED) {
-    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+    if (!isAdminAuthorized(req)) return sendJson(res, 404, { error: 'Not found' });
     return sendJson(res, 200, { periods: listLogPeriods() });
   }
   if (req.method === 'GET' && pathname === '/api/admin/measurements' && ADMIN_MEASUREMENTS_ENABLED) {
-    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+    if (!isAdminAuthorized(req)) return sendJson(res, 404, { error: 'Not found' });
     const year = urlObj.searchParams.get('year');
     const month = urlObj.searchParams.get('month');
     readMeasurementLogs(year, month)
@@ -1104,7 +1105,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'GET' && pathname === '/api/admin/measurements.csv' && ADMIN_MEASUREMENTS_ENABLED) {
-    if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+    if (!isAdminAuthorized(req)) return sendJson(res, 404, { error: 'Not found' });
     const year = urlObj.searchParams.get('year');
     const month = urlObj.searchParams.get('month');
     readMeasurementLogs(year, month)
