@@ -58,6 +58,7 @@ const geoIpCache = new Map();
 const GEO_IP_CACHE_MAX = 500;
 const contactRateMap = new Map();
 const calculateRateMap = new Map();
+const adminRateMap = new Map();
 const LOGS_MAX_BYTES = Number(process.env.LOGS_MAX_BYTES || 50 * 1024 * 1024);
 const CALCULATE_RATE_LIMIT = Number(process.env.CALCULATE_RATE_LIMIT || 60);
 const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY || '';
@@ -922,6 +923,10 @@ function checkContactRateLimit(ip) {
 }
 function isAdminAuthorized(req) {
   if (!adminToken) return false;
+  // Limite les tentatives (jeton correct ou non) avant même la comparaison, pour rendre
+  // un brute-force impraticable; la réponse 401 déjà renvoyée aux appelants ne distingue
+  // pas "jeton invalide" de "trop de tentatives", pour ne rien signaler à un attaquant.
+  if (!checkRateLimit(adminRateMap, getClientIp(req), 10)) return false;
   const provided = req.headers['x-admin-token'];
   if (typeof provided !== 'string') return false;
   // Comparaison à temps constant pour ne pas divulguer le jeton octet par octet.
