@@ -173,10 +173,15 @@ d'accès du serveur, l'historique du navigateur et l'en-tête `Referer`.
 Tentatives limitées à 10/minute/IP (jeton correct ou non), pour rendre un brute-force
 sur `ADMIN_TOKEN` impraticable.
 
-`ADMIN_MEASUREMENTS_ENABLED=false` désactive entièrement ces trois routes : elles
-répondent alors 404, indiscernable d'une route inexistante (même avec le bon jeton).
-`admin-mesures.html` reste servie en tant que fichier statique (Apache, pas Node) mais
-n'affiche plus rien d'utilisable une fois les routes coupées.
+Un jeton absent, invalide, ou une tentative déjà bloquée par la limite ci-dessus
+répondent 404 (pas 401) — exactement comme une route inexistante, pour ne pas même
+confirmer que ces routes existent à qui n'a pas le bon jeton. Seul un jeton correct
+révèle qu'elles existent, via une vraie réponse 200.
+
+`ADMIN_MEASUREMENTS_ENABLED=false` désactive entièrement ces trois routes : même le bon
+jeton reçoit alors ce 404 générique. `admin-mesures.html` reste servie en tant que
+fichier statique (Apache, pas Node) mais n'affiche plus rien d'utilisable une fois les
+routes coupées.
 
 ## Modèles Xplore RIS
 
