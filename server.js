@@ -46,6 +46,10 @@ if (!Number.isInteger(parsedPort) || parsedPort < 0 || parsedPort > 65535) {
 // CORS_ORIGIN reste accepté pour compatibilité.
 const corsOrigin = process.env.API_CORS_ORIGIN || process.env.CORS_ORIGIN || '*';
 const adminToken = process.env.ADMIN_TOKEN || '';
+// Coupure complète des routes admin (mesures): désactivées, elles ne répondent plus du
+// tout — même 404 générique que n'importe quelle route inexistante, pour ne rien
+// distinguer d'un accès normal, avec ou sans jeton.
+const ADMIN_MEASUREMENTS_ENABLED = String(process.env.ADMIN_MEASUREMENTS_ENABLED ?? 'true').toLowerCase() !== 'false';
 // Proxies autorisés à définir X-Forwarded-For. Par défaut le reverse-proxy local
 // (Apache/passenger). Mettre TRUSTED_PROXIES="" pour ignorer totalement l'en-tête.
 const trustedProxies = (process.env.TRUSTED_PROXIES === undefined ? '127.0.0.1,::1' : process.env.TRUSTED_PROXIES)
@@ -1083,11 +1087,11 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'GET' && pathname === '/api/admin/measurements/periods') {
+  if (req.method === 'GET' && pathname === '/api/admin/measurements/periods' && ADMIN_MEASUREMENTS_ENABLED) {
     if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     return sendJson(res, 200, { periods: listLogPeriods() });
   }
-  if (req.method === 'GET' && pathname === '/api/admin/measurements') {
+  if (req.method === 'GET' && pathname === '/api/admin/measurements' && ADMIN_MEASUREMENTS_ENABLED) {
     if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
     const month = urlObj.searchParams.get('month');
@@ -1099,7 +1103,7 @@ const server = http.createServer((req, res) => {
       });
     return;
   }
-  if (req.method === 'GET' && pathname === '/api/admin/measurements.csv') {
+  if (req.method === 'GET' && pathname === '/api/admin/measurements.csv' && ADMIN_MEASUREMENTS_ENABLED) {
     if (!isAdminAuthorized(req)) return sendJson(res, 401, { error: 'Unauthorized' });
     const year = urlObj.searchParams.get('year');
     const month = urlObj.searchParams.get('month');
