@@ -170,6 +170,13 @@ cours. `month` sans `year` est ignoré.
 L'accès requiert `ADMIN_TOKEN` fourni via le header `X-Admin-Token`.
 Le jeton ne doit jamais être passé en query string : il serait enregistré dans les journaux
 d'accès du serveur, l'historique du navigateur et l'en-tête `Referer`.
+Tentatives limitées à 10/minute/IP (jeton correct ou non), pour rendre un brute-force
+sur `ADMIN_TOKEN` impraticable.
+
+`ADMIN_MEASUREMENTS_ENABLED=false` désactive entièrement ces trois routes : elles
+répondent alors 404, indiscernable d'une route inexistante (même avec le bon jeton).
+`admin-mesures.html` reste servie en tant que fichier statique (Apache, pas Node) mais
+n'affiche plus rien d'utilisable une fois les routes coupées.
 
 ## Modèles Xplore RIS
 
