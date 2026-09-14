@@ -1065,7 +1065,13 @@ const server = http.createServer((req, res) => {
     });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {
-    return sendJson(res, 200, { recaptcha_site_key: recaptchaSiteKey ? recaptchaSiteKey : '' });
+    return sendJson(res, 200, {
+      recaptcha_site_key: recaptchaSiteKey ? recaptchaSiteKey : '',
+      // Reflète la config de journalisation actuelle: sert à générer une page RGPD
+      // qui reste correcte sans édition manuelle à chaque changement de .env.
+      measurement_logging_level: MEASUREMENT_LOGGING_LEVEL,
+      logs_retention_months: LOGS_RETENTION_MONTHS
+    });
   }
   if (req.method === 'POST' && pathname === '/api/calculate') {
     let body = '';

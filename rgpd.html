@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Confidentialité (RGPD) - Dosimétrie RIV</title>
+  <style>
+    :root { --border:#1f1f1f; --paper:#fff; --bg:#eef1f3; --link:#1637b8; }
+    body { margin:0; padding:24px; background:var(--bg); font-family:Arial, Helvetica, sans-serif; color:#1a1a1a; }
+    .page { max-width:900px; margin:0 auto; background:var(--paper); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.12); padding:24px 28px; }
+    h1 { margin-top:0; }
+    h2 { font-size:1.05rem; border-top:1px solid #e2e6e9; padding-top:16px; margin-top:22px; }
+    .links { margin-bottom:14px; }
+    .links a { color:var(--link); }
+    ul { padding-left:20px; }
+    .muted { color:#555; font-size:.92rem; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="links"><a href="index.html">← Retour à l'accueil</a></div>
+    <h1>Confidentialité et protection des données</h1>
+    <p class="muted">Cette page décrit les données traitées par ce site, conformément au RGPD.</p>
+
+    <h2>Responsable du traitement</h2>
+    <p id="responsable">…</p>
+
+    <h2>Finalités et base légale</h2>
+    <p>
+      Fonctionnement du service de calcul, sécurité et prévention des abus (limitation de débit),
+      amélioration du service. Base légale : intérêt légitime de l'éditeur du site.
+    </p>
+
+    <h2>Données collectées</h2>
+    <p id="donneesCollectees">Chargement…</p>
+    <p class="muted">
+      Si vous utilisez le <a href="contact.html">formulaire de contact</a>, votre adresse email et
+      le contenu de votre message sont transmis par email à l'éditeur du site, pour vous répondre.
+    </p>
+
+    <h2>Durée de conservation</h2>
+    <p id="dureeConservation">Chargement…</p>
+
+    <h2>Destinataires des données</h2>
+    <p id="destinataires">Chargement…</p>
+
+    <h2>Cookies et stockage local</h2>
+    <p>
+      Ce site n'utilise pas de cookie de suivi. Un stockage local (<code>localStorage</code> /
+      <code>sessionStorage</code>) est utilisé uniquement pour transmettre le résultat d'un calcul
+      entre les pages de ce site (ex. vue imprimable) : il reste sur votre appareil et n'est jamais
+      transmis au serveur.
+    </p>
+
+    <h2>Vos droits</h2>
+    <p>
+      Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement,
+      d'opposition, de limitation et de portabilité sur les données vous concernant. Pour les
+      exercer, utilisez le <a href="contact.html">formulaire de contact</a>. Vous pouvez également
+      introduire une réclamation auprès de la
+      <a href="https://www.cnil.fr/fr/adresser-une-plainte" target="_blank" rel="noopener noreferrer">CNIL</a>.
+    </p>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
+    const SITE_NAME = window.RADIOPROTECTION_SITE_NAME || '';
+    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME || 'l’éditeur du site';
+
+    document.getElementById('responsable').textContent =
+      `${COPYRIGHT_OWNER}. Pour toute question relative à vos données, utilisez le formulaire de contact du site.`;
+
+    function describeLoggingLevel(level) {
+      if (level === 'none') {
+        return 'Aucune donnée n’est conservée suite à un calcul (ni adresse IP, ni paramètres saisis).';
+      }
+      if (level === 'user') {
+        return 'À chaque calcul : horodatage, adresse IP et localisation approximative (ville/pays) ' +
+          'dérivée de cette IP. Les paramètres du calcul (radiopharmaceutique, débit de dose, taille, ' +
+          'nombre de cures) et le résultat ne sont pas conservés.';
+      }
+      return 'À chaque calcul : horodatage, adresse IP, localisation approximative (ville/pays) dérivée ' +
+        'de cette IP, paramètres du calcul demandé (radiopharmaceutique, débit de dose, taille, nombre ' +
+        'de cures) et résultat obtenu.';
+    }
+
+    function describeRetention(months) {
+      if (months) {
+        return `Les données décrites ci-dessus sont conservées ${months} mois, puis supprimées automatiquement.`;
+      }
+      return 'Aucune durée de conservation automatique n’est actuellement configurée pour ces données.';
+    }
+
+    function describeRecipients(level, recaptchaEnabled, sfmnEnabled) {
+      const items = [];
+      if (level !== 'none') {
+        items.push(
+          'Services de géolocalisation d’adresse IP (ipapi.co, ip-api.com) : votre adresse IP leur est transmise pour en déduire une localisation approximative.'
+        );
+      }
+      if (recaptchaEnabled) {
+        items.push(
+          'Google reCAPTCHA, sur le formulaire de contact uniquement, pour la protection anti-spam.'
+        );
+      }
+      if (sfmnEnabled) {
+        items.push(
+          'Si vous choisissez le mode de calcul "SFMN" : les paramètres de votre calcul (radiopharmaceutique, débit de dose, taille, nombre de cures — sans autre donnée) sont transmis à l’outil SFMN de référence, hébergé par un tiers, pour effectuer le calcul.'
+        );
+      }
+      if (!items.length) return 'Aucun destinataire tiers.';
+      return items;
+    }
+
+    function renderList(container, content) {
+      if (typeof content === 'string') {
+        container.textContent = content;
+        return;
+      }
+      container.textContent = '';
+      const ul = document.createElement('ul');
+      content.forEach((text) => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    }
+
+    (async () => {
+      let level = 'full';
+      let retentionMonths = null;
+      let recaptchaEnabled = false;
+      let sfmnEnabled = false;
+
+      try {
+        const res = await fetch(`${API_BASE}/public-config`);
+        if (res.ok) {
+          const data = await res.json();
+          level = data.measurement_logging_level || 'full';
+          retentionMonths = data.logs_retention_months || null;
+          recaptchaEnabled = Boolean(data.recaptcha_site_key);
+        }
+      } catch (e) {
+        // Config indisponible: les descriptions par défaut (le plus complet) restent affichées.
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/config`);
+        if (res.ok) {
+          const data = await res.json();
+          sfmnEnabled = Array.isArray(data.calculation_modes) && data.calculation_modes.includes('sfmn');
+        }
+      } catch (e) {
+        // idem
+      }
+
+      document.getElementById('donneesCollectees').textContent = describeLoggingLevel(level);
+      document.getElementById('dureeConservation').textContent = describeRetention(retentionMonths);
+      renderList(document.getElementById('destinataires'), describeRecipients(level, recaptchaEnabled, sfmnEnabled));
+    })();
+  </script>
+</body>
+</html>
