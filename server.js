@@ -50,6 +50,31 @@ const adminToken = process.env.ADMIN_TOKEN || '';
 // tout — même 404 générique que n'importe quelle route inexistante, pour ne rien
 // distinguer d'un accès normal, avec ou sans jeton.
 const ADMIN_MEASUREMENTS_ENABLED = String(process.env.ADMIN_MEASUREMENTS_ENABLED ?? 'true').toLowerCase() !== 'false';
+// Ce qui est journalisé à chaque /api/calculate (RGPD: minimisation des données) :
+//   "none" : rien n'est écrit (ni IP, ni contenu).
+//   "user" : uniquement horodatage + IP + géolocalisation dérivée (qui/quand, pas quoi).
+//   "full" : comportement historique, tout (IP/géoloc + données transmises — isotope,
+//            débit de dose, taille patient... — + résultat du calcul).
+const MEASUREMENT_LOGGING_LEVEL = (() => {
+  const raw = String(process.env.MEASUREMENT_LOGGING_LEVEL || 'full').trim().toLowerCase();
+  if (raw !== 'none' && raw !== 'user' && raw !== 'full') {
+    console.warn(`MEASUREMENT_LOGGING_LEVEL invalide (${raw}); fallback sur "full"`);
+    return 'full';
+  }
+  return raw;
+})();
+// Purge automatique des fichiers de logs plus vieux que N mois. Vide/absent = pas de
+// purge (rétention illimitée, comportement historique).
+const LOGS_RETENTION_MONTHS = (() => {
+  const raw = (process.env.LOGS_RETENTION_MONTHS || '').trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    console.warn(`LOGS_RETENTION_MONTHS invalide (${raw}); purge désactivée`);
+    return null;
+  }
+  return n;
+})();
 // Proxies autorisés à définir X-Forwarded-For. Par défaut le reverse-proxy local
 // (Apache/passenger). Mettre TRUSTED_PROXIES="" pour ignorer totalement l'en-tête.
 const trustedProxies = (process.env.TRUSTED_PROXIES === undefined ? '127.0.0.1,::1' : process.env.TRUSTED_PROXIES)
@@ -83,6 +108,10 @@ const sfmnDebugDefault = String(process.env.SFMN_DEBUG || 'false').toLowerCase()
 const SFMN_MODE_ENABLED = String(process.env.SFMN_MODE_ENABLED ?? 'true').toLowerCase() !== 'false';
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 migrateLegacyLogFile();
+purgeOldLogs();
+// Le processus tourne potentiellement des semaines sans redémarrer: une purge au seul
+// démarrage ne suffit pas à garantir la limite de rétention en continu.
+setInterval(purgeOldLogs, 24 * 60 * 60 * 1000).unref();
 function emptyRecommendations() {
   return {
     conjoint_plus_60: null,
@@ -625,6 +654,28 @@ function listLogPeriods() {
   periods.sort((a, b) => (b.year - a.year) || (b.month - a.month));
   return periods;
 }
+function purgeOldLogs() {
+  if (!LOGS_RETENTION_MONTHS) return;
+  if (!fs.existsSync(logsDir)) return;
+  // Mois calendaire courant, ramené au 1er: sert de référence pour calculer l'ancienneté
+  // de chaque fichier mensuel indépendamment du jour du mois où la purge tourne.
+  const now = new Date();
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - LOGS_RETENTION_MONTHS, 1));
+  const re = /^measurements-(\d{4})-(\d{2})\.jsonl(\.1)?$/;
+  for (const name of fs.readdirSync(logsDir)) {
+    const m = name.match(re);
+    if (!m) continue;
+    const fileDate = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+    if (fileDate < cutoff) {
+      try {
+        fs.unlinkSync(path.join(logsDir, name));
+        console.log(`Purge log mesures (rétention ${LOGS_RETENTION_MONTHS} mois): ${name}`);
+      } catch (error) {
+        console.error(`Erreur purge log ${name}:`, error.message);
+      }
+    }
+  }
+}
 function rotateLogFileIfNeeded(file) {
   try {
     if (!fs.existsSync(file)) return;
@@ -1034,14 +1085,15 @@ const server = http.createServer((req, res) => {
         const result = calculationMode === 'sfmn'
           ? await calculateSfmn(payload)
           : calculate(payload);
-        const ipGeo = await resolveGeoFromIp(ip);
-        appendMeasurementLog({
-          timestamp: new Date().toISOString(),
-          ip,
-          ip_geo: ipGeo,
-          input: sanitizeInputForLog(payload),
-          result
-        });
+        if (MEASUREMENT_LOGGING_LEVEL !== 'none') {
+          const ipGeo = await resolveGeoFromIp(ip);
+          appendMeasurementLog({
+            timestamp: new Date().toISOString(),
+            ip,
+            ip_geo: ipGeo,
+            ...(MEASUREMENT_LOGGING_LEVEL === 'full' ? { input: sanitizeInputForLog(payload), result } : {})
+          });
+        }
         sendJson(res, 200, result);
       } catch (error) {
         sendJson(res, 400, { error: 'JSON invalide' });

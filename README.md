@@ -159,6 +159,12 @@ scindé automatiquement en fichiers mensuels au démarrage, puis archivé en `.m
 Chaque fichier mensuel est en plus limité par `LOGS_MAX_BYTES` (défaut 50 Mo) : au-delà,
 il est basculé en `.1` avant de reprendre à zéro.
 
+`MEASUREMENT_LOGGING_LEVEL` contrôle ce qui est écrit (minimisation RGPD) : `none` (rien),
+`user` (horodatage + IP + géolocalisation uniquement, pas les données du calcul), `full`
+(défaut, comportement ci-dessus). `LOGS_RETENTION_MONTHS` purge automatiquement (au
+démarrage puis une fois par jour) les fichiers mensuels plus vieux que N mois ; vide par
+défaut = rétention illimitée.
+
 - Page web : `admin-mesures.html` (page statique sans lien de navigation, comme `tox.html`/`xplore.html` — accessible en tapant l'URL)
 - Périodes disponibles : `GET /api/admin/measurements/periods`
 - API JSON : `GET /api/admin/measurements?year=2026&month=08`
