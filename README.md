@@ -11,7 +11,7 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `explain.html` | Version explicative simplifiée destinée au patient. |
 | `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
 | `contact.html` | Formulaire de contact protégé par reCAPTCHA, envoi email côté backend. |
-| `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
+| `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
 | `admin-mesures.html` | Consultation et export des mesures journalisées. |
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
