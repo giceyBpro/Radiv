@@ -144,6 +144,24 @@ async function calculateSfmn(payload) {
       recommendations_days: emptyRecommendations()
     };
   }
+  // Même défense pour cure_count: sans validation explicite, un cure_count hors liste
+  // (ex. psma_177lu avec cure_count=999) retombait silencieusement sur le mapping SFMN
+  // "1 cure" plus bas (ternaires sur payload.cure_count) au lieu d'être rejeté.
+  const cure = normalizeCureCount(selected, payload.cure_count);
+  if (!cure.valid) {
+    return {
+      ok: false,
+      calculation_mode: 'sfmn',
+      selected,
+      errors: [`Pour ${selected.api_code}, cure_count doit être l'une des valeurs suivantes : ${cure.allowed.join(', ')}.`],
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: `cure_count invalide pour isotope_code=${selected.api_code}.`,
+        reason: `Valeurs valides : ${cure.allowed.join(', ')}.`
+      },
+      recommendations_days: emptyRecommendations()
+    };
+  }
   if (!SFMN_MODE_ENABLED) {
     return {
       ok: false,
@@ -181,9 +199,9 @@ async function calculateSfmn(payload) {
     iode131_5_fixation: 'Iodine-131-5%-uptake',
     iode131_25_fixation: 'Iodine-131-25%-uptake',
     iode131_benin: 'Iodine-131-Benign disease',
-    psma_177lu: payload.cure_count === 6 ? 'PSMA-177Lu 6 cures' : payload.cure_count === 4 ? 'PSMA-177Lu 4 cures' : 'PSMA-177Lu',
+    psma_177lu: cure.value === 6 ? 'PSMA-177Lu 6 cures' : cure.value === 4 ? 'PSMA-177Lu 4 cures' : 'PSMA-177Lu',
     radium223: 'Radium-223',
-    lutetium177_net: payload.cure_count === 4 ? 'NET 177Lu 4 cures' : 'NET 177Lu',
+    lutetium177_net: cure.value === 4 ? 'NET 177Lu 4 cures' : 'NET 177Lu',
     microspheres_90y: 'Microspheres-90Y',
     microspheres_166ho: 'Microsphères-166Ho',
     lipiodol_131i: 'Lipiodol-131I',
@@ -504,7 +522,7 @@ async function calculateSfmn(payload) {
       calculation_mode: 'sfmn',
       selected,
       cure_count: parsed.parsedCureCount || 1,
-      cure_count_allowed: normalizeCureCount(selected, payload.cure_count).allowed,
+      cure_count_allowed: cure.allowed,
       computed_dose_rate: parsed.computedDoseRate,
       effective_days: parsed.effectiveDays,
       effective_hours: parsed.effectiveHours,
