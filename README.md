@@ -11,7 +11,7 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `explain.html` | Version explicative simplifiée destinée au patient. |
 | `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
 | `contact.html` | Formulaire de contact protégé par reCAPTCHA, envoi email côté backend. |
-| `rgpd.html` | Page de confidentialité (RGPD) : contenu généré depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
+| `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
 | `admin-mesures.html` | Consultation et export des mesures journalisées. |
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
@@ -166,9 +166,9 @@ il est basculé en `.1` avant de reprendre à zéro.
 démarrage puis une fois par jour) les fichiers mensuels plus vieux que N mois ; vide par
 défaut = rétention illimitée.
 
-Ces deux réglages sont reflétés automatiquement sur `rgpd.html` (via `GET /api/public-config`) :
-la page de confidentialité décrit toujours l'état réel de la configuration, sans édition
-manuelle à chaque changement de `.env`.
+Ces deux réglages sont reflétés automatiquement sur `mentions-legales.html` (via
+`GET /api/public-config`) : la section protection des données décrit toujours l'état réel
+de la configuration, sans édition manuelle à chaque changement de `.env`.
 
 - Page web : `admin-mesures.html` (page statique sans lien de navigation, comme `tox.html`/`xplore.html` — accessible en tapant l'URL)
 - Périodes disponibles : `GET /api/admin/measurements/periods`

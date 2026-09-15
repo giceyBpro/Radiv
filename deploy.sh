@@ -123,7 +123,7 @@ rsync -a --delete \
   --include='print.html' \
   --include='explain.html' \
   --include='contact.html' \
-  --include='rgpd.html' \
+  --include='mentions-legales.html' \
   --include='api-fonctionnement.html' \
   --include='test-api.html' \
   --include='tox.html' \

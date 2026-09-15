@@ -4,13 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Confidentialité (RGPD) - Dosimétrie RIV</title>
+  <title>Mentions légales - Dosimétrie RIV</title>
   <style>
     :root { --border:#1f1f1f; --paper:#fff; --bg:#eef1f3; --link:#1637b8; }
     body { margin:0; padding:24px; background:var(--bg); font-family:Arial, Helvetica, sans-serif; color:#1a1a1a; }
     .page { max-width:900px; margin:0 auto; background:var(--paper); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.12); padding:24px 28px; }
     h1 { margin-top:0; }
     h2 { font-size:1.05rem; border-top:1px solid #e2e6e9; padding-top:16px; margin-top:22px; }
+    h2.section-break { font-size:1.3rem; border-top:2px solid var(--border); margin-top:34px; }
     .links { margin-bottom:14px; }
     .links a { color:var(--link); }
     ul { padding-left:20px; }
@@ -20,8 +21,27 @@
 <body>
   <main class="page">
     <div class="links"><a href="index.html">← Retour à l'accueil</a></div>
-    <h1>Confidentialité et protection des données</h1>
-    <p class="muted">Cette page décrit les données traitées par ce site, conformément au RGPD.</p>
+    <h1>Mentions légales et protection des données</h1>
+
+    <h2>Éditeur du site</h2>
+    <p>
+      Ce site est édité par une personne physique qui, conformément à l'article 6-III de la
+      loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN), a
+      choisi de ne pas rendre son identité publique. Cette identité est communiquée à
+      l'hébergeur du site. Pour toute question ou demande, utilisez le
+      <a href="contact.html">formulaire de contact</a>.
+    </p>
+    <p>Directeur de la publication : l'éditeur du site, joignable via ce même formulaire.</p>
+
+    <h2>Hébergeur</h2>
+    <p>
+      O2SWITCH — SAS au capital de 100 000 € — SIRET 510 909 807 00032 — RCS Clermont-Ferrand —
+      Chemin des Pardiaux, 63000 Clermont-Ferrand, France — téléphone : 04 44 44 60 40 —
+      <a href="https://www.o2switch.fr" target="_blank" rel="noopener noreferrer">www.o2switch.fr</a>
+    </p>
+
+    <h2 class="section-break">Protection des données personnelles</h2>
+    <p class="muted">Cette section décrit les données traitées par ce site, conformément au RGPD.</p>
 
     <h2>Responsable du traitement</h2>
     <p id="responsable">…</p>
@@ -66,11 +86,9 @@
   <script src="config.js"></script>
   <script>
     const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
-    const SITE_NAME = window.RADIOPROTECTION_SITE_NAME || '';
-    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME || 'l’éditeur du site';
 
     document.getElementById('responsable').textContent =
-      `${COPYRIGHT_OWNER}. Pour toute question relative à vos données, utilisez le formulaire de contact du site.`;
+      'L’éditeur du site (voir Mentions légales ci-dessus). Pour toute question relative à vos données, utilisez le formulaire de contact du site.';
 
     function describeLoggingLevel(level) {
       if (level === 'none') {
