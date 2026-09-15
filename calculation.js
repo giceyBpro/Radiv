@@ -138,6 +138,11 @@ function expectedPayloadByIsotope(selected) {
 }
 function calculate(payload) {
   const selected = getIsotope(payload.isotope_code);
+  // getIsotope() retombe silencieusement sur isotopes[0] si isotope_code ne correspond à
+  // rien (faute de frappe, casse, valeur absente) — sans ce contrôle, le calcul se
+  // poursuivrait normalement pour le mauvais isotope et renverrait ok:true avec un
+  // résultat correct en apparence mais faux, sans aucun signal d'erreur.
+  const isotopeCodeRecognized = isotopes.some((i) => i.api_code === payload.isotope_code);
   const cure = normalizeCureCount(selected, payload.cure_count);
   const userPeriodDays = toNumberOrNull(payload.user_period_days);
   const effectiveDays = userPeriodDays !== null ? userPeriodDays : (selected.api_code === 'non_defini' ? null : selected.periodHours / 24);
@@ -156,6 +161,9 @@ function calculate(payload) {
   const userComplete = filledCount === userValues.length;
   const userEmpty = filledCount === 0;
   const errors = [];
+  if (!isotopeCodeRecognized) {
+    errors.push(`isotope_code inconnu ou manquant : ${JSON.stringify(payload.isotope_code ?? null)}. Codes valides : ${isotopes.map((i) => i.api_code).join(', ')}.`);
+  }
   if (selected.api_code === 'iode131_benin') {
     if (!(benignActivityMbq > 0)) errors.push('Pour iode131_benin, benign_activity_mbq doit être strictement positif.');
     if (!(benignFixationPct > 0 && benignFixationPct <= 100)) errors.push('Pour iode131_benin, benign_fixation_pct doit être un pourcentage strictement positif et ≤ 100 (ex. 15).');
@@ -197,12 +205,16 @@ function calculate(payload) {
       calculation_mode: 'local',
       error: {
         code: 'VALIDATION_ERROR',
-        message: `Échec du calcul pour isotope_code=${selected.api_code}.`,
-        reason: selected.api_code === 'iode131_benin'
-          ? 'Pour iode131_benin, benign_activity_mbq et benign_fixation_pct (en %) sont obligatoires (dose_rate est ignoré).'
-          : selected.api_code === 'non_defini'
-            ? 'Pour non_defini, dose_rate et user_period_days sont obligatoires et strictement positifs.'
-            : 'Pour cet isotope, dose_rate est obligatoire et doit être strictement positif.',
+        message: isotopeCodeRecognized
+          ? `Échec du calcul pour isotope_code=${selected.api_code}.`
+          : `isotope_code inconnu ou manquant : ${JSON.stringify(payload.isotope_code ?? null)}.`,
+        reason: !isotopeCodeRecognized
+          ? `Codes valides : ${isotopes.map((i) => i.api_code).join(', ')}.`
+          : selected.api_code === 'iode131_benin'
+            ? 'Pour iode131_benin, benign_activity_mbq et benign_fixation_pct (en %) sont obligatoires (dose_rate est ignoré).'
+            : selected.api_code === 'non_defini'
+              ? 'Pour non_defini, dose_rate et user_period_days sont obligatoires et strictement positifs.'
+              : 'Pour cet isotope, dose_rate est obligatoire et doit être strictement positif.',
         expected_payload
       },
       selected,
