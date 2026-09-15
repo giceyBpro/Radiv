@@ -126,6 +126,24 @@ function emptyRecommendations() {
 }
 async function calculateSfmn(payload) {
   const selected = getIsotope(payload.isotope_code);
+  // Même défense qu'en mode local (calculation.js): getIsotope() retombe silencieusement
+  // sur isotopes[0] si isotope_code est inconnu — sans ce contrôle, le calcul distant
+  // interrogerait le SFMN pour le mauvais isotope sans le signaler (le garde-fou plus bas
+  // sur sfmnMap ne suffit pas: isotopes[0] a bien une entrée dans ce mapping).
+  if (!isotopes.some((i) => i.api_code === payload.isotope_code)) {
+    return {
+      ok: false,
+      calculation_mode: 'sfmn',
+      selected,
+      errors: [`isotope_code inconnu ou manquant : ${JSON.stringify(payload.isotope_code ?? null)}. Codes valides : ${isotopes.map((i) => i.api_code).join(', ')}.`],
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: `isotope_code inconnu ou manquant : ${JSON.stringify(payload.isotope_code ?? null)}.`,
+        reason: `Codes valides : ${isotopes.map((i) => i.api_code).join(', ')}.`
+      },
+      recommendations_days: emptyRecommendations()
+    };
+  }
   if (!SFMN_MODE_ENABLED) {
     return {
       ok: false,
