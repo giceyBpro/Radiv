@@ -553,8 +553,8 @@
     <div class="quick-actions no-print">
       <button type="button" class="print-btn" id="printBtn">Ouvrir la version imprimable (A4)</button>
       <button type="button" class="print-btn" id="explainBtn">Ouvrir la version explicative</button>
-      <a class="inline-link" href="contact.html"><strong>Contact</strong></a>
-      <a class="inline-link" href="api-fonctionnement.html"><strong>Info API</strong></a>
+      <a class="inline-link" href="/contact"><strong>Contact</strong></a>
+      <a class="inline-link" href="/doc"><strong>Info API</strong></a>
     </div>
 
     <section class="section mandatory">
@@ -738,7 +738,7 @@
       <div class="small" id="lastUpdatedRow">Maj le <span id="lastUpdatedLabel"></span></div>
     </div>
     <div class="copyright" id="copyrightText">© -</div>
-    <div class="copyright"><a href="mentions-legales.html" style="color:inherit;">Mentions légales</a></div>
+    <div class="copyright"><a href="/legal" style="color:inherit;">Mentions légales</a></div>
   </main>
 
     <script src="config.js"></script>
@@ -1309,7 +1309,7 @@
         result: lastResult
       };
       localStorage.setItem('radioprotection_print_payload', JSON.stringify(payload));
-      window.open('print.html', '_blank');
+      window.open('/print', '_blank');
     }
 
     function openExplanatoryVersion() {
@@ -1332,7 +1332,7 @@
         result: lastResult
       };
       localStorage.setItem('radioprotection_explain_payload', JSON.stringify(payload));
-      window.open('explain.html', '_blank');
+      window.open('/explain', '_blank');
     }
 
     $('printBtn').addEventListener('click', openPrintableVersion);
