@@ -152,6 +152,18 @@ else
   log_info "Règle /tox déjà présente dans .htaccess."
 fi
 
+log_step "Configuration .htaccess (règle /legal)"
+LEGAL_RULE="RewriteRule ^legal/?$ mentions-legales.html [L]"
+if [[ ! -f "$HTACCESS" ]]; then
+  printf 'Options -Indexes\nRewriteEngine On\n%s\n' "$LEGAL_RULE" > "$HTACCESS"
+  log_ok ".htaccess créé avec la règle /legal."
+elif ! grep -Fq "mentions-legales.html" "$HTACCESS"; then
+  printf '\n# /legal\nRewriteEngine On\n%s\n' "$LEGAL_RULE" >> "$HTACCESS"
+  log_ok "Règle /legal ajoutée dans .htaccess."
+else
+  log_info "Règle /legal déjà présente dans .htaccess."
+fi
+
 log_step "Configuration .htaccess (redirection 301 vers www)"
 # N'active la redirection que si SITE_PUBLIC_URL est explicitement en www: on ne force
 # jamais un choix de domaine canonique que l'opérateur n'a pas fait lui-même.
