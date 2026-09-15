@@ -11,14 +11,21 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `explain.html` | Version explicative simplifiée destinée au patient. |
 | `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
 | `contact.html` | Formulaire de contact protégé par reCAPTCHA, envoi email côté backend. |
-| `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. Également accessible via `/legal`. |
-| `admin-mesures.html` | Consultation et export des mesures journalisées. |
+| `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
+| `admin-mesures.html` | Consultation et export des mesures journalisées. Volontairement sans raccourci court (voir ci-dessous). |
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
-| `tox.html` | Page de diagnostic interne (accessible via `/tox`, sans lien depuis l'interface). |
+| `tox.html` | Page de diagnostic interne, sans lien depuis l'interface. |
 | `config.js` | Configuration runtime (URLs API/site) injectée par `deploy.sh` en production. |
 | `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
 | `robots.txt` | Autorise l'indexation de la page d'accueil uniquement (voir [Référencement](#référencement)). |
+
+`deploy.sh` ajoute dans `.htaccess` des raccourcis sans `.html` pour ces pages : `/tox`,
+`/legal`, `/contact`, `/print`, `/explain`, `/doc` (→ `api-fonctionnement.html`),
+`/test-api`, `/xplore`. `admin-mesures.html` en est volontairement exclu : cette page n'a
+aucun lien de navigation et sa découverte ne doit reposer sur aucun chemin devinable — lui
+donner un raccourci court irait à l'encontre du durcissement déjà en place dessus
+(rate-limit, réponse 404 uniforme, interrupteur `ADMIN_MEASUREMENTS_ENABLED`).
 
 ## Référencement
 

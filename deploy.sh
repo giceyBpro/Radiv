@@ -139,30 +139,36 @@ rsync -a --delete \
 
 log_ok "Frontend synchronisé vers $FRONTEND_DIR"
 
-log_step "Configuration .htaccess (règle /tox)"
+log_step "Configuration .htaccess (raccourcis de pages sans .html)"
 HTACCESS="$FRONTEND_DIR/.htaccess"
-TOX_RULE="RewriteRule ^tox/?$ tox.html [L]"
 if [[ ! -f "$HTACCESS" ]]; then
-  printf 'Options -Indexes\nRewriteEngine On\n%s\n' "$TOX_RULE" > "$HTACCESS"
-  log_ok ".htaccess créé avec la règle /tox."
-elif ! grep -Fq "tox.html" "$HTACCESS"; then
-  printf '\n# /tox\nRewriteEngine On\n%s\n' "$TOX_RULE" >> "$HTACCESS"
-  log_ok "Règle /tox ajoutée dans .htaccess."
-else
-  log_info "Règle /tox déjà présente dans .htaccess."
+  printf 'Options -Indexes\nRewriteEngine On\n' > "$HTACCESS"
+  log_ok ".htaccess créé."
 fi
-
-log_step "Configuration .htaccess (règle /legal)"
-LEGAL_RULE="RewriteRule ^legal/?$ mentions-legales.html [L]"
-if [[ ! -f "$HTACCESS" ]]; then
-  printf 'Options -Indexes\nRewriteEngine On\n%s\n' "$LEGAL_RULE" > "$HTACCESS"
-  log_ok ".htaccess créé avec la règle /legal."
-elif ! grep -Fq "mentions-legales.html" "$HTACCESS"; then
-  printf '\n# /legal\nRewriteEngine On\n%s\n' "$LEGAL_RULE" >> "$HTACCESS"
-  log_ok "Règle /legal ajoutée dans .htaccess."
-else
-  log_info "Règle /legal déjà présente dans .htaccess."
-fi
+# admin-mesures.html est volontairement exclu: cette page n'a pas de lien de navigation
+# et sa découverte ne doit reposer sur aucun chemin devinable — lui donner un raccourci
+# court irait à l'encontre du durcissement déjà en place dessus (rate-limit, 404 uniforme,
+# interrupteur ADMIN_MEASUREMENTS_ENABLED). Elle reste accessible via son nom de fichier
+# complet uniquement.
+declare -A SHORT_ROUTES=(
+  [tox]="tox.html"
+  [legal]="mentions-legales.html"
+  [contact]="contact.html"
+  [print]="print.html"
+  [explain]="explain.html"
+  [doc]="api-fonctionnement.html"
+  [test-api]="test-api.html"
+  [xplore]="xplore.html"
+)
+for route in "${!SHORT_ROUTES[@]}"; do
+  target="${SHORT_ROUTES[$route]}"
+  if grep -Fq "$target" "$HTACCESS"; then
+    log_info "Règle /$route (-> $target) déjà présente dans .htaccess."
+  else
+    printf '\n# /%s\nRewriteEngine On\nRewriteRule ^%s/?$ %s [L]\n' "$route" "$route" "$target" >> "$HTACCESS"
+    log_ok "Règle /$route ajoutée dans .htaccess."
+  fi
+done
 
 log_step "Configuration .htaccess (redirection 301 vers www)"
 # N'active la redirection que si SITE_PUBLIC_URL est explicitement en www: on ne force
