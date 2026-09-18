@@ -181,12 +181,21 @@ function calculate(payload) {
     if (!(user.distance1 > 0)) errors.push('La distance X du scénario utilisateur doit être strictement positive.');
     if (!(user.limit > 0)) errors.push('La limite dosimétrique du scénario utilisateur doit être strictement positive.');
   }
-  const rows = scenarios.map((scenario) => ({
-    audience_code: scenario.audience_code,
-    label: scenario.label,
-    condition: scenario.condition,
-    value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, scenario.exposures, scenario.limit / cure.value)
-  }));
+  const rows = scenarios.map((scenario) => {
+    // Cures multiples: la limite dosimétrique de chaque scénario est divisée par le nombre
+    // de cures, SAUF transport_commun. Pour les autres scénarios (conjoint, enfant...),
+    // c'est la même personne qui cumule l'exposition cure après cure, d'où la division.
+    // Pour le transport en commun, chaque cure expose des personnes différentes (autres
+    // passagers) : il n'y a pas de cumul à répartir, donc pas de division. Volontaire,
+    // aligné sur SFMN (confirmé par le groupe Radioprotection SFMN).
+    const limitForScenario = scenario.audience_code === 'transport_commun' ? scenario.limit : scenario.limit / cure.value;
+    return {
+      audience_code: scenario.audience_code,
+      label: scenario.label,
+      condition: scenario.condition,
+      value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, scenario.exposures, limitForScenario)
+    };
+  });
   let userRow = { audience_code: 'scenario_utilisateur', label: 'Scénario utilisateur', condition: '-', value: null };
   if (userComplete) {
     userRow = {
