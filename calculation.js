@@ -188,11 +188,15 @@ function calculate(payload) {
     // Pour le transport en commun, chaque cure expose des personnes différentes (autres
     // passagers) : il n'y a pas de cumul à répartir, donc pas de division. Volontaire,
     // aligné sur SFMN (confirmé par le groupe Radioprotection SFMN).
-    const limitForScenario = scenario.audience_code === 'transport_commun' ? scenario.limit : scenario.limit / cure.value;
+    const isTransportCommun = scenario.audience_code === 'transport_commun';
+    const limitForScenario = isTransportCommun ? scenario.limit : scenario.limit / cure.value;
+    const conditionSuffix = isTransportCommun
+      ? ' (par cure, non cumulée)'
+      : (cure.value > 1 ? ` (répartie sur ${cure.value} cures)` : '');
     return {
       audience_code: scenario.audience_code,
       label: scenario.label,
-      condition: scenario.condition,
+      condition: scenario.condition + conditionSuffix,
       value: errors.length ? null : restrictionDays(effectiveDays, doseRate, patientSizeCm, scenario.exposures, limitForScenario)
     };
   });
@@ -233,7 +237,8 @@ function calculate(payload) {
       effective_days: effectiveDays,
       effective_hours: effectiveDays === null ? null : effectiveDays * 24,
       errors,
-      recommendations_days
+      recommendations_days,
+      rows: allRows
     };
   }
   return {
@@ -246,7 +251,8 @@ function calculate(payload) {
     effective_days: effectiveDays,
     effective_hours: effectiveDays === null ? null : effectiveDays * 24,
     errors: [],
-    recommendations_days
+    recommendations_days,
+    rows: allRows
   };
 }
 
