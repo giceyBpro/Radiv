@@ -90,8 +90,10 @@
       afficher pour chaque scénario (utile pour ne pas dupliquer ces textes côté client). Ce texte
       varie selon la requête : par exemple, il précise quand la limite d'un scénario est répartie sur
       plusieurs cures. En mode SFMN, cette info n'existe pas au même niveau de fiabilité (elle vient
-      du scraping de la page distante) : elle reste disponible séparément sous
-      <code>sfmn_source.parsed_rows</code>, à titre indicatif seulement.
+      du scraping de la page distante) : elle n'est donc exposée, sous
+      <code>sfmn_source.parsed_rows</code>, que si le serveur est configuré avec
+      <code>SFMN_DEBUG=true</code> (réglage serveur uniquement, jamais activable depuis la requête).
+      En usage normal, <code>sfmn_source</code> ne contient que <code>url</code>.
     </p>
 
     <h2>Réponse en cas d’erreur de validation</h2>
