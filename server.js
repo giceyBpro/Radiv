@@ -528,6 +528,9 @@ async function calculateSfmn(payload) {
       effective_hours: parsed.effectiveHours,
       errors: [],
       recommendations_days: parsed.recommendations,
+      // Même forme que le mode local (calculate()) pour un consommateur unique sans
+      // branchement par mode ; sfmn_source.parsed_rows (ci-dessous) reste pour le debug.
+      rows: parsed.rows,
       sfmn_source: {
         url: sfmnCalculatorUrl,
         parsed_rows: parsed.rows

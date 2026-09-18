@@ -79,8 +79,17 @@
     "enfant_3_11_ans": 0,
     "collegues_travail": 0,
     "scenario_utilisateur": null
-  }
+  },
+  "rows": [
+    { "audience_code": "conjoint_plus_60", "label": "...", "condition": "...", "value": 0 }
+  ]
 }</code></pre>
+    <p class="muted">
+      <code>rows</code> reprend les mêmes valeurs que <code>recommendations_days</code>, avec en plus
+      un libellé et un texte de condition prêts à afficher pour chaque scénario (utile pour ne pas
+      dupliquer ces textes côté client). Ce texte varie selon la requête : par exemple, il précise
+      quand la limite d'un scénario est répartie sur plusieurs cures.
+    </p>
 
     <h2>Réponse en cas d’erreur de validation</h2>
     <pre><code>{
