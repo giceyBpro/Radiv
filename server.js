@@ -528,12 +528,15 @@ async function calculateSfmn(payload) {
       effective_hours: parsed.effectiveHours,
       errors: [],
       recommendations_days: parsed.recommendations,
-      // Même forme que le mode local (calculate()) pour un consommateur unique sans
-      // branchement par mode ; sfmn_source.parsed_rows (ci-dessous) reste pour le debug.
-      rows: parsed.rows,
+      // Pas de "rows" ici (contrairement au mode local) : parsed.rows vient d'un scraping
+      // de la page SFMN distante — forme différente, non garantie (nombre de lignes variable,
+      // audience_code parfois null par repli positionnel, libellés bruts de la page tierce).
+      // Ce n'est pas une info fiable au même titre que rows en mode local. Le détail scrapé
+      // (parsed_rows) n'est donc exposé qu'en mode debug, comme le reste du diagnostic SFMN ;
+      // en usage normal, seul url reste (attribution de la source, pas du diagnostic).
       sfmn_source: {
         url: sfmnCalculatorUrl,
-        parsed_rows: parsed.rows
+        ...(debugEnabled ? { parsed_rows: parsed.rows } : {})
       }
     });
   } catch (_) {
