@@ -57,6 +57,7 @@
       <li><strong>iode131_benin</strong> : fournir <code>benign_activity_mbq</code> et <code>benign_fixation_pct</code> (en %). <code>dose_rate</code> est ignoré.</li>
       <li><strong>non_defini</strong> (mode local) : fournir aussi <code>user_period_days</code> strictement positif.</li>
       <li><strong>cure_count</strong> : utile pour <code>psma_177lu</code> (1/4/6) et <code>lutetium177_net</code> (1/4). Pour <code>radium223</code> : 1 uniquement.</li>
+      <li><strong>cure_count &gt; 1</strong> : la limite dosimétrique de chaque scénario de <code>recommendations_days</code> est répartie sur les cures, sauf <code>transport_commun</code> (passagers différents à chaque cure, pas de cumul).</li>
     </ul>
 
     <h2>Réponse attendue (succès)</h2>
