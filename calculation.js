@@ -190,9 +190,9 @@ function calculate(payload) {
     // aligné sur SFMN (confirmé par le groupe Radioprotection SFMN).
     const isTransportCommun = scenario.audience_code === 'transport_commun';
     const limitForScenario = isTransportCommun ? scenario.limit : scenario.limit / cure.value;
-    const conditionSuffix = isTransportCommun
-      ? ' (par cure, non cumulée)'
-      : (cure.value > 1 ? ` (répartie sur ${cure.value} cures)` : '');
+    const conditionSuffix = cure.value > 1
+      ? (isTransportCommun ? ' (par cure, non cumulée)' : ` (répartie sur ${cure.value} cures)`)
+      : '';
     return {
       audience_code: scenario.audience_code,
       label: scenario.label,
