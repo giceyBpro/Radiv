@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Calculateur gratuit des durées de restriction de contact après radiothérapie interne vectorisée (RIV) : iode-131, PSMA-177Lu, radium-223, lutétium-177, microsphères Y-90/Ho-166... Consignes de radioprotection personnalisées pour le patient et son entourage." />
+  <link rel="canonical" href="/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="Radiothérapie interne vectorisée (RIV) : durées de restriction" />
+  <meta property="og:description" content="Calculateur des durées de restriction de contact après radiothérapie interne vectorisée (RIV), consignes de radioprotection personnalisées pour le patient et son entourage." />
+  <link rel="icon" href="favicon.ico" />
+  <title>RadIV (bêta) : durées de restriction</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --ink: #1a2433;
+      --muted: #5c6b80;
+      --border: #dde4f0;
+      --link: #2f5e8c;
+      --accent: #2f5e8c;
+      --accent-strong: #1f4566;
+      --accent-soft: #e4ecf7;
+      --accent-contrast: #ffffff;
+      --good: #8a2e42;
+      --good-soft: #f7e8ec;
+      --good-strong: #6b2032;
+      --warn: #a3283a;
+      --warn-soft: #fbe9eb;
+      --warn-border: #e7b3bb;
+      --font-display: "Archivo", "Segoe UI", sans-serif;
+      --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--paper);
+      padding: 30px 30px 24px;
+      box-shadow: 0 12px 32px -12px rgba(26,36,51,.18);
+      border-radius: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 26px;
+      line-height: 1.3;
+      font-weight: 700;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 14px;
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    .section {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-top: 18px;
+      overflow: hidden;
+    }
+
+    .section-title {
+      text-align: left;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 11.5px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 18px 22px 0;
+    }
+
+    .mandatory .section-title { background: transparent; }
+
+    .mandatory-body {
+      display: grid;
+      grid-template-columns: 1fr;
+      background: transparent;
+    }
+
+    .mandatory-body > div {
+      padding: 10px 22px;
+    }
+    .mandatory-body > div:last-of-type { padding-bottom: 20px; }
+
+    .field-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .field-title {
+      font-weight: 600;
+      font-size: 14.5px;
+      margin-bottom: 6px;
+    }
+
+    .pair {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .pair:last-child { margin-bottom: 0; }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      padding: 11px 13px;
+      font-size: 15px;
+      font-family: var(--font-mono);
+      border-radius: 10px;
+      box-shadow: none;
+    }
+    select { font-family: var(--font-body); }
+
+    input::placeholder {
+      color: #9aa6b8;
+      opacity: 1;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--paper);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    input[readonly] {
+      background: var(--border);
+      color: var(--muted);
+    }
+
+    .opt-row-value {
+      width: 100%;
+      max-width: 140px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .opt-preview {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+
+    .source-box,
+    .note,
+    .error {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .source-box,
+    .note {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .error {
+      background: var(--warn-soft);
+      border: 1px solid var(--warn-border);
+      color: var(--warn);
+      display: none;
+    }
+
+    .optional details {
+      border-top: 0;
+    }
+
+    .optional summary {
+      list-style: none;
+      cursor: pointer;
+      background: var(--paper);
+      padding: 16px 22px;
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: none;
+    }
+    .optional details[open] summary { border-bottom: 1px solid var(--border); }
+
+    .optional summary::-webkit-details-marker { display: none; }
+
+    .summary-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .summary-caption {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .summary-arrow {
+      font-size: 16px;
+      line-height: 1;
+      color: var(--muted);
+      transition: transform .2s ease;
+    }
+
+    details[open] .summary-arrow {
+      transform: rotate(180deg);
+    }
+
+    .optional-inner {
+      padding: 0;
+    }
+
+    .optional-intro {
+      margin: 0;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .optional-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 1.4fr) minmax(120px, 0.55fr) minmax(180px, 0.85fr);
+      width: 100%;
+    }
+
+    .optional-col-header {
+      font-style: normal;
+      background: var(--bg);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .opt-cell {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14.5px;
+    }
+
+    .opt-cell.value {
+      justify-content: center;
+      background: var(--accent-soft);
+    }
+
+    .opt-cell.repere {
+      background: var(--bg);
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
+    .opt-cell strong.block {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .opt-cell.opt-period {
+      background: var(--good-soft);
+      border-top: 1px solid var(--good);
+      border-bottom: 1px solid var(--good);
+    }
+    .opt-cell.value.opt-period {
+      background: var(--good-soft);
+    }
+    .opt-inline-pair {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .opt-inline-pair .small {
+      margin-bottom: 4px;
+    }
+
+    .effective-box {
+      margin-top: 16px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      padding: 14px 18px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      border-radius: 14px;
+      border: none;
+    }
+
+    .effective-box div + div { margin-top: 4px; }
+
+    table.results {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    table.results th,
+    table.results td {
+      padding: 14px 16px;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    table.results thead th {
+      background: var(--bg);
+      text-align: left;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.results thead th.duration-head {
+      width: 150px;
+      background: var(--bg);
+      text-align: center;
+    }
+
+    table.results tbody tr:last-child td { border-bottom: none; }
+    table.results tbody tr td { background: var(--paper); }
+
+    table.results td.value {
+      background: var(--paper) !important;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--good-strong);
+      width: 150px;
+    }
+
+    table.results td.conditions {
+      width: 280px;
+      text-align: left;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: pre-line;
+    }
+
+    table.results td.scenario {
+      font-weight: 600;
+      font-size: 14.5px;
+      white-space: pre-line;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .warning-block {
+      margin-top: 10px;
+      padding: 14px 16px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height: 1.4;
+      border-radius: 12px;
+    }
+    .copyright {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    a.inline-link {
+      color: var(--link);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a.inline-link:hover { text-decoration: underline; }
+
+    a.fake-link {
+      color: var(--link);
+      text-decoration: underline;
+      cursor: default;
+    }
+
+    .quick-actions {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .print-btn {
+      border: 1px solid var(--border);
+      background: var(--paper);
+      color: var(--ink);
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .print-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+    .calculate-btn {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      border-color: var(--accent);
+      padding: 15px 30px;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 10px 24px -8px rgba(47,94,140,.45);
+    }
+    .calculate-btn:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+    .calculate-btn:disabled {
+      opacity: 0.75;
+      cursor: wait;
+    }
+    .loading-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: var(--accent-strong);
+    }
+    .loading-indicator.active {
+      display: inline-flex;
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--accent-soft);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .required-field {
+      border: 1.5px solid #c9414f !important;
+      box-shadow: 0 0 0 3px var(--warn-soft);
+      background: var(--warn-soft) !important;
+      color: var(--ink) !important;
+    }
+    .benign-fixation-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 180px) 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+    .benign-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .benign-presets button {
+      border: 1px solid transparent;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      border-radius: 999px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+    .benign-presets button:hover { background: var(--accent); color: var(--accent-contrast); }
+    .cure-selector {
+      margin-top: 10px;
+      display: none;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .cure-selector button {
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .cure-selector button.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
+    .mode-selector {
+      display: inline-flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .mode-selector button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+    }
+    .mode-selector button.active {
+      border-color: transparent;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      box-shadow: none;
+    }
+
+    @media (max-width: 900px) {
+      .mandatory-body {
+        grid-template-columns: 1fr;
+      }
+
+      .optional-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .optional-col-header.value,
+      .optional-col-header.repere {
+        display: none;
+      }
+
+      .opt-cell,
+      .opt-cell.value,
+      .opt-cell.repere {
+        min-height: auto;
+      }
+
+      .opt-cell.value {
+        justify-content: stretch;
+      }
+
+      .opt-row-value {
+        max-width: 100%;
+      }
+
+      table.results td.conditions { width: auto; }
+
+      .pair {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1><span id="siteNameBanner">[Nom du site]</span> : Calcul de durée de restriction des contacts<br>après radiothérapie interne vectorisée&nbsp;RIV</h1>
+    <div class="subtitle">Adaptation web d’après le tableur SFMN / groupe radioprotection.</div>
+
+    <div class="source-box">
+      <strong>Source :</strong>
+      <a class="inline-link" id="sourceLink" href="https://doi.org/10.1016/j.mednuc.2026.03.002" target="_blank" rel="noopener noreferrer">https://doi.org/10.1016/j.mednuc.2026.03.002</a>
+      <span id="sourceMeta">— Carlier et al., Médecine Nucléaire 2026;50:131-136 (groupe Radioprotection SFMN)</span>
+    </div>
+
+    <div class="quick-actions no-print">
+      <button type="button" class="print-btn" id="printBtn">Ouvrir la version imprimable (A4)</button>
+      <button type="button" class="print-btn" id="explainBtn">Ouvrir la version explicative</button>
+      <a class="inline-link" href="/contact"><strong>Contact</strong></a>
+      <a class="inline-link" href="/doc"><strong>Info API</strong></a>
+    </div>
+
+    <section class="section mandatory">
+      <div class="section-title">Éléments obligatoires à préciser</div>
+      <div class="mandatory-body">
+        <div>
+          <div class="field-stack">
+            <div id="calculationModeField">
+              <div class="field-title">Mode de calcul</div>
+              <div id="calculationModeSelector" class="mode-selector" aria-label="Mode de calcul">
+                <button type="button" data-mode="sfmn">Calcul SFMN</button>
+                <button type="button" data-mode="local">Calcul local</button>
+              </div>
+            </div>
+            <div>
+              <div class="field-title">Type d'exposition (menu déroulant)</div>
+              <select id="isotope"></select>
+              <div id="cureSelector" class="cure-selector" aria-label="Nombre de cures">
+                <span class="small">Nombre de cures :</span>
+                <button type="button" data-cure="1">1 cure</button>
+                <button type="button" data-cure="4">4 cures</button>
+                <button type="button" data-cure="6">6 cures</button>
+              </div>
+            </div>
+            <div>
+              <div class="field-title">Débit de dose à 1 m (µSv/h) en sortie de chambre</div>
+              <input id="doseRate" type="number" min="0" step="0.01" value="">
+              <div class="small" id="doseRateHelp">Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.</div>
+            </div>
+            <div>
+              <div class="field-title">Taille du patient (cm)</div>
+              <input id="patientSize" type="number" min="1" step="1" value="">
+            </div>
+            <div id="benignInlineBlock" hidden>
+              <div class="field-title">Activité administrée</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <div class="small" style="margin-bottom:4px;">MBq</div>
+                  <input id="benignActivityMbq" type="number" min="0" step="1" placeholder="vide">
+                </div>
+                <div>
+                  <div class="small" style="margin-bottom:4px;">mCi</div>
+                  <input id="benignActivityMci" type="number" min="0" step="1" placeholder="vide">
+                </div>
+              </div>
+              <div class="field-title" style="margin-top:8px;">Taux de fixation (%)</div>
+              <div class="benign-fixation-row">
+                <input id="benignFixation" type="number" min="0" max="100" step="0.01" placeholder="ex. 15">
+                <div class="benign-presets">
+                  <button type="button" data-benign-fixation="15">Nodule chaud</button>
+                  <button type="button" data-benign-fixation="25">Goître multinodulaire</button>
+                  <button type="button" data-benign-fixation="30">Maladie de Basedow</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section optional">
+      <details id="optionalDetails">
+        <summary>
+          <span class="summary-left">
+            <span>Éléments optionnels : pour calculer un scénario d'exposition personnalisé</span>
+            <span class="summary-caption">Bloc replié par défaut. Structure reprise du tableur Excel : durée à la distance X, distance X, durée à 1 m et limite dosimétrique.</span>
+          </span>
+          <span class="summary-arrow">▾</span>
+        </summary>
+
+        <div class="optional-inner">
+          <div class="note optional-intro">
+            Ces champs servent uniquement à construire un scénario d’exposition personnalisé. Laisser vide pour conserver uniquement les scénarios standards du tableau.
+          </div>
+
+          <div class="optional-grid">
+            <div class="optional-col-header">Paramètre</div>
+            <div class="optional-col-header value">Valeur</div>
+            <div class="optional-col-header repere">Repère / usage</div>
+
+            <div class="opt-cell opt-period">
+              <div>
+                <strong class="block" id="effectivePeriodLabel">Période effective (j) imposée par l'utilisateur (laisser vide sinon)</strong>
+                À remplir uniquement si vous souhaitez imposer manuellement une période effective différente de celle liée au radiopharmaceutique choisi.
+              </div>
+            </div>
+            <div class="opt-cell value opt-period">
+              <input id="userPeriodDays" class="opt-row-value" type="number" min="0" step="0.01" placeholder="à renseigner si besoin">
+            </div>
+            <div class="opt-cell repere opt-period">Laisser vide dans la plupart des cas.</div>
+
+            <div class="opt-cell">
+              <div>
+                <strong class="block">Scénario utilisateur (éventuel) — Étape 1 : Temps à Xm + Distance X</strong>
+                Renseignez ensemble la durée à la distance X et la distance correspondante.
+              </div>
+            </div>
+            <div class="opt-cell value">
+              <div class="opt-inline-pair">
+                <div>
+                  <div class="small">Temps à Xm (h)</div>
+                  <input id="userHours1" class="opt-row-value" type="number" min="0" step="0.1" placeholder="ex. 8">
+                </div>
+                <div>
+                  <div class="small">Distance X (m)</div>
+                  <input id="userDistance1" class="opt-row-value" type="number" min="0.01" step="0.01" placeholder="ex. 0,3">
+                </div>
+              </div>
+            </div>
+            <div class="opt-cell repere">Correspond aux lignes « Durée à la distance X » et « Distance (m) » du tableur.</div>
+
+            <div class="opt-cell">
+              <div>
+                <strong class="block">Scénario utilisateur (éventuel) — Durée à 1 m (h)</strong>
+                Deuxième durée d’exposition, à 1 m fixe, valeur non nulle obligatoire pour activer le scénario utilisateur.
+              </div>
+            </div>
+            <div class="opt-cell value">
+              <input id="userHours2" class="opt-row-value" type="number" min="0" step="0.1" placeholder="ex. 3">
+            </div>
+            <div class="opt-cell repere">Correspond à la ligne « Durée à 1 m (valeur non nulle obligatoire) » du tableur.</div>
+
+            <div class="opt-cell">
+              <div>
+                <strong class="block">Limite dosimétrique (mSv)</strong>
+                Seuil de dose à ne pas dépasser pour le scénario utilisateur personnalisé.
+              </div>
+            </div>
+            <div class="opt-cell value">
+              <input id="userLimit" class="opt-row-value" type="number" min="0" step="0.01" placeholder="ex. 1">
+            </div>
+            <div class="opt-cell repere">Correspond à la ligne « Limite dosimétrique (mSv) » du tableur.</div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <div class="quick-actions no-print" style="justify-content:center;">
+      <button type="button" class="print-btn calculate-btn" id="calculateBtn">Calculer les durées de restriction</button>
+      <div id="loadingIndicator" class="loading-indicator" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Calcul en cours, merci de patienter…</span>
+      </div>
+    </div>
+
+    <div class="error" id="errorBox"></div>
+
+    <div class="effective-box">
+      <div id="effectiveDaysText">Période effective retenue en jours : -</div>
+      <div id="effectiveHoursText">Période effective retenue en heures : -</div>
+    </div>
+
+    <table class="results">
+      <thead>
+        <tr>
+          <th>Scénario</th>
+          <th class="duration-head">Durée restriction<br>(jours)</th>
+          <th style="text-align:center;">Conditions</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+
+    <div class="warning-block">
+      Attention: ce tableur ne tient compte que de l'exposition externe aux rayonnements ionisants. les risques de contamination (externe et interne) doivent être gérés conformément aux recommandations.
+    </div>
+
+    <div class="note">
+      <strong>Référence radiopharmaceutique :</strong> <span id="referenceText">-</span><br>
+      <strong>Remarque :</strong> <span id="remarkText">-</span>
+    </div>
+
+    <div class="note long-ref">
+      <strong>Références :</strong><br>
+      [1] T. Carlier et al., <em>Recommandations pratiques concernant la sortie des patients après traitement du cancer différencié de la thyroïde à l’131I</em>, Radioprotection 39 (2004) 481-492.<br>
+      [2] J.A. Siegel et al., <em>Calculating the absorbed dose from radioactive patients: The line-source versus point-source model</em>, J. Nucl. Med. 43 (2002) 1241-1244.
+    </div>
+
+    <div class="meta">
+      <div>Version web pour le calcul des durées de restriction RIV.</div>
+      <div class="small" id="lastUpdatedRow">Maj le <span id="lastUpdatedLabel"></span></div>
+    </div>
+    <div class="copyright" id="copyrightText">© -</div>
+    <div class="copyright"><a href="/legal" style="color:inherit;">Mentions légales</a></div>
+  </main>
+
+    <script src="config.js"></script>
+  <script>
+    const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
+    const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
+    const SITE_NAME = window.RADIOPROTECTION_SITE_NAME || (() => {
+      try {
+        return new URL(SITE_URL).hostname.replace(/^www\./, '');
+      } catch (_) {
+        return 'Nom du site';
+      }
+    })();
+    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME;
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    // N'accepte qu'un schéma http(s): une valeur javascript: s'exécuterait au clic.
+    const safeHttpUrl = (value) => {
+      if (!value) return null;
+      try {
+        const parsed = new URL(String(value), window.location.origin);
+        return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.href : null;
+      } catch { return null; }
+    };
+
+    let isotopes = [];
+    let cureOptionsByIsotope = {};
+    let selectedCureCount = 1;
+    let selectedCalculationMode = 'sfmn';
+    let sfmnCalculatorUrl = '';
+    let lastResult = null;
+    let latestRequestId = 0;
+    const audienceMeta = {
+      conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
+      conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
+      conjointe_enceinte: { label: 'Contact avec la conjointe enceinte', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv' },
+      transport_commun: { label: 'Transport en commun', condition: '3 h à 0,5 m,\nlimite 1 mSv' },
+      enfant_moins_3_ans: { label: 'Contact avec un enfant (<3 ans)\nau retour à la maison', condition: '9 h à 1 m,\nlimite 1 mSv' },
+      enfant_3_11_ans: { label: 'Contact avec un enfant (entre 3 et 11 ans)\nau retour à la maison', condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
+      collegues_travail: { label: 'Contact avec des collègues de travail', condition: '6 h à 1 m,\nlimite 1 mSv' },
+      scenario_utilisateur: { label: 'Scénario utilisateur', condition: 'h à m et h à 1 m,\nlimite mSv' }
+    };
+
+    function formatNumber(value, decimals = 2) {
+      if (value === null || value === undefined || Number.isNaN(value)) return '-';
+      return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(value);
+    }
+
+    function setFooterMeta() {
+      // window.RADIOPROTECTION_LAST_DEPLOYED_AT est la date réelle du dernier déploiement
+      // (injectée par deploy.sh), pas la date du jour de consultation.
+      const lastDeployedAt = window.RADIOPROTECTION_LAST_DEPLOYED_AT;
+      const lastUpdatedRow = $('lastUpdatedRow');
+      if (lastDeployedAt) {
+        const parsed = new Date(`${lastDeployedAt}T00:00:00`);
+        $('lastUpdatedLabel').textContent = Number.isNaN(parsed.getTime())
+          ? lastDeployedAt
+          : parsed.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        lastUpdatedRow.style.display = '';
+      } else {
+        lastUpdatedRow.style.display = 'none';
+      }
+      $('siteNameBanner').textContent = SITE_NAME;
+      $('copyrightText').textContent = `© ${new Date().getFullYear()} ${COPYRIGHT_OWNER}`;
+    }
+
+    function getNumberOrNull(id) {
+      const raw = $(id).value.trim();
+      if (raw === '') return null;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function roundUnit(value) {
+      return Math.round(value);
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function syncActivityFromMbq() {
+      const mbq = getNumberOrNull('benignActivityMbq');
+      if (mbq === null) {
+        $('benignActivityMci').value = '';
+        updateBenignDoseRateField();
+        markFormDirty();
+        return;
+      }
+      $('benignActivityMci').value = String(roundUnit(mbq / 37));
+      updateBenignDoseRateField();
+      markFormDirty();
+    }
+
+    function syncActivityFromMci() {
+      const mci = getNumberOrNull('benignActivityMci');
+      if (mci === null) {
+        $('benignActivityMbq').value = '';
+        updateBenignDoseRateField();
+        markFormDirty();
+        return;
+      }
+      $('benignActivityMbq').value = String(roundUnit(mci * 37));
+      updateBenignDoseRateField();
+      markFormDirty();
+    }
+
+    function updateBenignDoseRateField() {
+      if ($('isotope').value !== 'iode131_benin') return;
+      const mbq = getNumberOrNull('benignActivityMbq');
+      const fixation = getNumberOrNull('benignFixation');
+      if (!(mbq > 0) || !(fixation > 0)) {
+        $('doseRate').value = '';
+        return;
+      }
+      const fixationFraction = fixation / 100;
+      const computed = (2.2 * mbq * fixationFraction) / 37;
+      $('doseRate').value = String(Number(computed.toFixed(4)));
+    }
+
+    async function fetchConfig() {
+      const url = `${API_BASE}/config`;
+      const response = await fetchWithTimeout(url, {}, 12000);
+      if (!response.ok) {
+        throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez le proxy /api vers Node.js.`);
+      }
+      return response.json();
+    }
+
+    async function fetchCalculation(payload) {
+      const url = `${API_BASE}/calculate`;
+      const response = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!response.ok) {
+        throw new Error(`Erreur API (${response.status}) sur ${url}`);
+      }
+      return response.json();
+    }
+
+    function populateIsotopes(defaultIsotopeCode) {
+      const labelWithSituationCodes = new Set(['iode131_0_fixation', 'iode131_5_fixation', 'iode131_25_fixation']);
+      const visibleIsotopes = selectedCalculationMode === 'sfmn'
+        ? isotopes.filter((iso) => iso.api_code !== 'non_defini')
+        : isotopes;
+      const fallbackCode = visibleIsotopes[0]?.api_code || '';
+      const preferredCode = visibleIsotopes.some((iso) => iso.api_code === defaultIsotopeCode)
+        ? defaultIsotopeCode
+        : fallbackCode;
+      $('isotope').innerHTML = '';
+      visibleIsotopes.forEach((iso) => {
+        const option = document.createElement('option');
+        option.value = iso.api_code;
+        option.textContent = labelWithSituationCodes.has(iso.api_code) && iso.situation
+          ? `${iso.label} (${iso.situation})`
+          : iso.label;
+        if (iso.api_code === preferredCode) option.selected = true;
+        $('isotope').appendChild(option);
+      });
+    }
+
+    function getAllowedCureOptions(isotopeCode) {
+      return cureOptionsByIsotope[isotopeCode] || [1];
+    }
+
+    function renderCureSelector(isotopeCode) {
+      const selector = $('cureSelector');
+      const allowed = getAllowedCureOptions(isotopeCode);
+      selector.style.display = allowed.length > 1 ? 'flex' : 'none';
+      if (!allowed.includes(selectedCureCount)) selectedCureCount = 1;
+      selector.querySelectorAll('button[data-cure]').forEach((button) => {
+        const cure = Number(button.dataset.cure);
+        button.style.display = allowed.includes(cure) ? 'inline-block' : 'none';
+        button.classList.toggle('active', cure === selectedCureCount);
+      });
+    }
+
+    function toggleBenignRows(isBenign) {
+      $('benignInlineBlock').hidden = !isBenign;
+      $('doseRate').readOnly = isBenign;
+      $('doseRate').placeholder = isBenign ? 'calculé automatiquement' : '';
+      $('doseRateHelp').textContent = isBenign
+        ? 'Débit calculé automatiquement : 2,2 × activité (MBq) × fixation (%) / 100 / 37.'
+        : 'Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.';
+      if (isBenign) {
+        updateBenignDoseRateField();
+      }
+    }
+
+    function getRequiredFieldIds(isotopeCode) {
+      if (isotopeCode === 'iode131_benin') {
+        return ['patientSize', 'benignActivityMbq', 'benignFixation'];
+      }
+      if (isotopeCode === 'non_defini') {
+        return ['doseRate', 'patientSize', 'userPeriodDays'];
+      }
+      return ['doseRate', 'patientSize'];
+    }
+
+    function applyRequiredHighlight(isotopeCode) {
+      ['doseRate', 'patientSize', 'benignActivityMbq', 'benignFixation', 'userPeriodDays']
+        .forEach((id) => $(id).classList.remove('required-field'));
+
+      getRequiredFieldIds(isotopeCode).forEach((id) => $(id).classList.add('required-field'));
+
+      if (isotopeCode === 'non_defini') {
+        $('optionalDetails').open = true;
+      }
+      renderCureSelector(isotopeCode);
+    }
+
+    function buildFriendlyErrors(selected) {
+      const code = selected?.api_code || $('isotope').value;
+      const missingLabels = [];
+      const labels = {
+        doseRate: 'Débit de dose à 1 m',
+        patientSize: 'Taille du patient',
+        benignActivityMbq: 'Activité administrée (MBq)',
+        benignFixation: 'Taux de fixation (%)',
+        userPeriodDays: 'Période effective (j)'
+      };
+      getRequiredFieldIds(code).forEach((id) => {
+        const value = getNumberOrNull(id);
+        if (!(value > 0)) missingLabels.push(labels[id]);
+      });
+
+      if (!missingLabels.length) return [];
+      const isotopeLabel = selected?.label || code;
+      return [`Pour « ${isotopeLabel} », merci de renseigner : ${missingLabels.join(', ')}.`];
+    }
+
+    function buildPayload() {
+      const isotopeCode = $('isotope').value;
+      const allowedCures = getAllowedCureOptions(isotopeCode);
+      if (!allowedCures.includes(selectedCureCount)) {
+        selectedCureCount = 1;
+        renderCureSelector(isotopeCode);
+      }
+      return {
+        calculation_mode: selectedCalculationMode || 'sfmn',
+        isotope_code: isotopeCode,
+        dose_rate: isotopeCode === 'iode131_benin' ? null : getNumberOrNull('doseRate'),
+        patient_size_cm: getNumberOrNull('patientSize'),
+        user_period_days: getNumberOrNull('userPeriodDays'),
+        user_hours_1: getNumberOrNull('userHours1'),
+        user_distance_1: getNumberOrNull('userDistance1'),
+        user_hours_2: getNumberOrNull('userHours2'),
+        user_limit: getNumberOrNull('userLimit'),
+        benign_activity_mbq: getNumberOrNull('benignActivityMbq'),
+        benign_fixation_pct: getNumberOrNull('benignFixation'),
+        cure_count: selectedCureCount
+      };
+    }
+
+    function hasAllRequiredFields(isotopeCode) {
+      return getRequiredFieldIds(isotopeCode).every((id) => {
+        const value = getNumberOrNull(id);
+        return value !== null && value > 0;
+      });
+    }
+
+    function clearDisplayedResults() {
+      lastResult = null;
+      $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
+      $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
+      $('resultsBody').innerHTML = '';
+      $('errorBox').style.display = 'none';
+      $('errorBox').textContent = '';
+    }
+
+    function setLoadingState(isLoading) {
+      $('calculateBtn').disabled = isLoading;
+      $('loadingIndicator').classList.toggle('active', isLoading);
+    }
+
+    function markFormDirty() {
+      latestRequestId += 1;
+      setLoadingState(false);
+      clearDisplayedResults();
+    }
+
+    function buildUserScenarioCondition() {
+      const h1 = getNumberOrNull('userHours1');
+      const d1 = getNumberOrNull('userDistance1');
+      const h2 = getNumberOrNull('userHours2');
+      const limit = getNumberOrNull('userLimit');
+      if (h1 !== null && d1 !== null && h2 !== null && limit !== null) {
+        return `${h1} h à ${d1} m et ${h2} h à 1 m,\nlimite ${limit} mSv`;
+      }
+      return audienceMeta.scenario_utilisateur.condition;
+    }
+
+    function hasUserScenarioDefined() {
+      const h1 = getNumberOrNull('userHours1');
+      const d1 = getNumberOrNull('userDistance1');
+      const h2 = getNumberOrNull('userHours2');
+      const limit = getNumberOrNull('userLimit');
+      return h1 !== null && d1 !== null && h2 !== null && limit !== null;
+    }
+
+    function syncUiForSelectedIsotope() {
+      const selectedCode = $('isotope').value;
+      const selected = isotopes.find((iso) => iso.api_code === selectedCode);
+      const isBenign = selectedCode === 'iode131_benin';
+      toggleBenignRows(isBenign);
+      applyRequiredHighlight(selectedCode);
+      $('referenceText').textContent = selected?.reference || '-';
+      $('remarkText').textContent = selected?.remark || '-';
+      $('effectivePeriodLabel').textContent = selectedCode === 'non_defini'
+        ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
+        : 'Période effective (j) imposée par l’utilisateur (laisser vide sinon)';
+    }
+
+    function renderFromResult(result) {
+      lastResult = result;
+      const selected = result.selected;
+      selectedCalculationMode = result.calculation_mode || selectedCalculationMode || 'sfmn';
+      renderCalculationModeSelector();
+      const isBenign = selected.api_code === 'iode131_benin';
+      toggleBenignRows(isBenign);
+      applyRequiredHighlight(selected.api_code);
+      const fallbackDoseRate = selected.api_code === 'iode131_benin' ? null : getNumberOrNull('doseRate');
+      const displayDoseRate = result.computed_dose_rate ?? fallbackDoseRate;
+      if (isBenign) {
+        if (result.computed_dose_rate === null || result.computed_dose_rate === undefined) {
+          $('doseRate').value = $('doseRate').value || '';
+        } else {
+          $('doseRate').value = String(Number(result.computed_dose_rate.toFixed(4)));
+        }
+      }
+      $('referenceText').textContent = selected.reference || '-';
+      $('remarkText').textContent = selected.remark || '-';
+      renderSourceForMode(result);
+      selectedCureCount = Number(result.cure_count || selectedCureCount || 1);
+      renderCureSelector(selected.api_code);
+
+      $('effectivePeriodLabel').textContent = selected.api_code === 'non_defini'
+        ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
+        : 'Période effective (j) imposée par l’utilisateur (laisser vide sinon)';
+
+      if (result.effective_days !== null && Number.isFinite(result.effective_days)) {
+        $('effectiveDaysText').textContent = `Période effective retenue en jours : ${formatNumber(result.effective_days, 2)}`;
+        $('effectiveHoursText').textContent = `Période effective retenue en heures : ${formatNumber(result.effective_hours, 2)}`;
+      } else {
+        $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
+        $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
+      }
+
+      const errorBox = $('errorBox');
+      const sfmnVerbose = (() => {
+        if (!(result.sfmn_debug && result.sfmn_debug.enabled)) return null;
+        const debug = result.sfmn_debug || {};
+        const parsing = debug.parsing || {};
+        const filtered = {
+          enabled: true,
+          requests: debug.requests || [],
+          parsing: {
+            response_html_excerpt: parsing.response_html_excerpt || parsing.result_html_excerpt || null,
+            response_html: parsing.response_html || parsing.result_html || null,
+            parsed_summary: parsing.parsed_summary || null,
+            selected_radiopharmaceutical: parsing.selected_radiopharmaceutical || null,
+            radiopharmaceutical_options: parsing.radiopharmaceutical_options || null,
+            cookies_forwarded: parsing.cookies_forwarded || null
+          }
+        };
+        return JSON.stringify(filtered, null, 2);
+      })();
+      const sfmnVerboseEsc = sfmnVerbose
+        ? sfmnVerbose.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        : null;
+      if (result.errors.length) {
+        const friendlyErrors = buildFriendlyErrors(selected);
+        const displayedErrors = (friendlyErrors.length ? friendlyErrors : result.errors).map((error) => (
+          String(error || '').includes('SFMN task=process inaccessible')
+            ? 'Le calcul SFMN est temporairement indisponible. Merci de réessayer dans quelques instants.'
+            : error
+        ));
+        errorBox.style.display = 'block';
+        errorBox.innerHTML = `<strong>Calcul impossible :</strong><br>${displayedErrors.map((e) => `- ${escapeHtml(e)}`).join('<br>')}`;
+        if (sfmnVerboseEsc) {
+          errorBox.innerHTML += `<br><br><strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerboseEsc}</pre>`;
+        }
+      } else {
+        if (sfmnVerboseEsc) {
+          errorBox.style.display = 'block';
+          errorBox.innerHTML = `<strong>Information :</strong><br><pre style="white-space:pre-wrap;margin:6px 0 0 0;">${sfmnVerboseEsc}</pre>`;
+        } else {
+          errorBox.style.display = 'none';
+          errorBox.textContent = '';
+        }
+      }
+
+      const displayRows = Array.isArray(result.rows) && result.rows.length
+        ? result.rows
+        : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => {
+            let condition = audienceCode === 'scenario_utilisateur'
+              ? buildUserScenarioCondition()
+              : (audienceMeta[audienceCode]?.condition || '-');
+            // result.rows (mode local) porte déjà cette précision de façon dynamique ; ce
+            // repli (mode sfmn, où le texte n'est pas fourni par l'API) la reconstruit ici,
+            // seulement si le nombre de cures le justifie — même règle que calculation.js.
+            if (audienceCode === 'transport_commun' && result.cure_count > 1) {
+              condition += ' (par cure, non cumulée)';
+            }
+            return {
+              audience_code: audienceCode,
+              label: audienceMeta[audienceCode]?.label || audienceCode,
+              condition,
+              value
+            };
+          });
+      const filteredRows = hasUserScenarioDefined()
+        ? displayRows
+        : displayRows.filter((row) => row.audience_code !== 'scenario_utilisateur');
+
+      $('resultsBody').innerHTML = filteredRows.map((row) => `
+        <tr>
+          <td class="scenario">${escapeHtml(row.label)}</td>
+          <td class="value">${row.value === null ? '-' : escapeHtml(row.value)}</td>
+          <td class="conditions">${escapeHtml(row.condition)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCalculationModeSelector() {
+      $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.mode === selectedCalculationMode);
+      });
+    }
+
+    function renderSourceForMode(result = null) {
+      const link = $('sourceLink');
+      const meta = $('sourceMeta');
+      if (selectedCalculationMode === 'sfmn') {
+        const sfmnUrl = safeHttpUrl(result?.sfmn_source?.url || sfmnCalculatorUrl) || 'https://www.sfmn.org/';
+        link.href = sfmnUrl;
+        link.textContent = sfmnUrl;
+        meta.textContent = '— source SFMN utilisée pour le calcul';
+        return;
+      }
+      link.href = 'https://doi.org/10.1016/j.mednuc.2026.03.002';
+      link.textContent = 'https://doi.org/10.1016/j.mednuc.2026.03.002';
+      meta.textContent = '— Carlier et al., Médecine Nucléaire 2026;50:131-136 (groupe Radioprotection SFMN)';
+    }
+
+    async function renderResults() {
+      const isotopeCode = $('isotope').value;
+      if (!hasAllRequiredFields(isotopeCode)) {
+        latestRequestId += 1;
+        clearDisplayedResults();
+        return;
+      }
+
+      const requestId = ++latestRequestId;
+      clearDisplayedResults();
+      setLoadingState(true);
+      try {
+        const result = await fetchCalculation(buildPayload());
+        if (requestId !== latestRequestId) return;
+        renderFromResult(result);
+      } catch (error) {
+        if (requestId !== latestRequestId) return;
+        $('errorBox').style.display = 'block';
+        $('errorBox').innerHTML = `<strong>Erreur réseau/API :</strong><br>- ${escapeHtml(error.message)}`;
+      } finally {
+        if (requestId === latestRequestId) {
+          setLoadingState(false);
+        }
+      }
+    }
+
+    function bindEvents() {
+      ['doseRate', 'patientSize', 'userPeriodDays', 'userHours1', 'userDistance1', 'userHours2', 'userLimit']
+        .forEach((id) => $(id).addEventListener('input', () => {
+          markFormDirty();
+        }));
+
+      $('isotope').addEventListener('input', () => {
+        $('userPeriodDays').value = '';
+        syncUiForSelectedIsotope();
+        markFormDirty();
+      });
+
+      $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectedCalculationMode = button.dataset.mode || 'sfmn';
+          renderCalculationModeSelector();
+          populateIsotopes($('isotope').value);
+          syncUiForSelectedIsotope();
+          renderSourceForMode();
+          markFormDirty();
+        });
+      });
+
+      $('cureSelector').querySelectorAll('button[data-cure]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const cure = Number(button.dataset.cure);
+          const allowed = getAllowedCureOptions($('isotope').value);
+          if (!allowed.includes(cure)) return;
+          selectedCureCount = cure;
+          renderCureSelector($('isotope').value);
+          markFormDirty();
+        });
+      });
+      document.querySelectorAll('button[data-benign-fixation]').forEach((button) => {
+        button.addEventListener('click', () => {
+          $('benignFixation').value = button.dataset.benignFixation;
+          updateBenignDoseRateField();
+          markFormDirty();
+        });
+      });
+
+      $('benignFixation').addEventListener('input', () => {
+        updateBenignDoseRateField();
+        markFormDirty();
+      });
+      $('benignActivityMbq').addEventListener('input', syncActivityFromMbq);
+      $('benignActivityMci').addEventListener('input', syncActivityFromMci);
+      $('calculateBtn').addEventListener('click', renderResults);
+    }
+
+    async function bootstrap() {
+      setFooterMeta();
+      try {
+        const config = await fetchConfig();
+        isotopes = config.isotopes || [];
+        cureOptionsByIsotope = config.cure_options_by_isotope || {};
+        sfmnCalculatorUrl = config.sfmn_calculator_url || '';
+        const availableModes = config.calculation_modes || ['local', 'sfmn'];
+        selectedCalculationMode = config.default_calculation_mode || 'sfmn';
+        // Mode SFMN désactivé côté serveur (SFMN_MODE_ENABLED=false): un seul mode restant,
+        // le sélecteur n'a plus lieu d'être affiché plutôt que de montrer un choix impossible.
+        if (!availableModes.includes('sfmn')) {
+          $('calculationModeField').style.display = 'none';
+        }
+        renderCalculationModeSelector();
+        renderSourceForMode();
+        populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
+        syncUiForSelectedIsotope();
+        bindEvents();
+      } catch (error) {
+        $('errorBox').style.display = 'block';
+        $('errorBox').innerHTML = '<strong>Service temporairement indisponible.</strong><br>- Veuillez réessayer dans quelques minutes.';
+      }
+    }
+
+    function openPrintableVersion() {
+      if (!lastResult) return;
+      const payload = {
+        generated_at: new Date().toISOString(),
+        form: {
+          isotope_label: $('isotope').selectedOptions[0]?.textContent || '',
+          dose_rate: $('doseRate').value,
+          patient_size_cm: $('patientSize').value,
+          benign_activity_mbq: $('benignActivityMbq').value,
+          benign_fixation_pct: $('benignFixation').value,
+          user_period_days: $('userPeriodDays').value,
+          user_hours_1: $('userHours1').value,
+          user_distance_1: $('userDistance1').value,
+          user_hours_2: $('userHours2').value,
+          user_limit: $('userLimit').value,
+          cure_count: selectedCureCount
+        },
+        result: lastResult
+      };
+      localStorage.setItem('radioprotection_print_payload', JSON.stringify(payload));
+      window.open('/print', '_blank');
+    }
+
+    function openExplanatoryVersion() {
+      if (!lastResult) return;
+      const payload = {
+        generated_at: new Date().toISOString(),
+        form: {
+          isotope_label: $('isotope').selectedOptions[0]?.textContent || '',
+          dose_rate: $('doseRate').value,
+          patient_size_cm: $('patientSize').value,
+          benign_activity_mbq: $('benignActivityMbq').value,
+          benign_fixation_pct: $('benignFixation').value,
+          user_period_days: $('userPeriodDays').value,
+          user_hours_1: $('userHours1').value,
+          user_distance_1: $('userDistance1').value,
+          user_hours_2: $('userHours2').value,
+          user_limit: $('userLimit').value,
+          cure_count: selectedCureCount
+        },
+        result: lastResult
+      };
+      localStorage.setItem('radioprotection_explain_payload', JSON.stringify(payload));
+      window.open('/explain', '_blank');
+    }
+
+    $('printBtn').addEventListener('click', openPrintableVersion);
+    $('explainBtn').addEventListener('click', openExplanatoryVersion);
+
+    bootstrap().catch((error) => {
+      $('errorBox').style.display = 'block';
+      $('errorBox').innerHTML = `<strong>Initialisation impossible :</strong><br>- ${escapeHtml(error.message)}`;
+    });
+  </script>
+</body>
+</html>
