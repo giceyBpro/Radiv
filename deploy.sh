@@ -116,10 +116,15 @@ fi
 # admin-mesures.html ne contient aucun secret: seuls les appels qu'elle fait vers
 # /api/admin/* exigent le jeton (header X-Admin-Token, saisi dans la page). Page
 # statique sans lien de navigation, comme tox.html/xplore.html.
+# new.html: bêta de l'interface (nouveau design), volontairement sans lien de/vers
+# index.html. Accessible uniquement en tapant l'URL. Pas de route courte dans
+# SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que les autres pages
+# non liées.
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
   --include='index.html' \
+  --include='new.html' \
   --include='print.html' \
   --include='explain.html' \
   --include='contact.html' \
