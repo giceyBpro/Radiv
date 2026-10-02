@@ -120,11 +120,15 @@ fi
 # index.html. Accessible uniquement en tapant l'URL. Pas de route courte dans
 # SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que les autres pages
 # non liées.
+# app.js: logique JS partagée entre index.html et new.html (chargée via <script
+# src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
+# deux pages depuis un seul fichier, sans duplication à maintenir à la main.
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
   --include='index.html' \
   --include='new.html' \
+  --include='app.js' \
   --include='print.html' \
   --include='explain.html' \
   --include='contact.html' \
