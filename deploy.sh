@@ -116,18 +116,18 @@ fi
 # admin-mesures.html ne contient aucun secret: seuls les appels qu'elle fait vers
 # /api/admin/* exigent le jeton (header X-Admin-Token, saisi dans la page). Page
 # statique sans lien de navigation, comme tox.html/xplore.html.
-# new.html: bêta de l'interface (nouveau design), volontairement sans lien de/vers
-# index.html. Accessible uniquement en tapant l'URL. Pas de route courte dans
-# SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que les autres pages
-# non liées.
-# app.js: logique JS partagée entre index.html et new.html (chargée via <script
+# v1.html: ancienne version de l'interface (design précédent), conservée sans
+# lien de/vers index.html. Accessible uniquement en tapant l'URL. Pas de route
+# courte dans SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que
+# les autres pages non liées.
+# app.js: logique JS partagée entre index.html et v1.html (chargée via <script
 # src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
 # deux pages depuis un seul fichier, sans duplication à maintenir à la main.
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
   --include='index.html' \
-  --include='new.html' \
+  --include='v1.html' \
   --include='app.js' \
   --include='print.html' \
   --include='explain.html' \
