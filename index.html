@@ -15,22 +15,24 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
   <style>
     :root {
-      --bg: #f5f7fb;
+      --bg: #eaf2ff;
       --paper: #ffffff;
       --ink: #1a2433;
       --muted: #5c6b80;
-      --border: #dde4f0;
-      --link: #2f5e8c;
-      --accent: #2f5e8c;
-      --accent-strong: #1f4566;
-      --accent-soft: #e4ecf7;
+      --border: #cfe0f5;
+      --link: #2f6fe0;
+      --accent: #2f6fe0;
+      --accent-strong: #1c4fb0;
+      --accent-soft: #dceaff;
       --accent-contrast: #ffffff;
-      --good: #8a2e42;
-      --good-soft: #f7e8ec;
-      --good-strong: #6b2032;
+      --good: #c23a5e;
+      --good-soft: #ffe1ea;
+      --good-strong: #96234a;
       --warn: #a3283a;
       --warn-soft: #fbe9eb;
       --warn-border: #e7b3bb;
+      --field-bg: #dceaff;
+      --field-border: #8fb6ef;
       --font-display: "Archivo", "Segoe UI", sans-serif;
       --font-body: "Source Sans 3", "Segoe UI", sans-serif;
       --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -126,8 +128,8 @@
 
     input[type="text"], input[type="number"], select {
       width: 100%;
-      border: 1.5px solid var(--border);
-      background: var(--bg);
+      border: 1.5px solid var(--field-border);
+      background: var(--field-bg);
       color: var(--ink);
       padding: 11px 13px;
       font-size: 15px;
@@ -450,15 +452,15 @@
     }
     .print-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
     .calculate-btn {
-      background: var(--accent);
+      background: var(--good);
       color: var(--accent-contrast);
-      border-color: var(--accent);
+      border-color: var(--good);
       padding: 15px 30px;
       font-size: 16px;
       font-weight: 700;
-      box-shadow: 0 10px 24px -8px rgba(47,94,140,.45);
+      box-shadow: 0 10px 24px -8px rgba(150,35,74,.5);
     }
-    .calculate-btn:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+    .calculate-btn:hover { background: var(--good-strong); border-color: var(--good-strong); }
     .calculate-btn:disabled {
       opacity: 0.75;
       cursor: wait;
