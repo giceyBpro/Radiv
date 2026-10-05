@@ -207,10 +207,12 @@
     }
 
     function applyRequiredHighlight(isotopeCode) {
+      const requiredIds = getRequiredFieldIds(isotopeCode);
       ['doseRate', 'patientSize', 'benignActivityMbq', 'benignFixation', 'userPeriodDays']
-        .forEach((id) => $(id).classList.remove('required-field'));
-
-      getRequiredFieldIds(isotopeCode).forEach((id) => $(id).classList.add('required-field'));
+        .forEach((id) => {
+          const stillEmpty = requiredIds.includes(id) && !(getNumberOrNull(id) > 0);
+          $(id).classList.toggle('required-field', stillEmpty);
+        });
 
       if (isotopeCode === 'non_defini') {
         $('optionalDetails').open = true;
@@ -287,6 +289,7 @@
       latestRequestId += 1;
       setLoadingState(false);
       clearDisplayedResults();
+      applyRequiredHighlight($('isotope').value);
     }
 
     function buildUserScenarioCondition() {
