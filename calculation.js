@@ -27,18 +27,18 @@ const roundRestrictionDays = RESTRICTION_ROUNDING_MODE === 'floor' ? Math.floor 
 
 // 1) isotopes: périodes effectives, références et libellés métier utilisés dans le calcul
 const isotopes = [
-  { api_code: 'iode131_0_fixation', label: 'Iode-131-0%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: '-', situation: 'Cancer opéré' },
-  { api_code: 'iode131_5_fixation', label: 'Iode-131-5%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Cancer oligo-métastasé' },
-  { api_code: 'iode131_25_fixation', label: 'Iode-131-25%-fixation', periodHours: 16, reference: 'Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Cancer poly-métastasé' },
-  { api_code: 'iode131_benin', label: 'Iode-131-Bénin', periodHours: 122.4, reference: 'Nuclear Medicine Communications 2006, 27:559–566', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Pathologie bénigne' },
-  { api_code: 'radium223', label: 'Radium-223', periodHours: 11.43 * 24, reference: '-', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'psma_177lu', label: 'PSMA-177Lu', periodHours: 40, reference: 'EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019', remark: 'Valeur la plus longue proposée', situation: '' },
-  { api_code: 'synovectomie_90y', label: 'Synovectomie-90Y', periodHours: 2.67 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'synovectomie_186re', label: 'Synovectomie-186Re', periodHours: 3.7 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'synovectomie_169er', label: 'Synovectomie-169Er', periodHours: 9.4 * 24, reference: 'EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'microspheres_90y', label: 'Microsphères-90Y', periodHours: 64.05, reference: 'Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1) — demi-vie physique', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'microspheres_166ho', label: 'Microsphères-166Ho', periodHours: 26.81, reference: 'Carlier et al., Médecine Nucléaire 2026;50:131-136 (Tableau 1) — demi-vie physique', remark: 'Demi vie physique', situation: '' },
-  { api_code: 'lipiodol_131i', label: 'Lipiodol-131I', periodHours: 8.04 * 24, reference: 'EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'iode131_0_fixation', label: 'Iode-131-0%-fixation', periodHours: 16, reference: 'Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: '-', situation: 'Cancer opéré' },
+  { api_code: 'iode131_5_fixation', label: 'Iode-131-5%-fixation', periodHours: 16, reference: 'Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Cancer oligo-métastasé' },
+  { api_code: 'iode131_25_fixation', label: 'Iode-131-25%-fixation', periodHours: 16, reference: 'Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Cancer poly-métastasé' },
+  { api_code: 'iode131_benin', label: 'Iode-131-Bénin', periodHours: 122.4, reference: 'Carlier et al., Nuclear Medicine Communications 2006, 27:559–566', remark: 'en considérant la période au niveau de la thyroïde', situation: 'Pathologie bénigne' },
+  { api_code: 'radium223', label: 'Radium-223', periodHours: 11.43 * 24, reference: 'Période physique du radium-223', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'psma_177lu', label: 'PSMA-177Lu', periodHours: 40, reference: 'Kratochwil et al., EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019', remark: 'Valeur la plus longue proposée', situation: '' },
+  { api_code: 'synovectomie_90y', label: 'Synovectomie-90Y', periodHours: 2.67 * 24, reference: 'Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'synovectomie_186re', label: 'Synovectomie-186Re', periodHours: 3.7 * 24, reference: 'Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'synovectomie_169er', label: 'Synovectomie-169Er', periodHours: 9.4 * 24, reference: 'Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'microspheres_90y', label: 'Microsphères-90Y', periodHours: 64.05, reference: 'Période physique de l’yttrium-90', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'microspheres_166ho', label: 'Microsphères-166Ho', periodHours: 26.81, reference: 'Période physique de l’holmium-166', remark: 'Demi vie physique', situation: '' },
+  { api_code: 'lipiodol_131i', label: 'Lipiodol-131I', periodHours: 8.04 * 24, reference: 'Giammarile et al., EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011', remark: 'Demi vie physique', situation: '' },
   { api_code: 'lutetium177_net', label: 'Lutétium-177 NET', periodHours: 100, reference: 'Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019', remark: 'Demi vie effective', situation: '' },
   // 10,6 h = t½,elim des enfants (n=6) dans Wafelman et al. 1995, valeur locale historique
   // restaurée. Le Tableau 1 de Carlier et al. 2026 cite la même source pour une valeur de
