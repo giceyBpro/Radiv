@@ -214,6 +214,18 @@
           $(id).classList.toggle('required-field', stillEmpty);
         });
 
+      // Sur les pages qui le demandent (index.html) : mCi suit le même état que MBq (ils
+      // sont synchronisés, cf. syncActivityFromMbq/Mci), et les 4 champs du scénario
+      // utilisateur sont mis en évidence en rouge tant qu'ils sont vides — contrairement à
+      // userPeriodDays, qu'on ne veut pas inciter à remplir (cf. #userPeriodDays en CSS).
+      if (document.body.hasAttribute('data-field-style')) {
+        const mbqEmpty = requiredIds.includes('benignActivityMbq') && !(getNumberOrNull('benignActivityMbq') > 0);
+        $('benignActivityMci').classList.toggle('required-field', mbqEmpty);
+        ['userHours1', 'userDistance1', 'userHours2', 'userLimit'].forEach((id) => {
+          $(id).classList.toggle('required-field', !(getNumberOrNull(id) > 0));
+        });
+      }
+
       if (isotopeCode === 'non_defini') {
         $('optionalDetails').open = true;
       }

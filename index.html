@@ -156,6 +156,37 @@
       color: var(--muted);
     }
 
+    /* Volontairement discret : ce champ doit rester vide dans la plupart des cas, pas
+       ressortir comme les champs à renseigner. Écrasé par .required-field (!important)
+       quand il devient réellement obligatoire (isotope non_defini). */
+    #userPeriodDays {
+      background: var(--border);
+      border-color: var(--border);
+      color: var(--muted);
+    }
+
+    /* Largeur réduite et séparateur pour montrer que MBq et mCi sont la même valeur
+       exprimée dans deux unités, pas deux champs indépendants. */
+    .benign-activity-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .benign-activity-unit { width: 120px; }
+    .benign-activity-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .benign-activity-sep {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--muted);
+      padding-bottom: 11px;
+    }
+
     .opt-row-value {
       width: 100%;
       max-width: 140px;
@@ -598,7 +629,7 @@
     }
   </style>
 </head>
-<body>
+<body data-field-style="v2">
   <main class="page">
     <h1><span id="siteNameBanner">[Nom du site]</span> : Calcul de durée de restriction des contacts<br>après radiothérapie interne vectorisée&nbsp;RIV</h1>
     <div class="subtitle">Adaptation web d’après le tableur SFMN / groupe radioprotection.</div>
@@ -645,13 +676,14 @@
             </div>
             <div id="benignInlineBlock" hidden>
               <div class="field-title">Activité administrée</div>
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div>
-                  <div class="small" style="margin-bottom:4px;">MBq</div>
+              <div class="benign-activity-row">
+                <div class="benign-activity-unit">
+                  <div class="benign-activity-label">MBq</div>
                   <input id="benignActivityMbq" type="number" min="0" step="1" placeholder="vide">
                 </div>
-                <div>
-                  <div class="small" style="margin-bottom:4px;">mCi</div>
+                <span class="benign-activity-sep">/</span>
+                <div class="benign-activity-unit">
+                  <div class="benign-activity-label">mCi</div>
                   <input id="benignActivityMci" type="number" min="0" step="1" placeholder="vide">
                 </div>
               </div>
