@@ -118,7 +118,7 @@ body.disclaimer-locked{overflow:hidden}
   <div class="grid" id="results"></div>
   <div class="sourcebox">
     <strong>Sources :</strong> Common Terminology Criteria for Adverse Events (CTCAE) v6.0 (MedDRA 28.0), Published July 22, 2025. Données utilisées : feuille « Feuil1 » du fichier « CTCAE v6.xlsx » fourni.<br>
-    <strong>Traduction :</strong> traduction française automatisée, non officielle, ni réalisée ni vérifiée par le NCI/CTEP. Une relecture médicale/oncologique reste recommandée avant toute utilisation clinique, réglementaire ou protocolaire — voir l’avertissement en haut de page.
+    <strong>Traduction :</strong> données reprises du fichier <a href="https://dctd.cancer.gov/research/ctep-trials/for-sites/adverse-events#ctcae" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">CTCAE v6.0</a> traduit automatiquement. Une relecture médicale/oncologique reste recommandée avant toute utilisation clinique, réglementaire ou protocolaire.<br>Moteur de recherche officiel du NCI : <a href="https://safetyprofiler-ctep.nci.nih.gov/safety-profiler/index.html" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">Safety Profiler (safetyprofiler-ctep.nci.nih.gov)</a>.
   </div>
   <footer>Outil d’aide à la consultation rapide. Ne remplace pas le jugement clinique, le protocole d’essai, ni le document CTCAE officiel.</footer>
 </main>
@@ -157,7 +157,7 @@ function score(item, query) {
   if (cq && item._compact.includes(cq)) s += 250;
   const toks = nq.split(/\s+/).filter(Boolean);
   if (toks.length && toks.every(t => item._index.includes(t))) s += 180;
-  if (DEFAULT_CODES.includes(item.code)) s += 5;
+  if (s > 0 && DEFAULT_CODES.includes(item.code)) s += 5;
   return s;
 }
 function highlight(text, query) {
