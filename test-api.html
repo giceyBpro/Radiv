@@ -44,7 +44,6 @@
     <div class="row">
       <label for="payload">Payload JSON (uniquement pour POST /calculate)</label>
       <textarea id="payload">{
-  "calculation_mode": "sfmn",
   "isotope_code": "iode131_25_fixation",
   "dose_rate": 9.9,
   "patient_size_cm": 150,
@@ -84,15 +83,15 @@
 
     $('apiBase').value = normalizeBase(window.RADIOPROTECTION_API_URL || $('apiBase').value);
 
-    // Si le mode SFMN est désactivé côté serveur, l'exemple de payload par défaut ne doit
-    // pas suggérer une valeur qui échouera systématiquement.
+    // calculation_mode est optionnel (local par défaut) : on ne l'ajoute à l'exemple que si
+    // le serveur a réellement un second mode disponible.
     (async () => {
       try {
         const resp = await fetch(`${$('apiBase').value}/config`);
         const config = await resp.json();
-        const modes = config.calculation_modes || ['local', 'sfmn'];
-        if (!modes.includes('sfmn')) {
-          $('payload').value = $('payload').value.replace('"calculation_mode": "sfmn"', '"calculation_mode": "local"');
+        const modes = config.calculation_modes || ['local'];
+        if (modes.includes('sfmn')) {
+          $('payload').value = $('payload').value.replace('{\n', '{\n  "calculation_mode": "sfmn",\n');
         }
       } catch (_) {
         // Config indisponible au chargement: l'exemple par défaut reste tel quel.

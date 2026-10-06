@@ -1103,7 +1103,9 @@ const server = http.createServer((req, res) => {
       cure_options_by_isotope: cureOptionsByIsotope,
       calculation_modes: SFMN_MODE_ENABLED ? ['local', 'sfmn'] : ['local'],
       default_calculation_mode: SFMN_MODE_ENABLED ? 'sfmn' : 'local',
-      sfmn_calculator_url: SFMN_MODE_ENABLED ? sfmnCalculatorUrl : ''
+      // Absent (plutôt que vide) quand SFMN_MODE_ENABLED=false: aucune mention de ce mode,
+      // même sous forme de clé, dans une réponse où il n'est pas réellement disponible.
+      ...(SFMN_MODE_ENABLED ? { sfmn_calculator_url: sfmnCalculatorUrl } : {})
     });
   }
   if (req.method === 'GET' && pathname === '/api/public-config') {

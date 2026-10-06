@@ -7,37 +7,38 @@
   <title>API Dosimétrie RIV - informations utiles</title>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #eef1f3; color: #111; }
-    main { max-width: 980px; margin: 24px auto; background: #fff; padding: 28px; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); }
-    h1, h2 { margin-top: 0; }
-    pre { background: #f4f7f8; padding: 12px; border-radius: 6px; overflow: auto; }
+    main { max-width: 900px; margin: 24px auto; background: #fff; padding: 24px 28px; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); }
+    h1 { margin-top: 0; font-size: 1.4rem; }
+    h2 { font-size: 1.05rem; margin-top: 26px; }
+    pre { background: #f4f7f8; padding: 12px; border-radius: 6px; overflow: auto; font-size: 13px; }
     code { font-family: Consolas, Monaco, monospace; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #d5dde1; padding: 8px 10px; text-align: left; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+    th, td { border: 1px solid #d5dde1; padding: 6px 10px; text-align: left; }
     th { background: #f4f7f8; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 4px; }
+    .muted { color: #555; font-size: 13px; }
     .links { margin-top: 20px; display: flex; gap: 16px; flex-wrap: wrap; }
     a { color: #1637b8; }
   </style>
 </head>
 <body>
   <main>
-    <h1>API Dosimétrie RIV — informations utiles</h1>
-    <p>
-      Cette page est destinée aux personnes qui veulent <strong>envoyer une requête</strong> à l’API
-      et <strong>récupérer la réponse</strong>. Elle ne contient pas d’informations de débogage interne.
-    </p>
+    <h1>API Dosimétrie RIV</h1>
+    <p class="muted">Pour envoyer une requête à l'API et lire la réponse.</p>
 
-    <h2>Endpoints utiles</h2>
+    <h2>Endpoints</h2>
     <ul>
-      <li><code>GET /api/config</code> : liste des radiopharmaceutiques, options de cures, mode par défaut.</li>
+      <li><code>GET /api/config</code> : radiopharmaceutiques, options de cures.</li>
       <li><code>POST /api/calculate</code> : calcule les durées de restriction.</li>
-      <li><code>GET /api/public-config</code> : clé publique reCAPTCHA (page contact), niveau et durée de conservation de la journalisation (page mentions légales).</li>
-      <li><code>POST /api/contact</code> : envoi d’un message de contact.</li>
-      <li><code>GET /health</code> : vérification de disponibilité du service.</li>
+      <li><code>GET /api/public-config</code> : clé publique reCAPTCHA, niveau et durée de conservation de la journalisation.</li>
+      <li><code>POST /api/contact</code> : envoi d'un message de contact.</li>
+      <li><code>GET /health</code> : disponibilité du service.</li>
     </ul>
 
-    <h2>Payload attendu pour <code>POST /api/calculate</code></h2>
-    <pre><code>{
-  "calculation_mode": "<span id="modeExamplePayload">sfmn</span>",
+    <h2>Payload — <code>POST /api/calculate</code></h2>
+    <pre><code>{<span id="modeLinePayload" hidden>
+  "calculation_mode": "sfmn",</span>
   "isotope_code": "iode131_25_fixation",
   "dose_rate": 9.9,
   "patient_size_cm": 150,
@@ -51,19 +52,19 @@
   "cure_count": 1
 }</code></pre>
 
-    <h2>Règles importantes par cas</h2>
+    <h2>Règles</h2>
     <ul>
-      <li><strong>Cas standard</strong> : fournir <code>dose_rate</code> et <code>patient_size_cm</code>.</li>
-      <li><strong>iode131_benin</strong> : fournir <code>benign_activity_mbq</code> et <code>benign_fixation_pct</code> (en %). <code>dose_rate</code> est ignoré.</li>
-      <li><strong>non_defini</strong> (mode local) : fournir aussi <code>user_period_days</code> strictement positif.</li>
-      <li><strong>cure_count</strong> : utile pour <code>psma_177lu</code> (1/4/6) et <code>lutetium177_net</code> (1/4). Pour <code>radium223</code> : 1 uniquement.</li>
-      <li><strong>cure_count &gt; 1</strong> : la limite dosimétrique de chaque scénario de <code>recommendations_days</code> est répartie sur les cures, sauf <code>transport_commun</code> (passagers différents à chaque cure, pas de cumul).</li>
+      <li><strong>Standard</strong> : <code>dose_rate</code> + <code>patient_size_cm</code>.</li>
+      <li><strong>iode131_benin</strong> : <code>benign_activity_mbq</code> + <code>benign_fixation_pct</code> (%) ; <code>dose_rate</code> ignoré.</li>
+      <li><strong>non_defini</strong> : <code>user_period_days</code> strictement positif obligatoire.</li>
+      <li><strong>cure_count</strong> : <code>psma_177lu</code> (1/4/6), <code>lutetium177_net</code> (1/4), sinon 1 uniquement.</li>
+      <li><strong>cure_count &gt; 1</strong> : limite répartie sur les cures, sauf <code>transport_commun</code> (non cumulé).</li>
     </ul>
 
-    <h2>Réponse attendue (succès)</h2>
+    <h2>Réponse (succès)</h2>
     <pre><code>{
-  "ok": true,
-  "calculation_mode": "<span id="modeExampleResponse">sfmn</span>",
+  "ok": true,<span id="modeLineResponse" hidden>
+  "calculation_mode": "sfmn",</span>
   "selected": { "api_code": "...", "label": "..." },
   "cure_count": 1,
   "computed_dose_rate": 9.9,
@@ -84,26 +85,13 @@
     { "audience_code": "conjoint_plus_60", "label": "...", "condition": "...", "value": 0 }
   ]
 }</code></pre>
-    <p class="muted">
-      <code>rows</code> (présent uniquement en <strong>mode local</strong>) reprend les mêmes valeurs
-      que <code>recommendations_days</code>, avec en plus un libellé et un texte de condition prêts à
-      afficher pour chaque scénario (utile pour ne pas dupliquer ces textes côté client). Ce texte
-      varie selon la requête : par exemple, il précise quand la limite d'un scénario est répartie sur
-      plusieurs cures. En mode SFMN, cette info n'existe pas au même niveau de fiabilité (elle vient
-      du scraping de la page distante) : elle n'est donc exposée, sous
-      <code>sfmn_source.parsed_rows</code>, que si le serveur est configuré avec
-      <code>SFMN_DEBUG=true</code> (réglage serveur uniquement, jamais activable depuis la requête).
-      En usage normal, <code>sfmn_source</code> ne contient que <code>url</code>.
-    </p>
+    <p class="muted"><code>rows</code> reprend les valeurs de <code>recommendations_days</code> avec un libellé et un texte de condition prêts à afficher pour chaque scénario.</p>
+    <p class="muted" id="sfmnNote" hidden>En mode SFMN, <code>rows</code> n'est pas renvoyé au même niveau de fiabilité ; <code>sfmn_source</code> contient alors uniquement <code>url</code> en usage normal.</p>
 
-    <h2>Réponse en cas d’erreur de validation</h2>
+    <h2>Réponse (erreur de validation)</h2>
     <pre><code>{
   "ok": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "...",
-    "reason": "..."
-  },
+  "error": { "code": "VALIDATION_ERROR", "message": "...", "reason": "..." },
   "errors": ["..."]
 }</code></pre>
 
@@ -136,20 +124,21 @@
   </main>
   <script src="config.js"></script>
   <script>
-    // Si le mode SFMN est désactivé côté serveur, les exemples ne doivent pas suggérer
-    // une valeur qui échouera systématiquement.
+    // Le paramètre calculation_mode est optionnel (local par défaut) et n'est documenté
+    // que si le serveur a réellement un second mode disponible.
     (async () => {
       try {
         const apiBase = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
         const resp = await fetch(`${apiBase}/config`);
         const config = await resp.json();
-        const modes = config.calculation_modes || ['local', 'sfmn'];
-        if (!modes.includes('sfmn')) {
-          document.getElementById('modeExamplePayload').textContent = 'local';
-          document.getElementById('modeExampleResponse').textContent = 'local';
+        const modes = config.calculation_modes || ['local'];
+        if (modes.includes('sfmn')) {
+          document.getElementById('modeLinePayload').hidden = false;
+          document.getElementById('modeLineResponse').hidden = false;
+          document.getElementById('sfmnNote').hidden = false;
         }
       } catch (_) {
-        // Config indisponible au chargement: les exemples par défaut restent tels quels.
+        // Config indisponible au chargement: la page reste dans son état minimal par défaut.
       }
     })();
   </script>
