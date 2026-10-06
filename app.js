@@ -278,6 +278,8 @@
       $('errorBox').style.display = 'none';
       $('errorBox').textContent = '';
       $('durationHead').innerHTML = 'Durée restriction<br>(jours)';
+      const printBtn = $('printBtn');
+      if (printBtn.hasAttribute('data-show-after-calc')) printBtn.hidden = true;
     }
 
     function setLoadingState(isLoading) {
@@ -326,6 +328,8 @@
 
     function renderFromResult(result) {
       lastResult = result;
+      const printBtn = $('printBtn');
+      if (printBtn.hasAttribute('data-show-after-calc')) printBtn.hidden = false;
       const selected = result.selected;
       selectedCalculationMode = result.calculation_mode || selectedCalculationMode || 'sfmn';
       renderCalculationModeSelector();
@@ -607,7 +611,8 @@
     }
 
     $('printBtn').addEventListener('click', openPrintableVersion);
-    $('explainBtn').addEventListener('click', openExplanatoryVersion);
+    const explainBtn = $('explainBtn');
+    if (explainBtn) explainBtn.addEventListener('click', openExplanatoryVersion);
 
     bootstrap().catch((error) => {
       $('errorBox').style.display = 'block';
