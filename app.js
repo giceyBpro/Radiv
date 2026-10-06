@@ -442,6 +442,19 @@
       `).join('');
     }
 
+    function ensureCalculationModeButtons(availableModes) {
+      const container = $('calculationModeSelector');
+      if (container.querySelector('button[data-mode]')) return;
+      const labels = { sfmn: 'Calcul SFMN', local: 'Calcul local' };
+      availableModes.forEach((mode) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.mode = mode;
+        button.textContent = labels[mode] || `Calcul ${mode}`;
+        container.appendChild(button);
+      });
+    }
+
     function renderCalculationModeSelector() {
       $('calculationModeSelector').querySelectorAll('button[data-mode]').forEach((button) => {
         button.classList.toggle('active', button.dataset.mode === selectedCalculationMode);
@@ -548,10 +561,16 @@
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
         const availableModes = config.calculation_modes || ['local', 'sfmn'];
         selectedCalculationMode = config.default_calculation_mode || 'sfmn';
-        // Mode SFMN désactivé côté serveur (SFMN_MODE_ENABLED=false): un seul mode restant,
-        // le sélecteur n'a plus lieu d'être affiché plutôt que de montrer un choix impossible.
-        if (!availableModes.includes('sfmn')) {
-          $('calculationModeField').style.display = 'none';
+        // Un seul mode de calcul disponible (SFMN désactivé côté serveur, SFMN_MODE_ENABLED=
+        // false): le sélecteur n'a plus lieu d'être affiché plutôt que de montrer un choix
+        // impossible. Sur les pages qui construisent leurs boutons dynamiquement (voir
+        // ensureCalculationModeButtons), le DOM ne contient alors aucune mention du mode
+        // non disponible, pas seulement un style masqué.
+        if (availableModes.length > 1) {
+          ensureCalculationModeButtons(availableModes);
+          $('calculationModeField').hidden = false;
+        } else {
+          $('calculationModeField').hidden = true;
         }
         renderCalculationModeSelector();
         renderSourceForMode();
