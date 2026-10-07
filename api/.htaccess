@@ -1,0 +1,12 @@
+# Déployé dans <racine web>/api/. Toutes les requêtes sous /api/ passent par index.php:
+# les URLs restent /api/calculate, /api/config... (aucun .php visible, contrat Node inchangé)
+# et aucun fichier de ce dossier (.env, logs/, var/, lib/, tests/) n'est servi directement.
+Options -Indexes
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^ index.php [L]
+</IfModule>
+# Filet de sécurité si mod_rewrite était indisponible: interdit tout sauf index.php.
+<FilesMatch "^(?!index\.php$)">
+Require all denied
+</FilesMatch>
