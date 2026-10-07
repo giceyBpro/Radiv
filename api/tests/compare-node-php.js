@@ -98,8 +98,8 @@ for (const mode of ['round', 'floor']) {
     }
   });
   const rawEqual = nodeRaw === phpRaw;
-  if (!rawEqual) { let i = 0; while (nodeRaw[i] === phpRaw[i]) i += 1; console.log(`  1er écart brut @${i}:\n  node: ${nodeRaw.slice(Math.max(0, i - 60), i + 60)}\n  php : ${phpRaw.slice(Math.max(0, i - 60), i + 60)}`); }
-  console.log(`[${mode}] ${wire.length} cas, ${modeFailures} écart(s) sémantique/ordre; sortie brute ${rawEqual ? 'identique octet pour octet' : 'différente (formatage)'}`);
+  if (!rawEqual && process.env.VERBOSE) { let i = 0; while (nodeRaw[i] === phpRaw[i]) i += 1; console.log(`  1er écart brut @${i}:\n  node: ${nodeRaw.slice(Math.max(0, i - 60), i + 60)}\n  php : ${phpRaw.slice(Math.max(0, i - 60), i + 60)}`); }
+  console.log(`[${mode}] ${wire.length} cas, ${modeFailures} écart(s) sémantique/ordre; sortie brute ${rawEqual ? 'identique octet pour octet' : 'équivalente (seul le formatage des exposants diffère: 1e+300 / 1.0e+300; VERBOSE=1 pour le détail)'}`);
   failures += modeFailures;
 }
 process.exit(failures ? 1 : 0);

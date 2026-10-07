@@ -55,7 +55,8 @@ suffisent pas rétroactivement.
 |---|---|
 | `server.js` | API Node.js : routage HTTP, proxy SFMN, journalisation, contact, sécurité. |
 | `calculation.js` | Mode de calcul « local » : données (isotopes, scénarios), formalisme et validation. Fichier autonome (aucune dépendance au reste du serveur), pensé pour être audité ou testé isolément. |
-| `deploy.sh` | Script de déploiement/mise à jour idempotent. |
+| `deploy.sh` | Script de déploiement/mise à jour idempotent (backend Node). |
+| `api/` + `deploy-php.sh` | Port PHP du backend, à contrat d'API identique (voir [Version PHP](#version-php-api)). Pas encore en production. |
 | `monitor_node.sh` | Script de supervision généré par `deploy.sh` (health-check + relance). |
 | `.env.example` | Modèle de configuration pour le déploiement. |
 | `formules.txt` | Documentation interne des formules et méthodes de calcul. |
@@ -219,6 +220,12 @@ npm install
 npm start
 ```
 
+Version PHP (voir plus bas), depuis la racine du dépôt — sert aussi les pages statiques :
+
+```bash
+php -S 127.0.0.1:8081 -t . api/tests/dev-router.php
+```
+
 ## Déploiement
 
 1. Copier `deploy.sh` et un `.env` (basé sur `.env.example`) dans le répertoire d'exploitation.
@@ -286,3 +293,86 @@ synchronisés sur le disque ne seraient jamais chargés par le process en cours 
 ### Cron (automatique)
 
 Définir `INSTALL_CRON_MONITOR=true` dans `.env` : `deploy.sh` ajoute la ligne sans doublon.
+
+## Version PHP (`api/`)
+
+Port PHP du backend Node, à **contrat d'API strictement identique** : mêmes routes
+(`/health`, `/api/config`, `/api/public-config`, `/api/calculate`, `/api/contact`,
+`/api/admin/*`), mêmes réponses JSON, mêmes en-têtes, mêmes variables d'environnement.
+Aucun `.php` n'apparaît dans les URLs : les appelants externes (notamment le questionnaire
+RIS Xplore) n'ont rien à changer. **État : validé en local contre le Node inchangé, pas encore
+déployé en production** ; `server.js`, `calculation.js` et `deploy.sh` restent la référence
+tant que la bascule n'est pas faite.
+
+Pourquoi : Node est un process persistant à superviser (`monitor_node.sh`, cron, PID,
+Passenger). PHP s'exécute par requête sous Apache : déployer = copier des fichiers, plus
+aucun process à relancer ni à surveiller.
+
+| Fichier | Rôle |
+|---|---|
+| `api/index.php` | Point d'entrée unique et routage (équivalent de `server.js`). |
+| `api/calculation.php` | Calcul local — port de `calculation.js` (mêmes données, mêmes formules). |
+| `api/lib/*.php` | Config/.env, état partagé (rate-limit, cache géoIP), HTTP, journal des mesures, géoIP, SFMN, contact/SMTP, accès admin. |
+| `api/.htaccess` | Réécrit tout `/api/*` vers `index.php` et refuse les fichiers de configuration/données. |
+| `api/tests/` | Outillage de développement (jamais déployé) : comparaisons Node/PHP, faux serveur SMTP, routeur de dev. |
+| `deploy-php.sh` | Déploiement simplifié (voir ci-dessous). |
+
+### Prérequis hébergement
+
+- **PHP ≥ 8.0** choisi pour le site dans cPanel (Sélecteur PHP), extensions `curl`, `mbstring`, `json`, `openssl` (activées par défaut sur o2switch).
+- `APCu` est **optionnel** : s'il est présent il porte le rate-limit par IP et le cache géoIP (équivalent direct des `Map` en mémoire de Node) ; sinon ils sont stockés dans `api/var/` (fichiers JSON verrouillés). `RATE_LIMIT_BACKEND=auto|apcu|file` force le choix. Sous LiteSpeed/LSAPI la mémoire APCu n'est pas forcément partagée entre processus : en cas de doute, `RATE_LIMIT_BACKEND=file` est le choix sûr.
+- Vérifier APCu : cPanel → Sélecteur PHP → Extensions, ou `php -m | grep apcu`.
+
+### Configuration
+
+Mêmes noms de variables que `.env.example` (rien à renommer). `api/` lit `api/.runtime.env`
+(généré par `deploy-php.sh`) puis `api/.env` (réglages purement locaux, jamais écrasé) ; une
+variable déjà définie dans l'environnement du serveur l'emporte. Variables propres à Node et sans
+objet en PHP : `API_PORT`, `MONITOR_PUBLIC_CONFIG_URL`, `INSTALL_CRON_MONITOR`,
+`ALERT_ON_API_DOWN_*` (l'alerte « API indisponible » n'existe plus : elle ne servait qu'à
+surveiller le process Node). Nouveauté : `RATE_LIMIT_BACKEND`.
+
+### Déploiement (`deploy-php.sh`)
+
+Même `.env` de déploiement que `deploy.sh` (`GIT_REPO`, `GIT_TOKEN`, `FRONTEND_DIR`, `SITE_PUBLIC_URL`,
+`API_PUBLIC_URL`...). Frontend et API vivent dans **un seul dossier** (`FRONTEND_DIR`, la racine
+web) : l'API est déployée dans `FRONTEND_DIR/api/`. Le script contrôle la syntaxe PHP avant
+toute publication, synchronise frontend et `api/` (en protégeant `.env`, `logs/`, `var/`),
+génère `config.js`, `sitemap.xml`, `api/.runtime.env` (600) et les règles `.htaccess` (raccourcis
+sans `.html`, `/health`, redirection www). Il ne gère plus ni `monitor_node.sh`, ni cron, ni PID,
+ni `tmp/restart.txt`, ni `npm install`.
+
+### Bascule Node → PHP (cPanel / o2switch)
+
+1. **Essai à blanc, sans toucher à la production** : lancer `deploy-php.sh` avec un `FRONTEND_DIR` de test (sous-domaine séparé), puis vérifier `GET /health`, `GET /api/config`, un `POST /api/calculate` et la page de contact.
+2. Quand c'est concluant, sur la production : **arrêter puis supprimer l'application dans cPanel → Setup Node.js App** (sinon `/api/*` reste servi par Node via Passenger ; le script avertit si le `.htaccess` contient encore une configuration Passenger).
+3. Lancer `deploy-php.sh` sur la racine web de production.
+4. Reprendre l'historique des mesures (même format, rien à convertir) : copier `BACKEND_DIR/logs/measurements-*.jsonl*` vers `FRONTEND_DIR/api/logs/`.
+5. Supprimer l'entrée cron `monitor_node.sh` (`crontab -e`) : elle relancerait Node en boucle. Le script signale sa présence.
+6. Contrôler `GET <API_PUBLIC_URL>/config`, puis un appel réel depuis le questionnaire Xplore.
+
+**Retour arrière** : recréer l'application Node dans cPanel, relancer l'ancien `deploy.sh` (inchangé dans le dépôt), recopier `api/logs/` vers `BACKEND_DIR/logs/` si des mesures ont été collectées entre-temps.
+
+### Vérification (Node et PHP en parallèle)
+
+Depuis la racine du dépôt, avec Node sur `:3003` et PHP sur `:8081` (`php -S`, voir *Lancement local*) :
+
+```bash
+node api/tests/compare-node-php.js 20000   # calcul: 20 031 cas, deux modes d'arrondi, sortie JSON identique
+node api/tests/compare-http.js             # statut, en-têtes et corps de chaque route
+node api/tests/compare-admin.js functional # routes /api/admin/* (jeton ADMIN_TOKEN=secret-test des deux côtés)
+```
+
+`api/tests/fake-smtp.js` simule un serveur SMTP (TLS direct et STARTTLS) pour tester l'envoi du contact.
+
+### Écarts connus avec la version Node
+
+- Corps de requête > 64 Ko : réponse `413` JSON propre (Node coupait la connexion sans répondre).
+- La géolocalisation IP et la journalisation s'exécutent **après** l'envoi de la réponse (Node attendait jusqu'à 3 appels réseau avant de répondre) : l'appelant n'est plus retardé.
+- Purge des vieux journaux : au plus une fois par jour, déclenchée par une requête (pas de process persistant pour la planifier).
+- `/api/contact` : en cas d'échec réseau vers Google, la réponse est `400 Échec vérification reCAPTCHA.` (Node répondait `400 JSON invalide`).
+- Un tableau/objet JSON passé comme nombre (`"dose_rate": []`) donne une erreur de validation (JS le convertissait en 0).
+
+### Non vérifié de bout en bout
+
+L'appel réel à Google (reCAPTCHA) et l'envoi vers un vrai serveur SMTP n'ont pas pu être testés (pas de réseau sortant dans l'environnement de test) : à contrôler avec les vraies clés lors de l'essai à blanc.
