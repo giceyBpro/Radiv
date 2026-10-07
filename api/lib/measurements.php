@@ -163,9 +163,10 @@ function read_file(string $file): array
 
 function read_logs(?string $year, ?string $month): array
 {
-    if ($year && $month) {
+    $has = static fn (?string $v) => $v !== null && $v !== ''; // test de vérité JS: "0" est vrai
+    if ($has($year) && $has($month)) {
         $files = [log_file_for_period((int) $year, (int) $month)];
-    } elseif ($year) {
+    } elseif ($has($year)) {
         $files = array_map(
             static fn ($p) => log_file_for_period($p['year'], $p['month']),
             array_values(array_filter(list_periods(), static fn ($p) => $p['year'] === (int) $year))

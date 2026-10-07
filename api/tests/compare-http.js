@@ -23,7 +23,14 @@ const cases = [
   post({ isotope_code: 'psma_177lu', dose_rate: 5, patient_size_cm: 150, cure_count: 3 }),
   post({ calculation_mode: 'sfmn', isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }),
   post({}), post(''), post('{pas du json'), post('null'), post('5'), post('"x"'), post('[]'), post('[1,2]'),
-  post({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 0 })
+  post({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 0 }),
+  // /api/contact: validations avant tout envoi (reCAPTCHA non configuré => refus, des deux côtés)
+  ...[{}, { email: 'a@b.fr' }, { message: 'x' }, { email: 'a b@c.fr', message: 'x' }, { email: 'a@b.fr\nBcc: x@y.z', message: 'x' },
+    { email: 0, message: 'x' }, { email: ' a@b.fr ', message: ' bonjour ' }, { email: 'a@b.fr', message: 'x', recaptcha_token: 'tok' }]
+    .map((b) => ({ ...post(b), path: '/api/contact' })),
+  { ...post('{pas du json'), path: '/api/contact' }, { ...post('null'), path: '/api/contact' }, { ...post(''), path: '/api/contact' },
+  ...Array.from({ length: 5 }, () => ({ ...post({ email: 'a@b.fr', message: 'x' }), path: '/api/contact' })), // dépasse 5/min => 429
+  get('/api/contact'),
   // Non comparé: corps > 64 Ko. Node coupe la connexion sans réponse (req.destroy); PHP répond
   // proprement 413 {"ok":false,"error":"Requête trop volumineuse."} — écart volontaire.
 ];
