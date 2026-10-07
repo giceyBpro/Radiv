@@ -123,6 +123,10 @@ fi
 # app.js: logique JS partagée entre index.html et v1.html (chargée via <script
 # src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
 # deux pages depuis un seul fichier, sans duplication à maintenir à la main.
+# tox.html: version d'aperçu réduite à 7 termes (maquette avant le site CTCAE
+# définitif, prévu détaché de dosimetrieRIV). La version complète (~850 termes)
+# est conservée sous .tox-complet.html, publiée mais sans route courte ni lien
+# — accessible uniquement en tapant son nom complet.
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
@@ -136,6 +140,7 @@ rsync -a --delete \
   --include='api-fonctionnement.html' \
   --include='test-api.html' \
   --include='tox.html' \
+  --include='.tox-complet.html' \
   --include='xplore.html' \
   --include='admin-mesures.html' \
   --include='favicon.ico' \
