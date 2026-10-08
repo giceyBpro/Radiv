@@ -19,13 +19,11 @@ require __DIR__ . '/lib/geo.php';
 require __DIR__ . '/lib/measurements.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
-require __DIR__ . '/lib/admin.php';
 require __DIR__ . '/lib/session.php';
 require __DIR__ . '/lib/google.php';
 require __DIR__ . '/lib/updater.php';
 require __DIR__ . '/lib/admin_site.php';
 
-use Radiv\Admin;
 use Radiv\AdminSite;
 use Radiv\Calculation;
 use Radiv\Config;
@@ -163,47 +161,7 @@ try {
         exit;
     }
 
-    // Routes admin (mesures collectées). Jeton absent, invalide, ou tentative bloquée par la
-    // limite: 404 identique à une route inexistante, pour ne même pas confirmer qu'elles
-    // existent. ADMIN_MEASUREMENTS_ENABLED=false les coupe entièrement (même 404, quel que soit
-    // le jeton) en les laissant tomber dans le 404 général plus bas.
-    if ($method === 'GET' && Config\admin_measurements_enabled()
-        && in_array($path, ['/api/admin/measurements/periods', '/api/admin/measurements', '/api/admin/measurements.csv'], true)) {
-        if (!Admin\authorized()) {
-            Http\send_json(404, ['error' => 'Not found']);
-            exit;
-        }
-        $year = Admin\query_param('year');
-        $month = Admin\query_param('month');
-        if ($path === '/api/admin/measurements/periods') {
-            Http\send_json(200, ['periods' => Measurements\list_periods()]);
-            exit;
-        }
-        try {
-            $rows = Measurements\read_logs($year, $month);
-        } catch (\Throwable $e) {
-            error_log('Erreur lecture mesures: ' . $e->getMessage());
-            Http\send_json(500, ['error' => 'Erreur lecture des mesures.']);
-            exit;
-        }
-        if ($path === '/api/admin/measurements') {
-            Http\send_json(200, ['rows' => $rows, 'year' => Admin\present($year) ? $year : null, 'month' => Admin\present($month) ? $month : null, 'total' => count($rows)]);
-            exit;
-        }
-        $label = Admin\present($year) && Admin\present($month)
-            ? $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT)
-            : (Admin\present($year) ? $year : 'periode');
-        $label = preg_replace('/[^A-Za-z0-9._-]/', '_', $label); // nom de fichier sûr (pas d'injection d'en-tête)
-        $csv = Measurements\to_csv($rows);
-        http_response_code(200);
-        header('Content-Type: text/csv; charset=utf-8');
-        header("Content-Disposition: attachment; filename=\"mesures_{$label}.csv\"");
-        header('Content-Length: ' . strlen($csv));
-        echo $csv;
-        exit;
-    }
-
-    // Page d'administration du site (connexion Google, mises à jour): 404 générique tant qu'elle n'est pas configurée.
+    // Administration du site (/auth: connexion Google, mesures, mises à jour): 404 générique tant qu'elle n'est pas configurée.
     if (AdminSite\handle($method, $path)) {
         exit;
     }

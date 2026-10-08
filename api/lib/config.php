@@ -144,14 +144,23 @@ function ensure_private_dir(string $dir): bool
 
 // --- Administration du site (connexion Google, mises à jour) -------------------------------
 
-// URL publique de l'API (ex. https://www.example.org/api), sans slash final. Sert à construire
-// l'URL de retour OAuth: jamais déduite de l'en-tête Host, qui est contrôlé par l'appelant.
-function api_public_url(): string
+// URL publique du site (ex. https://www.example.org), sans slash final. Sert à construire l'URL
+// de retour OAuth et à contrôler l'origine des formulaires: jamais déduite de l'en-tête Host, qui
+// est contrôlé par l'appelant.
+function site_public_url(): string
 {
-    return rtrim(env('API_PUBLIC_URL'), '/');
+    return rtrim(env('SITE_PUBLIC_URL'), '/');
 }
 
-// Adresses Google autorisées à administrer le site (liste séparée par des virgules).
+// URL publique de l'API (ex. https://www.example.org/api), sans slash final.
+function api_public_url(): string
+{
+    $url = rtrim(env('API_PUBLIC_URL'), '/');
+    return $url !== '' ? $url : (site_public_url() !== '' ? site_public_url() . '/api' : '');
+}
+
+// Adresses Google autorisées à administrer le site: uniquement celles listées dans le .env
+// (liste séparée par des virgules, comparaison exacte, jamais de domaine entier ni de joker).
 function admin_google_emails(): array
 {
     $list = array_map(static fn ($e) => strtolower(trim($e)), explode(',', env('ADMIN_GOOGLE_EMAILS')));
@@ -163,7 +172,7 @@ function admin_site_enabled(): bool
 {
     return flag('ADMIN_SITE_ENABLED')
         && env('GOOGLE_CLIENT_ID') !== '' && env('GOOGLE_CLIENT_SECRET') !== ''
-        && api_public_url() !== '' && admin_google_emails() !== [];
+        && site_public_url() !== '' && admin_google_emails() !== [];
 }
 
 // Les mises à jour depuis l'interface sont désactivées tant qu'on ne les active pas explicitement.

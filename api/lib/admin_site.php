@@ -11,27 +11,36 @@ use Radiv\Config;
 use Radiv\Contact;
 use Radiv\Google;
 use Radiv\Http;
+use Radiv\Measurements;
 use Radiv\Session;
 use Radiv\Store;
 use Radiv\Updater;
 
+// Aucun lien vers ces adresses n'existe sur le site: l'entrée est connue de l'administrateur seul.
+// /auth redirige vers Google (ou affiche la page si la session est déjà ouverte); tout le reste,
+// sans session valide, répond par le 404 générique.
 const ROUTES = [
-    'GET /api/admin/login' => 'login',
-    'GET /api/admin/oauth/callback' => 'callback',
-    'GET /api/admin/site' => 'site',
-    'POST /api/admin/update' => 'update',
-    'POST /api/admin/rollback' => 'rollback',
-    'POST /api/admin/logout' => 'logout',
+    'GET /auth' => 'home',
+    'GET /auth/' => 'home',
+    'GET /auth/callback' => 'callback',
+    'GET /auth/mesures' => 'measurements',
+    'GET /auth/mesures.csv' => 'measurements_csv',
+    'POST /auth/update' => 'update',
+    'POST /auth/rollback' => 'rollback',
+    'POST /auth/logout' => 'logout',
 ];
 
+// Échappement HTML de toute valeur affichée. Les données des journaux viennent d'appelants anonymes:
+// aucune n'est jamais insérée telle quelle.
 function h(mixed $value): string
 {
-    return Contact\escape_html((string) $value);
+    $text = ($value === null || is_scalar($value)) ? (string) $value : (string) json_encode($value);
+    return Contact\escape_html($text);
 }
 
-function site_url(): string
+function home_url(): string
 {
-    return Config\api_public_url() . '/admin/site';
+    return Config\site_public_url() . '/auth';
 }
 
 // true si la requête a été traitée (réponse envoyée), false pour laisser le 404 général s'en charger.
@@ -48,11 +57,16 @@ function handle(string $method, string $path): bool
     return ('Radiv\\AdminSite\\' . 'do_' . $action)();
 }
 
-function do_login(): bool
+// /auth: sans session valide (ou avec ?reauth=1) on part vers Google, sinon on affiche la page.
+function do_home(): bool
 {
-    if (!Store\rate_limit_hit('admin', Http\client_ip(), 10)) return false;
-    Http\redirect(Google\begin_login(($_GET['reauth'] ?? '') === '1'));
-    return true;
+    $reauth = ($_GET['reauth'] ?? '') === '1';
+    if (Session\admin() === null || $reauth) {
+        if (!Store\rate_limit_hit('admin', Http\client_ip(), 10)) return false;
+        Http\redirect(Google\begin_login($reauth));
+        return true;
+    }
+    return do_site();
 }
 
 function do_callback(): bool
@@ -64,7 +78,7 @@ function do_callback(): bool
         return true;
     }
     Session\login($email);
-    Http\redirect(site_url(), 303);
+    Http\redirect(home_url(), 303);
     return true;
 }
 
@@ -96,7 +110,7 @@ function do_site(): bool
         $out .= '<p>Les mises à jour depuis cette page sont désactivées sur ce site.</p>';
     } else {
         $default = $token['tags'][0] ?? 'main';
-        $out .= '<form method="post" action="' . h(Config\api_public_url() . '/admin/update') . '" autocomplete="off">';
+        $out .= '<form method="post" action="/auth/update" autocomplete="off">';
         $out .= '<input type="hidden" name="csrf" value="' . h(Session\csrf_token()) . '">';
         $out .= '<label>Version (tag, branche ou commit)<input name="ref" value="' . h($default) . '" list="refs" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._/-]*"></label>';
         $out .= '<datalist id="refs">';
@@ -112,7 +126,7 @@ function do_site(): bool
     }
     if ($status['backup']) {
         $prev = $status['backup']['from']['sha'] ?? null;
-        $out .= '<h2>Retour arrière</h2><form method="post" action="' . h(Config\api_public_url() . '/admin/rollback') . '">'
+        $out .= '<h2>Retour arrière</h2><form method="post" action="/auth/rollback">'
             . '<input type="hidden" name="csrf" value="' . h(Session\csrf_token()) . '">'
             . '<p>Version précédente conservée' . ($prev ? ' : <code>' . h(substr((string) $prev, 0, 7)) . '</code>' : '') . '.</p>'
             . '<button type="submit" class="secondary">Rétablir la version précédente</button></form>';
@@ -126,7 +140,17 @@ function do_site(): bool
         }
         $out .= '</table>';
     }
-    $out .= '<form method="post" action="' . h(Config\api_public_url() . '/admin/logout') . '" class="logout">'
+    if (Config\admin_measurements_enabled()) {
+        $out .= '<h2>Mesures</h2>';
+        $periods = Measurements\list_periods();
+        $out .= '<p><a href="/auth/mesures">Mois en cours</a>';
+        foreach (array_slice($periods, 0, 12) as $p) {
+            $label = sprintf('%02d/%d', $p['month'], $p['year']);
+            $out .= ' · <a href="/auth/mesures?year=' . $p['year'] . '&amp;month=' . $p['month'] . '">' . h($label) . '</a>';
+        }
+        $out .= '</p>';
+    }
+    $out .= '<form method="post" action="/auth/logout" class="logout">'
         . '<input type="hidden" name="csrf" value="' . h(Session\csrf_token()) . '">'
         . '<span>' . h($admin['email']) . '</span> <button type="submit" class="secondary">Se déconnecter</button></form>';
     render('Administration du site', $out);
@@ -162,7 +186,7 @@ function guard_post(bool $needFresh): ?array
         exit;
     }
     if ($needFresh && !Session\fresh_login()) {
-        Http\redirect(Config\api_public_url() . '/admin/login?reauth=1');
+        Http\redirect(home_url() . '?reauth=1');
         exit;
     }
     return $admin;
@@ -187,7 +211,7 @@ function do_update(): bool
         unset($_SESSION['gh']);
     }
     $token = $posted = '';
-    Http\redirect(site_url(), 303);
+    Http\redirect(home_url(), 303);
     return true;
 }
 
@@ -198,7 +222,60 @@ function do_rollback(): bool
     if ($admin === null) return false;
     if (!Store\rate_limit_hit('adminupd', Http\client_ip(), 5)) return false;
     Session\flash_set(Updater\rollback($admin['email']));
-    Http\redirect(site_url(), 303);
+    Http\redirect(home_url(), 303);
+    return true;
+}
+
+// year/month: chiffres uniquement (la valeur finit dans un nom de fichier de journal et dans le HTML).
+function period_from_query(): array
+{
+    $year = isset($_GET['year']) && is_string($_GET['year']) && preg_match('/^\d{4}$/', $_GET['year']) ? $_GET['year'] : null;
+    $month = $year !== null && isset($_GET['month']) && is_string($_GET['month']) && preg_match('/^(0?[1-9]|1[0-2])$/', $_GET['month']) ? ltrim($_GET['month'], '0') : null;
+    return [$year, $month];
+}
+
+function do_measurements(): bool
+{
+    if (!Config\admin_measurements_enabled() || Session\admin() === null) return false;
+    [$year, $month] = period_from_query();
+    $rows = Measurements\read_logs($year, $month);
+    $shown = array_slice($rows, 0, 300);
+    $label = $year === null ? 'mois en cours' : ($month === null ? $year : sprintf('%02d/%s', (int) $month, $year));
+    $query = $year === null ? '' : '?year=' . $year . ($month === null ? '' : '&amp;month=' . $month);
+    $out = '<p><a href="/auth">&larr; Retour</a> · <a href="/auth/mesures.csv' . $query . '">Exporter en CSV (' . count($rows) . ' lignes)</a></p>';
+    $out .= '<p class="small">Période : ' . h($label) . ' — ' . count($rows) . ' mesure(s)' . (count($rows) > count($shown) ? ', les ' . count($shown) . ' plus récentes sont affichées (export CSV pour tout)' : '') . '. Niveau de journalisation : ' . h(Config\logging_level()) . '.</p>';
+    $out .= '<table><tr><th>Date (UTC)</th><th>IP</th><th>Lieu</th><th>Isotope</th><th>Débit</th><th>Taille</th><th>Jours</th><th>Résultat</th></tr>';
+    foreach ($shown as $row) {
+        $geo = $row->ip_geo ?? null;
+        $place = is_object($geo) ? (isset($geo->scope) ? 'local' : trim((string) ($geo->city ?? '') . ' ' . (string) ($geo->country ?? ''))) : '';
+        $input = $row->input ?? null;
+        $result = $row->result ?? null;
+        $ok = is_object($result) ? ($result->ok ?? null) : null;
+        // Toutes les valeurs viennent de requêtes d'appelants anonymes: échappées sans exception.
+        $out .= '<tr><td>' . h($row->timestamp ?? '') . '</td><td>' . h($row->ip ?? '') . '</td><td>' . h($place) . '</td>'
+            . '<td>' . h(is_object($input) ? ($input->isotope_code ?? '') : '') . '</td>'
+            . '<td>' . h(is_object($input) ? ($input->dose_rate ?? '') : '') . '</td>'
+            . '<td>' . h(is_object($input) ? ($input->patient_size_cm ?? '') : '') . '</td>'
+            . '<td>' . h(is_object($result) ? ($result->effective_days ?? '') : '') . '</td>'
+            . '<td>' . ($ok === true ? 'ok' : ($ok === false ? 'erreur' : '')) . '</td></tr>';
+    }
+    $out .= '</table>';
+    render('Mesures', $out);
+    return true;
+}
+
+function do_measurements_csv(): bool
+{
+    if (!Config\admin_measurements_enabled() || Session\admin() === null) return false;
+    [$year, $month] = period_from_query();
+    $csv = Measurements\to_csv(Measurements\read_logs($year, $month));
+    $label = $year === null ? 'mois-en-cours' : ($month === null ? $year : $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT));
+    http_response_code(200);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="mesures_' . $label . '.csv"');
+    header('Cache-Control: no-store');
+    header('Content-Length: ' . strlen($csv));
+    echo $csv;
     return true;
 }
 
