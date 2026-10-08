@@ -140,7 +140,7 @@ function fetch(string $url, array $options = []): ?array
     $redirects = 0;
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_FOLLOWLOCATION => (bool) ($options['follow'] ?? true),
         CURLOPT_MAXREDIRS => 10,
         CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
         CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
@@ -173,7 +173,51 @@ function fetch(string $url, array $options = []): ?array
         'headers' => $currentHeaders,
         'final_url' => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
         'redirected' => $redirects > 0,
+        'location' => null,
     ];
+    foreach ($currentHeaders as $line) {
+        if (stripos($line, 'location:') === 0) $result['location'] = trim(substr($line, 9));
+    }
     curl_close($ch);
     return $result;
+}
+
+// Télécharge une URL dans un fichier (flux, jamais en mémoire) avec un plafond de taille.
+// Retourne ['status','final_url'] ou null en cas d'échec réseau, de dépassement de taille ou de
+// timeout. Les en-têtes d'autorisation ne sont pas retransmis à un autre hôte en cas de
+// redirection (comportement par défaut de cURL).
+function download(string $url, string $destination, array $headers = [], int $maxBytes = 20971520, int $timeoutMs = 60000): ?array
+{
+    $out = @fopen($destination, 'wb');
+    if (!$out) return null;
+    $ch = curl_init($url);
+    if ($ch === false) { fclose($out); return null; }
+    curl_setopt_array($ch, [
+        CURLOPT_FILE => $out,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_CONNECTTIMEOUT_MS => 10000,
+        CURLOPT_TIMEOUT_MS => $timeoutMs,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_NOPROGRESS => false,
+        // Interrompt dès que la taille annoncée ou reçue dépasse le plafond.
+        CURLOPT_PROGRESSFUNCTION => static fn ($c, $dlTotal, $dlNow) => ($dlNow > $maxBytes || $dlTotal > $maxBytes) ? 1 : 0,
+    ]);
+    $ok = curl_exec($ch);
+    $result = $ok === false ? null : [
+        'status' => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
+        'final_url' => (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+    ];
+    curl_close($ch);
+    fclose($out);
+    return $result;
+}
+
+function redirect(string $url, int $status = 302): void
+{
+    http_response_code($status);
+    header('Location: ' . $url);
+    header('Content-Length: 0');
 }
