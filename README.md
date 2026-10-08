@@ -12,7 +12,6 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
 | `contact.html` | Formulaire de contact protégé par reCAPTCHA, envoi email côté backend. |
 | `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
-| `admin-mesures.html` | Consultation et export des mesures journalisées. Volontairement sans raccourci court (voir ci-dessous). |
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
 | `tox.html` | Page de diagnostic interne, sans lien depuis l'interface. |
@@ -22,10 +21,8 @@ Application web de calcul des durées de restriction de contact après Radiothé
 
 `deploy.sh` ajoute dans `.htaccess` des raccourcis sans `.html` pour ces pages : `/tox`,
 `/legal`, `/contact`, `/print`, `/explain`, `/doc` (→ `api-fonctionnement.html`),
-`/test-api`, `/xplore`. `admin-mesures.html` en est volontairement exclu : cette page n'a
-aucun lien de navigation et sa découverte ne doit reposer sur aucun chemin devinable — lui
-donner un raccourci court irait à l'encontre du durcissement déjà en place dessus
-(rate-limit, réponse 404 uniforme, interrupteur `ADMIN_MEASUREMENTS_ENABLED`).
+`/test-api`, `/xplore`. La consultation des mesures n'a plus de page statique : elle fait partie
+de l'administration du site, derrière la connexion Google (voir [Version PHP](#version-php-api)).
 
 ## Référencement
 
@@ -34,7 +31,7 @@ niveaux de protection, indépendants l'un de l'autre :
 
 - `robots.txt` interdit le crawl de tout le reste (`Disallow: /` avec deux exceptions
   `Allow: /$` et `Allow: /index.html$`). Les noms des pages cachées (`tox.html`,
-  `admin-mesures.html`, `xplore.html`…) n'y sont volontairement pas listés : ce fichier
+  `xplore.html`…) n'y sont volontairement pas listés : ce fichier
   est public, les y nommer reviendrait à les annoncer.
 - Chaque page sauf l'accueil porte `<meta name="robots" content="noindex, nofollow">`,
   qui bloque l'indexation même si un lien externe venait un jour à pointer vers elle.
@@ -178,7 +175,10 @@ Ces deux réglages sont reflétés automatiquement sur `mentions-legales.html` (
 `GET /api/public-config`) : la section protection des données décrit toujours l'état réel
 de la configuration, sans édition manuelle à chaque changement de `.env`.
 
-- Page web : `admin-mesures.html` (page statique sans lien de navigation, comme `tox.html`/`xplore.html` — accessible en tapant l'URL)
+**Backend Node uniquement** — dans la version PHP il n'y a plus de jeton ni de ces routes : la
+consultation passe par la connexion Google de la page `/auth` (voir plus bas). La page statique
+`admin-mesures.html` a été supprimée ; ces routes ne restent utilisables que par appel direct.
+
 - Périodes disponibles : `GET /api/admin/measurements/periods`
 - API JSON : `GET /api/admin/measurements?year=2026&month=08`
 - Export CSV : `GET /api/admin/measurements.csv?year=2026&month=08`
@@ -198,9 +198,7 @@ confirmer que ces routes existent à qui n'a pas le bon jeton. Seul un jeton cor
 révèle qu'elles existent, via une vraie réponse 200.
 
 `ADMIN_MEASUREMENTS_ENABLED=false` désactive entièrement ces trois routes : même le bon
-jeton reçoit alors ce 404 générique. `admin-mesures.html` reste servie en tant que
-fichier statique (Apache, pas Node) mais n'affiche plus rien d'utilisable une fois les
-routes coupées.
+jeton reçoit alors ce 404 générique.
 
 ## Modèles Xplore RIS
 
@@ -297,8 +295,7 @@ Définir `INSTALL_CRON_MONITOR=true` dans `.env` : `deploy.sh` ajoute la ligne s
 ## Version PHP (`api/`)
 
 Port PHP du backend Node, à **contrat d'API strictement identique** : mêmes routes
-(`/health`, `/api/config`, `/api/public-config`, `/api/calculate`, `/api/contact`,
-`/api/admin/*`), mêmes réponses JSON, mêmes en-têtes, mêmes variables d'environnement.
+(`/health`, `/api/config`, `/api/public-config`, `/api/calculate`, `/api/contact`), mêmes réponses JSON, mêmes en-têtes, mêmes variables d'environnement.
 Aucun `.php` n'apparaît dans les URLs : les appelants externes (notamment le questionnaire
 RIS Xplore) n'ont rien à changer. **État : validé en local contre le Node inchangé, pas encore
 déployé en production** ; `server.js`, `calculation.js` et `deploy.sh` restent la référence
@@ -355,12 +352,11 @@ ni `tmp/restart.txt`, ni `npm install`.
 
 ### Vérification (Node et PHP en parallèle)
 
-Depuis la racine du dépôt, avec Node sur `:3003` et PHP sur `:8081` (`php -S`, voir *Lancement local*) :
+Depuis la racine du dépôt, avec Node sur `:3003` et PHP sur `:8081` (`php -S`, voir *Lancement local*) — l'administration (`/auth`) se teste séparément, voir ci-dessus :
 
 ```bash
 node api/tests/compare-node-php.js 20000   # calcul: 20 031 cas, deux modes d'arrondi, sortie JSON identique
 node api/tests/compare-http.js             # statut, en-têtes et corps de chaque route
-node api/tests/compare-admin.js functional # routes /api/admin/* (jeton ADMIN_TOKEN=secret-test des deux côtés)
 ```
 
 `api/tests/fake-smtp.js` simule un serveur SMTP (TLS direct et STARTTLS) pour tester l'envoi du contact.
@@ -373,25 +369,31 @@ node api/tests/compare-admin.js functional # routes /api/admin/* (jeton ADMIN_TO
 - `/api/contact` : en cas d'échec réseau vers Google, la réponse est `400 Échec vérification reCAPTCHA.` (Node répondait `400 JSON invalide`).
 - Un tableau/objet JSON passé comme nombre (`"dose_rate": []`) donne une erreur de validation (JS le convertissait en 0).
 
-### Page d'administration du site (connexion Google, mises à jour)
+### Administration du site (`/auth` : connexion Google, mesures, mises à jour)
 
-Page protégée par une **connexion Google** (OpenID Connect avec PKCE) : seules les adresses de `ADMIN_GOOGLE_EMAILS` (vérifiées par Google) y accèdent. Elle affiche la version installée et permet de **mettre à jour le site depuis le dépôt GitHub privé**, puis de revenir à la version précédente. Aucun JavaScript, formulaires protégés par jeton CSRF, politique CSP stricte, cookie `HttpOnly` / `SameSite=Lax` / `Secure`, session limitée (30 min d'inactivité, 8 h au maximum), et **nouvelle connexion Google exigée si la dernière date de plus de 10 minutes** avant toute modification. Tant que la configuration n'est pas complète, ou si le jeton CSRF / l'origine / la session ne conviennent pas, la réponse est le 404 générique de l'API.
+Une seule page d'administration, à l'adresse **`https://<votre-domaine>/auth`**. Aucune page du site n'y renvoie, aucun raccourci, et `/admin` n'existe pas : seule la personne qui connaît l'adresse la trouve. Sans session, `/auth` envoie directement vers la **connexion Google** ; avec une session valide, elle affiche la page. Elle remplace l'ancienne page `admin-mesures.html` et son jeton `ADMIN_TOKEN`, **supprimés** de la version PHP.
+
+- **Qui peut entrer** : uniquement les adresses écrites dans `ADMIN_GOOGLE_EMAILS` (`.env`), comparées exactement après vérification par Google (pas de domaine entier, pas de joker). Un autre compte Google, même valide, reçoit « Accès refusé ».
+- **Ce que la page propose** : la version installée ; la **consultation des mesures** (mois en cours ou mois choisi, 300 lignes les plus récentes affichées, **export CSV** complet) ; la **mise à jour** du site depuis le dépôt GitHub privé ; le **retour à la version précédente** ; l'historique des opérations.
+- **Sécurité** : OpenID Connect avec PKCE, state et nonce à usage unique ; cookie `HttpOnly` / `SameSite=Lax` / `Secure` limité au chemin `/auth` ; session de 30 min d'inactivité (8 h au maximum) ; jeton CSRF et contrôle de l'origine sur chaque formulaire ; **nouvelle connexion Google exigée si la dernière date de plus de 10 minutes** avant une mise à jour ; HTTPS exigé ; politique CSP stricte sans aucun JavaScript ; toutes les valeurs des journaux (venues d'appelants anonymes) sont échappées ; export CSV protégé contre l'injection de formules. Tant que la configuration n'est pas complète, ou sans session valide, ou si une règle n'est pas respectée, les adresses autres que `/auth` répondent le 404 générique de l'API.
 
 | URL | Rôle |
 |---|---|
-| `GET <API_PUBLIC_URL>/admin/login` | Point d'entrée (redirige vers Google). Non lié depuis le site. |
-| `GET <API_PUBLIC_URL>/admin/site` | La page (404 sans session). |
+| `/auth` | Entrée : redirige vers Google, ou affiche la page si la session est ouverte. |
+| `/auth/callback` | Retour de Google (à déclarer comme URI de redirection). |
+| `/auth/mesures`, `/auth/mesures.csv` | Mesures (`?year=2026&month=9`) et export, sur session valide. |
+| `/auth/update`, `/auth/rollback`, `/auth/logout` | Actions (formulaires `POST`). |
 
-**Mise en place Google** : console Google Cloud → *API et services* → *Identifiants* → client OAuth de type *Application Web*, avec pour URI de redirection `<API_PUBLIC_URL>/admin/oauth/callback`. En mode « Test » de l'écran de consentement, ajoutez vos adresses comme utilisateurs de test : aucune validation par Google n'est nécessaire. Renseignez ensuite `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_GOOGLE_EMAILS` et `API_PUBLIC_URL` (variables décrites dans `.env.example`). Activez les mises à jour avec `ADMIN_UPDATE_ENABLED=true`.
+**Mise en place Google** : console Google Cloud → *API et services* → *Identifiants* → client OAuth de type *Application Web*, avec pour URI de redirection `https://<votre-domaine>/auth/callback`. En mode « Test » de l'écran de consentement, ajoutez vos adresses comme utilisateurs de test : aucune validation par Google n'est nécessaire. Renseignez `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_GOOGLE_EMAILS` et `SITE_PUBLIC_URL` (voir `.env.example`). `deploy-php.sh` ajoute la règle `/auth` au `.htaccess`. `ADMIN_MEASUREMENTS_ENABLED=false` retire la section Mesures ; `ADMIN_SITE_ENABLED=false` coupe toute l'administration. Les mises à jour exigent en plus `ADMIN_UPDATE_ENABLED=true`.
 
-**Jeton GitHub** : le dépôt étant privé, le téléchargement exige un jeton en lecture seule (*fine-grained token*, permission « Contents : lecture » sur ce seul dépôt). S'il est dans `.env` (`UPDATE_GITHUB_TOKEN`) et accepté par GitHub, il est utilisé. **S'il est absent ou refusé, la page affiche simplement un champ pour en saisir un**, valable pour l'opération en cours : il n'est jamais enregistré (ni disque, ni session, ni journal). Il n'est envoyé qu'à l'API GitHub, jamais à l'adresse de téléchargement vers laquelle GitHub redirige.
+**Jeton GitHub** : le dépôt étant privé, le téléchargement exige un jeton en lecture seule (*fine-grained token*, permission « Contents : lecture » sur ce seul dépôt). S'il est dans `.env` (`UPDATE_GITHUB_TOKEN`) et accepté par GitHub, il est utilisé. **S'il est absent ou refusé, la page affiche simplement un champ « Jeton d'accès »** pour en saisir un, valable pour l'opération en cours : il n'est jamais enregistré (ni disque, ni session, ni journal). Il n'est envoyé qu'à l'API GitHub, jamais à l'adresse de téléchargement vers laquelle GitHub redirige.
 
-**Déroulement d'une mise à jour** : (1) le commit demandé (tag, branche ou SHA ; un tag validé est recommandé) est résolu en SHA exact ; (2) l'archive ZIP est téléchargée dans `api/var/tmp/` (20 Mo maximum) ; (3) tout est validé **avant la moindre écriture sur le site** : dossier racine correspondant au SHA, aucun chemin `..`, absolu ou lien symbolique (l'archive entière est refusée), tailles plafonnées, seuls les fichiers de la liste blanche sont extraits (jamais `.env`, `.htaccess` racine, `config.js`, `sitemap.xml`, `logs/`, `var/`, `tests/`), syntaxe de chaque fichier PHP contrôlée, version cible capable de se mettre elle-même à jour (sinon refusée) ; (4) la version en place est sauvegardée (une génération) ; (5) les fichiers sont remplacés un par un par renommage atomique, `api/index.php` en dernier ; (6) l'API est interrogée : **si elle ne répond pas correctement, l'ancienne version est rétablie automatiquement** ; (7) l'archive et les fichiers de préparation sont supprimés (même en cas d'échec), l'opération est journalisée (`api/logs/updates.jsonl`) et un e-mail est envoyé à `CONTACT_DEST` si le SMTP est configuré. Le bouton « Rétablir la version précédente » restaure la sauvegarde.
+**Déroulement d'une mise à jour** : (1) le commit demandé (tag, branche ou SHA ; un tag validé est recommandé) est résolu en SHA exact ; (2) l'archive ZIP est téléchargée dans `api/var/tmp/` (20 Mo maximum) ; (3) tout est validé **avant la moindre écriture sur le site** : dossier racine correspondant au SHA, aucun chemin `..`, absolu ou lien symbolique (l'archive entière est refusée), tailles et nombre de fichiers plafonnés, seuls les fichiers de la liste blanche sont extraits (jamais `.env`, `.htaccess` racine, `config.js`, `sitemap.xml`, `logs/`, `var/`, `tests/`), syntaxe de chaque fichier PHP contrôlée, version cible capable de se mettre elle-même à jour (sinon refusée) ; (4) la version en place est sauvegardée (une génération) ; (5) les fichiers sont remplacés un par un par renommage atomique, `api/index.php` en dernier ; (6) l'API est interrogée : **si elle ne répond pas correctement, l'ancienne version est rétablie automatiquement** ; (7) l'archive et les fichiers de préparation sont supprimés (même en cas d'échec), l'opération est journalisée (`api/logs/updates.jsonl`) et un e-mail est envoyé à `CONTACT_DEST` si le SMTP est configuré. « Rétablir la version précédente » restaure la sauvegarde.
 
-Limites : le `.htaccess` racine, `config.js` et `sitemap.xml` restent gérés par `deploy-php.sh` (une version qui exigerait de les modifier demande un passage du script, ou une édition manuelle) ; l'extension PHP `zip` est requise (la page l'indique) ; la première installation du site reste à faire par `deploy-php.sh` ou par FTP, la connexion Google n'existant pas encore à ce stade.
+Limites : le `.htaccess` racine, `config.js` et `sitemap.xml` restent gérés par `deploy-php.sh` ; l'extension PHP `zip` est requise (la page l'indique) ; la première installation du site reste à faire par `deploy-php.sh` ou par FTP, la connexion Google n'existant pas encore à ce stade ; la lecture d'un mois de mesures charge le fichier en mémoire (d'où l'intérêt de `LOGS_MAX_BYTES` et `LOGS_RETENTION_MONTHS` sur un petit hébergement).
 
-Vérification : `api/tests/test-admin-site.js` (96 contrôles : connexion refusée/acceptée, PKCE, CSRF, connexion ancienne, jeton invalide/valide/du `.env`, archives piégées, retour arrière automatique et manuel, fichiers hors liste blanche, jeton jamais écrit ni transmis au téléchargement) contre un site déployé sous Apache et `api/tests/fake-services.js` (faux Google + faux GitHub) ; les archives de test sont fabriquées par `api/tests/make-fixtures.php`.
+Vérification : `api/tests/test-admin-site.js` (112 contrôles : connexion refusée/acceptée, PKCE, CSRF, connexion ancienne, mesures et export CSV avec valeurs hostiles, jeton invalide/valide/du `.env`, archives piégées, retour arrière automatique et manuel, fichiers hors liste blanche, jeton jamais écrit ni transmis au téléchargement, anciennes adresses `/api/admin/*` en 404) contre un site déployé sous Apache et `api/tests/fake-services.js` (faux Google + faux GitHub) ; les archives de test sont fabriquées par `api/tests/make-fixtures.php`.
 
 ### Non vérifié de bout en bout
 
-L'appel réel à Google (reCAPTCHA **et** connexion de la page d'administration), le téléchargement depuis le vrai GitHub et l'envoi vers un vrai serveur SMTP n'ont pas pu être testés (pas de réseau sortant dans l'environnement de test) : à contrôler avec les vraies clés lors de l'essai à blanc.
+L'appel réel à Google (reCAPTCHA **et** connexion de `/auth`), le téléchargement depuis le vrai GitHub et l'envoi vers un vrai serveur SMTP n'ont pas pu être testés (pas de réseau sortant dans l'environnement de test) : à contrôler avec les vraies clés lors de l'essai à blanc.

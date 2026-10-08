@@ -43,7 +43,7 @@ function start(): void
     ini_set('session.gc_maxlifetime', (string) ABSOLUTE_SECONDS);
     session_set_cookie_params([
         'lifetime' => 0,
-        'path' => '/api/admin',
+        'path' => '/auth',
         'secure' => is_https(),
         'httponly' => true,
         'samesite' => 'Lax', // Lax et non Strict: le retour de Google est une navigation entre sites
@@ -77,7 +77,7 @@ function logout(): void
     start();
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
-        setcookie(session_name(), '', ['expires' => time() - 3600, 'path' => '/api/admin', 'secure' => is_https(), 'httponly' => true, 'samesite' => 'Lax']);
+        setcookie(session_name(), '', ['expires' => time() - 3600, 'path' => '/auth', 'secure' => is_https(), 'httponly' => true, 'samesite' => 'Lax']);
     }
     session_destroy();
 }
@@ -103,7 +103,7 @@ function csrf_valid(): bool
     if (!is_string($given) || empty($_SESSION['csrf']) || !hash_equals((string) $_SESSION['csrf'], $given)) return false;
     $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
     if ($origin !== '') {
-        $expected = parse_url(Config\api_public_url(), PHP_URL_HOST);
+        $expected = parse_url(Config\site_public_url(), PHP_URL_HOST);
         if (parse_url((string) $origin, PHP_URL_HOST) !== $expected) return false;
     }
     return true;

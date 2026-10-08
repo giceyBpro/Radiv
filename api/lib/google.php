@@ -18,7 +18,7 @@ use Radiv\Session;
 // GOOGLE_AUTH_URL / GOOGLE_TOKEN_URL n'existent que pour les essais (faux Google local).
 function auth_url(): string { return Config\env('GOOGLE_AUTH_URL', 'https://accounts.google.com/o/oauth2/v2/auth'); }
 function token_url(): string { return Config\env('GOOGLE_TOKEN_URL', 'https://oauth2.googleapis.com/token'); }
-function redirect_uri(): string { return Config\api_public_url() . '/admin/oauth/callback'; }
+function redirect_uri(): string { return Config\site_public_url() . '/auth/callback'; }
 
 function b64url(string $raw): string
 {

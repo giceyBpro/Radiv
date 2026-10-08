@@ -128,9 +128,6 @@ if [[ -n "$(ls -A "$FRONTEND_DIR" 2>/dev/null)" ]] && [[ ! -f "$FRONTEND_DIR/ind
 fi
 # Liste blanche: tout ce qui n'est pas listé ici n'est PAS publié. Une liste noire
 # échouerait en mode ouvert, publiant automatiquement tout nouveau fichier du dépôt.
-# admin-mesures.html ne contient aucun secret: seuls les appels qu'elle fait vers
-# /api/admin/* exigent le jeton (header X-Admin-Token, saisi dans la page). Page
-# statique sans lien de navigation, comme tox.html/xplore.html.
 # v1.html: ancienne version de l'interface (design précédent), conservée sans
 # lien de/vers index.html. Accessible uniquement en tapant l'URL. Pas de route
 # courte dans SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que
@@ -160,7 +157,6 @@ rsync -a --delete \
   --include='tox.html' \
   --include='.tox-complet.html' \
   --include='xplore.html' \
-  --include='admin-mesures.html' \
   --include='favicon.ico' \
   --include='robots.txt' \
   --include='config.js' \
@@ -200,11 +196,8 @@ if grep -Eqi 'PassengerAppRoot|CLOUDLINUX PASSENGER CONFIGURATION|PassengerNodej
   log_warn "Désactivez/supprimez l'application dans cPanel (Setup Node.js App) AVANT de basculer, sinon"
   log_warn "/api/* continuera d'être servi par Node et non par PHP."
 fi
-# admin-mesures.html est volontairement exclu: cette page n'a pas de lien de navigation
-# et sa découverte ne doit reposer sur aucun chemin devinable — lui donner un raccourci
-# court irait à l'encontre du durcissement déjà en place dessus (rate-limit, 404 uniforme,
-# interrupteur ADMIN_MEASUREMENTS_ENABLED). Elle reste accessible via son nom de fichier
-# complet uniquement.
+# L'administration du site n'a ni page statique ni raccourci: elle vit sous /auth (voir plus bas)
+# et n'est liée depuis aucune page.
 declare -A SHORT_ROUTES=(
   [tox]="tox.html"
   [legal]="mentions-legales.html"
@@ -234,6 +227,19 @@ if grep -Fq "$HEALTH_MARKER" "$HTACCESS"; then
 else
   printf '\n%s\nRewriteEngine On\nRewriteRule ^health/?$ api/index.php [L]\n' "$HEALTH_MARKER" >> "$HTACCESS"
   log_ok "Règle /health ajoutée dans .htaccess."
+fi
+
+log_step "Configuration .htaccess (/auth vers l'API PHP)"
+# L'administration du site (connexion Google, mesures, mises à jour) répond sous /auth, point
+# d'entrée volontairement discret et lié depuis aucune page. Comme /health, la règle est ici et non
+# dans api/.htaccess (qui ne voit que ce qui commence par /api/). Sans effet visible tant que la
+# configuration Google n'est pas renseignée: l'API répond alors le 404 générique.
+AUTH_MARKER="# /auth (API PHP)"
+if grep -Fq "$AUTH_MARKER" "$HTACCESS"; then
+  log_info "Règle /auth déjà présente dans .htaccess."
+else
+  printf '\n%s\nRewriteEngine On\nRewriteRule ^auth(/.*)?$ api/index.php [L]\n' "$AUTH_MARKER" >> "$HTACCESS"
+  log_ok "Règle /auth ajoutée dans .htaccess."
 fi
 
 log_step "Configuration .htaccess (redirection 301 vers www)"
@@ -343,7 +349,7 @@ log_step "Configuration de l'API (api/.runtime.env)"
 # Seules les variables d'exécution y sont copiées (jamais GIT_TOKEN ni les chemins de déploiement),
 # et seulement si elles sont renseignées: sinon c'est le défaut du code qui s'applique.
 # Le fichier doit être en 600 dès sa création: une redirection simple le crée en 644
-# et laisse une fenêtre où ADMIN_TOKEN/SMTP_PASS sont lisibles par tout le monde.
+# et laisse une fenêtre où GOOGLE_CLIENT_SECRET/SMTP_PASS sont lisibles par tout le monde.
 runtime_line() {
   local name="$1" value="${!1:-}"
   [[ -n "$value" ]] || return 0
@@ -362,7 +368,7 @@ runtime_line() {
   fi
 }
 RUNTIME_VARS=(
-  API_CORS_ORIGIN TRUSTED_PROXIES ADMIN_TOKEN ADMIN_MEASUREMENTS_ENABLED
+  API_CORS_ORIGIN TRUSTED_PROXIES ADMIN_MEASUREMENTS_ENABLED SITE_PUBLIC_URL
   RECAPTCHA_SECRET_KEY RECAPTCHA_SITE_KEY
   SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_USER SMTP_PASS SMTP_FROM CONTACT_DEST SMTP_TIMEOUT_MS
   SFMN_MODE_ENABLED SFMN_CALCULATOR_URL SFMN_DEBUG

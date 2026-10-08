@@ -25,7 +25,7 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 const FRONTEND_FILES = [
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'tox.html',
-    '.tox-complet.html', 'xplore.html', 'admin-mesures.html', 'favicon.ico', 'robots.txt',
+    '.tox-complet.html', 'xplore.html', 'favicon.ico', 'robots.txt',
 ];
 
 // Sans ces fichiers dans la version cible, le site ne saurait plus se mettre à jour lui-même
