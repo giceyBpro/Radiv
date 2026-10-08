@@ -141,3 +141,45 @@ function ensure_private_dir(string $dir): bool
     }
     return true;
 }
+
+// --- Administration du site (connexion Google, mises à jour) -------------------------------
+
+// URL publique de l'API (ex. https://www.example.org/api), sans slash final. Sert à construire
+// l'URL de retour OAuth: jamais déduite de l'en-tête Host, qui est contrôlé par l'appelant.
+function api_public_url(): string
+{
+    return rtrim(env('API_PUBLIC_URL'), '/');
+}
+
+// Adresses Google autorisées à administrer le site (liste séparée par des virgules).
+function admin_google_emails(): array
+{
+    $list = array_map(static fn ($e) => strtolower(trim($e)), explode(',', env('ADMIN_GOOGLE_EMAILS')));
+    return array_values(array_filter($list, static fn ($e) => $e !== ''));
+}
+
+// La page d'administration n'existe (ne répond autre chose que 404) que si tout est configuré.
+function admin_site_enabled(): bool
+{
+    return flag('ADMIN_SITE_ENABLED')
+        && env('GOOGLE_CLIENT_ID') !== '' && env('GOOGLE_CLIENT_SECRET') !== ''
+        && api_public_url() !== '' && admin_google_emails() !== [];
+}
+
+// Les mises à jour depuis l'interface sont désactivées tant qu'on ne les active pas explicitement.
+function admin_update_enabled(): bool
+{
+    return strtolower(env('ADMIN_UPDATE_ENABLED', 'false')) === 'true';
+}
+
+function web_root(): string
+{
+    return dirname(base_dir());
+}
+
+// Variante pour les dossiers de préparation et de destination du site (publics ou temporaires):
+// pas de .htaccess "Require all denied" à y poser, uniquement la création récursive.
+function ensure_dir(string $dir): bool
+{
+    return is_dir($dir) || @mkdir($dir, 0755, true) || is_dir($dir);
+}

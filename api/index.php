@@ -20,8 +20,13 @@ require __DIR__ . '/lib/measurements.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
 require __DIR__ . '/lib/admin.php';
+require __DIR__ . '/lib/session.php';
+require __DIR__ . '/lib/google.php';
+require __DIR__ . '/lib/updater.php';
+require __DIR__ . '/lib/admin_site.php';
 
 use Radiv\Admin;
+use Radiv\AdminSite;
 use Radiv\Calculation;
 use Radiv\Config;
 use Radiv\Contact;
@@ -195,6 +200,11 @@ try {
         header("Content-Disposition: attachment; filename=\"mesures_{$label}.csv\"");
         header('Content-Length: ' . strlen($csv));
         echo $csv;
+        exit;
+    }
+
+    // Page d'administration du site (connexion Google, mises à jour): 404 générique tant qu'elle n'est pas configurée.
+    if (AdminSite\handle($method, $path)) {
         exit;
     }
 
