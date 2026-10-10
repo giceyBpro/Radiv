@@ -34,6 +34,7 @@ use Radiv\Http;
 use Radiv\Measurements;
 use Radiv\Sfmn;
 use Radiv\Store;
+use Radiv\Updater;
 
 Config\boot();
 Http\set_cors_headers();
@@ -69,6 +70,8 @@ try {
             // Affichés par le navigateur (bandeau, copyright): modifiables à chaud dans .runtime.env.
             'site_name' => Config\site_name(),
             'copyright_owner' => Config\copyright_owner(),
+            // Date (AAAA-MM-JJ) de la version installée: change à chaque mise à jour ou retour arrière depuis /auth.
+            'last_updated' => Updater\installed_date(),
         ]);
         exit;
     }

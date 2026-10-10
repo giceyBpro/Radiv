@@ -109,6 +109,14 @@ function write_json_file(string $file, array $data): void
 }
 
 function current_version(): ?array { return read_json_file(state_dir() . '/version.json'); }
+
+// Date (AAAA-MM-JJ, fuseau du serveur) d'installation de la version en place; '' si inconnue.
+function installed_date(): string
+{
+    $at = current_version()['at'] ?? '';
+    $ts = is_string($at) ? strtotime($at) : false;
+    return $ts === false ? '' : date('Y-m-d', $ts);
+}
 function manifest(): array { return read_json_file(state_dir() . '/manifest.json')['files'] ?? []; }
 function backup_dir(): string { return state_dir() . '/backup/prev'; }
 function backup_info(): ?array { return read_json_file(backup_dir() . '/backup.json'); }
