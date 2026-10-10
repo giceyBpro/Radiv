@@ -21,7 +21,7 @@ const MAX_ZIP_BYTES = 20971520;        // 20 Mo: l'archive réelle fait moins de
 const MAX_FILE_BYTES = 10485760;       // 10 Mo par fichier extrait
 const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les "bombes" ZIP)
 
-// Même liste blanche que deploy.sh. api/ et downloads/ sont traités par préfixe (voir allowed()).
+// Même liste blanche que deploy.sh. api/, downloads/ et vendor/ sont traités par préfixe (voir allowed()).
 const FRONTEND_FILES = [
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
@@ -72,6 +72,12 @@ function allowed(string $rel): bool
     if (in_array($rel, FRONTEND_FILES, true)) return true;
     if ($parts[0] === 'downloads') {
         return count($parts) === 2 && preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $parts[1]) === 1;
+    }
+    if ($parts[0] === 'vendor') { // polices et bibliothèques hébergées sur le site (vendor/ ou vendor/fonts/)
+        if (count($parts) < 2 || count($parts) > 3) return false;
+        // Jamais de script serveur ici : seuls les fichiers statiques d'extension connue sont acceptés.
+        if (count($parts) === 3 && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $parts[1]) !== 1) return false;
+        return preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:css|js|woff2?|txt|map)$/', $parts[count($parts) - 1]) === 1;
     }
     if ($parts[0] === 'api' && count($parts) >= 2) {
         if (in_array($parts[1], ['tests', 'logs', 'var'], true)) return false;

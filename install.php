@@ -30,7 +30,7 @@ const DEFAULT_REPO = 'giceyBpro/Radiv';
 const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142&lang=fr';
 
 // Même liste blanche que api/lib/updater.php et deploy.sh (api/tests/test-install.js vérifie
-// qu'elles restent identiques). api/ et downloads/ sont traités par préfixe dans allowed().
+// qu'elles restent identiques). api/, downloads/ et vendor/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
@@ -43,7 +43,7 @@ $REQUIRED_FILES = array(
 $TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à api/.runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER');
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT');
 // Description de api/.runtime.env : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Strictement identique à celle de deploy.sh (api/tests/check-runtime-layout.js le vérifie).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -72,6 +72,7 @@ UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = 
 == Formulaire de contact
 RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
 RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
+RECAPTCHA_MIN_SCORE|Score minimal reCAPTCHA v3 accepté, de 0 (robot) à 1 (humain). Défaut : 0.5.
 SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
 SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
 SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
@@ -90,10 +91,11 @@ SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des donné
 == Mesures et journaux (RGPD)
 MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
 |seulement ; none = rien. Défaut : full.
-LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = conservation illimitée.
+LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = 12 mois. 0 = conservation illimitée (à justifier).
 LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
+SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
 RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
 == Essais en local uniquement
 ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.
@@ -305,6 +307,12 @@ function allowed($rel)
     if ($parts[0] === 'downloads') {
         return count($parts) === 2 && preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $parts[1]) === 1;
     }
+    if ($parts[0] === 'vendor') { // polices et bibliothèques hébergées sur le site (vendor/ ou vendor/fonts/)
+        if (count($parts) < 2 || count($parts) > 3) return false;
+        // Jamais de script serveur ici : seuls les fichiers statiques d'extension connue sont acceptés.
+        if (count($parts) === 3 && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $parts[1]) !== 1) return false;
+        return preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:css|js|woff2?|txt|map)$/', $parts[count($parts) - 1]) === 1;
+    }
     if ($parts[0] === 'api' && count($parts) >= 2) {
         if (in_array($parts[1], array('tests', 'logs', 'var'), true)) return false;
         if ($rel === 'api/.env' || $rel === 'api/.runtime.env') return false;
@@ -452,7 +460,7 @@ function render_form($key, $values, $errors)
         . '<label>Arrondi des durées</label><select name="rounding"><option value="round">Au jour le plus proche (round)</option><option value="floor"' . ((isset($values['rounding']) && $values['rounding'] === 'floor') ? ' selected' : '') . '>Troncature (floor)</option></select>'
         . '<label>Journalisation des mesures</label><select name="logging">'
         . '<option value="full">Complète</option><option value="user"' . ((isset($values['logging']) && $values['logging'] === 'user') ? ' selected' : '') . '>Qui et quand uniquement</option><option value="none"' . ((isset($values['logging']) && $values['logging'] === 'none') ? ' selected' : '') . '>Aucune</option></select>'
-        . '<label>Conservation des journaux (mois, vide = illimitée)</label><input type="text" name="retention" value="' . $v('retention', '3') . '">'
+        . '<label>Conservation des journaux (mois ; vide = 12 ; 0 = illimitée)</label><input type="text" name="retention" value="' . $v('retention', '12') . '">'
         . '<label>Taille maximale d\'un journal mensuel (Mo)</label><input type="text" name="logs_mb" value="' . $v('logs_mb', '5') . '">'
         . '<label class="inline"><input type="checkbox" name="sfmn" value="1"' . (isset($values['sfmn']) ? ' checked' : '') . '> Activer le mode « calcul SFMN » (appelle un site distant)</label>';
     $out .= '<button type="submit">Installer</button></form>';
@@ -480,7 +488,7 @@ function render_env_summary($key, $d, $extras, $errors, $needToken, $inside)
         array('Contact (SMTP)', $d['smtp_host'] !== '' ? $d['smtp_host'] . ':' . $d['smtp_port'] . ($d['smtp_secure'] ? ' (TLS direct)' : ' (STARTTLS)') . ', utilisateur ' . $d['smtp_user'] . ', mot de passe ' . mask($d['smtp_pass']) . ', vers ' . $d['contact_dest'] : '— (non configuré)'),
         array('reCAPTCHA', $d['recaptcha_site'] !== '' ? 'clé du site ' . $d['recaptcha_site'] . ', clé secrète ' . mask($d['recaptcha_secret']) : '—'),
         array('Mode SFMN', $d['sfmn'] ? 'activé' : 'désactivé'),
-        array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] !== '' ? $d['retention'] . ' mois' : 'illimitée') . ', journal ' . $d['logs_mb'] . ' Mo'),
+        array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] === '' ? '12 mois (défaut)' : ($d['retention'] === '0' ? 'illimitée' : $d['retention'] . ' mois')) . ', journal ' . $d['logs_mb'] . ' Mo'),
         array('Autres variables transmises', $extras ? implode(', ', array_keys($extras)) : '—'),
     );
     $out = '<h2>Configuration lue dans le fichier .env</h2><table>';
@@ -696,7 +704,7 @@ function validate_inputs($src)
     if ($d['sfmn_url'] !== '' && !preg_match('#^https://[^\s"\'<>]{4,250}$#', $d['sfmn_url'])) $e[] = 'Adresse SFMN invalide (https:// attendu).';
     if (!in_array($d['rounding'], array('round', 'floor'), true)) $e[] = 'Arrondi invalide.';
     if (!in_array($d['logging'], array('full', 'user', 'none'), true)) $e[] = 'Niveau de journalisation invalide.';
-    if ($d['retention'] !== '' && !preg_match('/^[1-9]\d{0,2}$/', $d['retention'])) $e[] = 'Conservation des journaux invalide.';
+    if ($d['retention'] !== '' && !preg_match('/^(?:0|[1-9]\d{0,2})$/', $d['retention'])) $e[] = 'Conservation des journaux invalide.';
     if (!preg_match('/^[1-9]\d{0,2}$/', $d['logs_mb'])) $e[] = 'Taille de journal invalide.';
     return array($d, $e);
 }
@@ -713,6 +721,14 @@ function htaccess_blocks($siteUrl)
     }
     $blocks['# /health (API PHP)'] = "# /health (API PHP)\nRewriteEngine On\nRewriteRule ^health/?$ api/index.php [L]\n";
     $blocks['# /auth (API PHP)'] = "# /auth (API PHP)\nRewriteEngine On\nRewriteRule ^auth(/.*)?$ api/index.php [L]\n";
+    // Pas de redirection www/HTTPS pour un essai local (http://127.0.0.1) : seulement si le site est en https.
+    $isHttps = strpos($siteUrl, 'https://') === 0;
+    $headers = "<IfModule mod_headers.c>\nHeader setifempty X-Content-Type-Options \"nosniff\"\nHeader setifempty X-Frame-Options \"DENY\"\n"
+        . "Header setifempty Referrer-Policy \"strict-origin-when-cross-origin\"\n"
+        . "Header setifempty Permissions-Policy \"camera=(), microphone=(), geolocation=(), payment=()\"\n"
+        . "Header setifempty Content-Security-Policy \"frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'\"\n"
+        . ($isHttps ? "Header setifempty Strict-Transport-Security \"max-age=31536000\"\n" : '') . "</IfModule>\n";
+    $blocks['# En-têtes de sécurité des pages v1'] = "# En-têtes de sécurité des pages v1\n" . $headers;
     $host = preg_replace('#^https?://#', '', $siteUrl);
     if (strpos($host, 'www.') === 0 && strpos($siteUrl, 'https://') === 0) {
         $re = str_replace('.', '\\.', preg_replace('/:\d+$/', '', $host));
@@ -896,7 +912,13 @@ try {
     foreach (htaccess_blocks($site) as $marker => $block) {
         if (strpos($existing, $marker) === false) $add .= "\n" . $block;
     }
-    if (@file_put_contents($ht, $existing . $add) === false) throw new RuntimeException('Écriture impossible : .htaccess');
+    // Redirection HTTP -> HTTPS (308 : un POST garde sa méthode et son corps), placée en TÊTE pour passer avant les autres règles.
+    $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
+    $head = '';
+    if (strpos($site, 'https://') === 0 && strpos($existing, $httpsMarker) === false) {
+        $head = $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
+    }
+    if (@file_put_contents($ht, $head . $existing . $add) === false) throw new RuntimeException('Écriture impossible : .htaccess');
     $written[] = '.htaccess';
 
     // 6) Configuration de l'API (jamais écrasée par les mises à jour) et dossiers de données protégés

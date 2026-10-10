@@ -19,6 +19,10 @@
     .status { margin-top:10px; font-weight:700; }
     .status.ok { color:var(--ok); }
     .status.err { color:var(--err); }
+    .consent { display:flex; gap:10px; align-items:flex-start; font-weight:400; margin-top:16px; }
+    .consent input { width:auto; margin-top:4px; }
+    .privacy { font-size:.9rem; color:#444; margin-top:12px; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
   </style>
 </head>
 <body>
@@ -32,8 +36,14 @@
       <label for="message">Message</label>
       <textarea id="message" name="message" required></textarea>
 
-      <button type="submit">Envoyer</button>
+      <label class="consent" id="consentRow" for="recaptchaConsent" hidden>
+        <input id="recaptchaConsent" type="checkbox">
+        <span>J'accepte le chargement de Google reCAPTCHA (protection anti-spam) pour envoyer ce message. Mon adresse IP et des données techniques de mon navigateur seront transmises à Google, qui peut déposer des cookies. Sans cet accord, le message ne peut pas être envoyé.</span>
+      </label>
+
+      <button type="submit" id="sendBtn">Envoyer</button>
       <div id="status" class="status"></div>
+      <p class="privacy">Votre adresse e-mail, votre message, votre adresse IP et la date d'envoi sont transmis par e-mail à l'éditeur du site, uniquement pour vous répondre ; le site ne les enregistre pas par ailleurs. Détails et exercice de vos droits : <a href="/legal#donnees">mentions légales, protection des données</a>.</p>
     </form>
   </main>
 
@@ -83,15 +93,15 @@
       return window.grecaptcha.execute(recaptchaSiteKey, { action: 'contact_form' });
     }
 
+    // Le script de Google n'est chargé qu'après l'accord de l'utilisateur (case à cocher), jamais à l'ouverture de la page.
+    let recaptchaConsent = false;
     async function ensureRecaptchaReady() {
       if (!recaptchaSiteKey) return;
       if (recaptchaReady) return;
+      if (!recaptchaConsent) throw new Error('Cochez la case d\'accord reCAPTCHA pour envoyer le message.');
       if (!recaptchaInitPromise) {
-        recaptchaInitPromise = (async () => {
-          await loadPublicConfig();
-          if (!recaptchaSiteKey) return;
-          await loadRecaptchaV3();
-        })();
+        recaptchaInitPromise = loadRecaptchaV3();
+        recaptchaInitPromise.catch(() => { recaptchaInitPromise = null; });
       }
       await recaptchaInitPromise;
     }
@@ -140,18 +150,28 @@
 
       setStatus('Message envoyé avec succès.', true);
       document.getElementById('contactForm').reset();
+      document.getElementById('recaptchaConsent').checked = recaptchaConsent; // l'accord donné reste valable pour cette visite
     });
 
     (async () => {
       try {
         await loadPublicConfig();
-        if (recaptchaSiteKey) {
-          recaptchaInitPromise = ensureRecaptchaReady();
-          await recaptchaInitPromise;
-        }
       } catch (err) {
-        // reCAPTCHA optionnel: pas d'erreur bloquante côté utilisateur
+        // configuration indisponible: l'envoi échouera avec un message d'erreur de l'API
       }
+      if (!recaptchaSiteKey) return;
+      const row = document.getElementById('consentRow');
+      const box = document.getElementById('recaptchaConsent');
+      const send = document.getElementById('sendBtn');
+      row.hidden = false;
+      send.disabled = true;
+      box.addEventListener('change', async () => {
+        recaptchaConsent = box.checked;
+        send.disabled = !recaptchaConsent;
+        if (recaptchaConsent) {
+          try { await ensureRecaptchaReady(); } catch (err) { setStatus(err.message || 'reCAPTCHA indisponible.', false); }
+        }
+      });
     })();
   </script>
 </body>

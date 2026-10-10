@@ -15,6 +15,7 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
 | `config.js` | Configuration runtime (URLs API/site) injectée par `deploy.sh` en production. |
+| `vendor/` | Polices et bibliothèques d'impression hébergées sur le site (aucun CDN ; licences dans `vendor/LICENSES.txt`). |
 | `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
 | `robots.txt` | Autorise l'indexation de la page d'accueil uniquement (voir [Référencement](#référencement)). |
 
@@ -168,7 +169,7 @@ il est basculé en `.1` avant de reprendre à zéro.
 `user` (horodatage + IP + géolocalisation uniquement, pas les données du calcul), `full`
 (défaut, comportement ci-dessus). `LOGS_RETENTION_MONTHS` purge automatiquement (au plus
 une fois par jour, déclenchée par une requête) les fichiers mensuels plus vieux que N mois ; vide par
-défaut = rétention illimitée.
+défaut = 12 mois ; `0` = rétention illimitée.
 
 Ces deux réglages sont reflétés automatiquement sur `mentions-legales.html` (via
 `GET /api/public-config`) : la section protection des données décrit toujours l'état réel
@@ -277,6 +278,18 @@ Même effet qu'une mise à jour depuis `/auth` (le script appelle le même code 
 #### Onglet « Test SFMN »
 
 Même si le calcul SFMN est désactivé sur le site (`SFMN_MODE_ENABLED=false`), `https://<votre-domaine>/auth/test-sfmn` permet de l'essayer : c'est la **page d'accueil du site elle-même** (`index.html` + `app.js`, donc toujours à jour avec elle), servie avec une autre feuille de style (fond orangé, bandeau « TEST SFMN », `api/assets/test-sfmn.css`) pour ne pas la confondre avec le site. Le calcul SFMN y est toujours proposé et choisi par défaut ; les appels passent par `/auth/test-sfmn/api/*` (réservés à une session d'administration, même origine exigée, 20 essais par minute), jamais par l'API publique. **Rien n'est enregistré dans les mesures.** Sous le tableau, deux volets repliés (`api/assets/test-sfmn.js`) : la **comparaison avec le calcul local** (écart par scénario) et les **détails techniques SFMN** (échanges avec le site distant, même si `SFMN_DEBUG=false`). La page n'ajoute aucun script tiers : la CSP n'autorise que les scripts du site. Vérifié par `test-admin-site.js` et `test-browser-admin.js`.
+
+### Sécurité et conformité (RGPD)
+
+- **Aucun service tiers au simple affichage d'une page** : polices (Archivo, Source Sans 3, IBM Plex Mono) et bibliothèques d'impression (html2canvas, jsPDF) sont hébergées dans `vendor/` (licences dans `vendor/LICENSES.txt`) ; Leaflet l'est dans `api/assets/`. Les empreintes SRI de l'ancienne version CDN ont été vérifiées identiques aux fichiers hébergés.
+- **reCAPTCHA** (formulaire de contact uniquement) : le script de Google n'est chargé qu'après avoir coché une case d'accord explicite ; sans elle, l'envoi est bloqué. Côté serveur, le jeton est contrôlé (succès, action `contact_form`, nom de domaine, score ≥ `RECAPTCHA_MIN_SCORE`, 0,5 par défaut).
+- **Conservation des journaux** : 12 mois par défaut (`LOGS_RETENTION_MONTHS`), `0` pour une conservation illimitée. La purge s'applique aussi aux journaux existants, au plus une fois par jour. Les mentions légales (`/legal`) décrivent automatiquement la configuration réelle ; services de géolocalisation d'IP et reCAPTCHA y sont déclarés.
+- **HTTPS et en-têtes** : `deploy.sh` et `install.php` ajoutent dans `.htaccess` (si le site est en `https://`) une redirection HTTP → HTTPS en tête de fichier (308 : un POST garde sa méthode et son corps) et, pour les pages, des en-têtes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, une CSP limitée aux directives sans effet sur les scripts en ligne (`frame-ancestors`, `base-uri`, `object-src`, `form-action`) et HSTS (sans `includeSubDomains`, pour ne pas imposer HTTPS à d'éventuels sous-domaines). Ils ne remplacent pas ceux de l'API et de `/auth`, plus stricts (`setifempty`). Nécessite `mod_headers` (sinon ignorés sans erreur).
+- **Adresse IP derrière un proxy** : `X-Forwarded-For` est lu de droite à gauche en ignorant les proxys déclarés dans `TRUSTED_PROXIES` ; ce qui est à gauche est écrit par le client et n'est jamais cru.
+- **Interrogations du site SFMN** : plafond global `SFMN_GLOBAL_RATE_LIMIT` (120 par minute, tous visiteurs) et résultats identiques réutilisés 10 minutes, pour ne pas servir de relais d'abus vers ce site.
+- **À faire de votre côté** (hors code) : registre des traitements, accords de sous-traitance (hébergeur, messagerie), procédure en cas de violation de données, qualification éventuelle du logiciel au regard du règlement (UE) 2017/745 sur les dispositifs médicaux, et accord du site SFMN pour l'interrogation automatisée de son outil.
+
+Vérifié par `test-client-ip.php`, `test-config-store.php`, `test-recaptcha.js`, `test-browser-contact.js`, `test-install.js` et `test-admin-site.js`.
 
 ### Tests
 

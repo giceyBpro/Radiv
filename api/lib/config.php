@@ -82,15 +82,19 @@ function logging_level(): string
 }
 
 // Purge automatique des fichiers de logs plus vieux que N mois. Vide/absent = pas de purge.
+// Durée de conservation des journaux de mesures, en mois. Sans réglage: 12 mois (limitation de la durée de
+// conservation, RGPD). « 0 » désactive explicitement la purge (conservation illimitée, à justifier).
+const DEFAULT_RETENTION_MONTHS = 12;
+
 function logs_retention_months(): ?int
 {
     $raw = trim(env('LOGS_RETENTION_MONTHS'));
-    if ($raw === '') return null;
-    if (!preg_match('/^\d+$/', $raw) || (int) $raw <= 0) {
-        error_log("LOGS_RETENTION_MONTHS invalide ({$raw}); purge désactivée");
-        return null;
+    if ($raw === '') return DEFAULT_RETENTION_MONTHS;
+    if (!preg_match('/^\d+$/', $raw)) {
+        error_log("LOGS_RETENTION_MONTHS invalide ({$raw}); " . DEFAULT_RETENTION_MONTHS . ' mois appliqués');
+        return DEFAULT_RETENTION_MONTHS;
     }
-    return (int) $raw;
+    return (int) $raw > 0 ? (int) $raw : null;
 }
 
 // Proxies autorisés à définir X-Forwarded-For. Absent = reverse-proxy local; défini mais

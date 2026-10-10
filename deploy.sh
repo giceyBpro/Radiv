@@ -162,6 +162,8 @@ rsync -a --delete \
   --include='config.js' \
   --include='downloads/' \
   --include='downloads/**' \
+  --include='vendor/' \
+  --include='vendor/**' \
   --exclude='*' \
   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
@@ -223,6 +225,37 @@ for route in "${!SHORT_ROUTES[@]}"; do
     log_ok "Règle /$route ajoutée dans .htaccess."
   fi
 done
+
+log_step "Configuration .htaccess (HTTPS et en-têtes de sécurité des pages)"
+# Redirection HTTP -> HTTPS (308: la méthode et le corps d'un POST sont conservés) placée en TÊTE du fichier, pour
+# passer avant les autres règles; uniquement si le site est déclaré en https. En-têtes de sécurité posés seulement
+# s'ils ne le sont pas déjà (setifempty): l'API et /auth envoient les leurs, plus stricts, qui restent prioritaires.
+HTTPS_MARKER="# /https (redirection HTTP vers HTTPS) v1"
+if [[ "$SITE_PUBLIC_URL" == https://* ]]; then
+  if grep -Fq "$HTTPS_MARKER" "$HTACCESS"; then
+    log_info "Redirection HTTPS déjà présente dans .htaccess."
+  else
+    _tmp_ht="$(mktemp)"
+    printf '%s\nRewriteEngine On\nRewriteCond %%{HTTPS} off\nRewriteCond %%{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%%{HTTP_HOST}%%{REQUEST_URI} [L,R=308]\n\n' "$HTTPS_MARKER" > "$_tmp_ht"
+    cat "$HTACCESS" >> "$_tmp_ht" && cat "$_tmp_ht" > "$HTACCESS" && rm -f "$_tmp_ht"
+    log_ok "Redirection HTTP -> HTTPS ajoutée en tête de .htaccess."
+  fi
+fi
+HEADERS_MARKER="# En-têtes de sécurité des pages v1"
+if grep -Fq "$HEADERS_MARKER" "$HTACCESS"; then
+  log_info "En-têtes de sécurité déjà présents dans .htaccess."
+else
+  {
+    printf '\n%s\n<IfModule mod_headers.c>\n' "$HEADERS_MARKER"
+    printf 'Header setifempty X-Content-Type-Options "nosniff"\nHeader setifempty X-Frame-Options "DENY"\n'
+    printf 'Header setifempty Referrer-Policy "strict-origin-when-cross-origin"\n'
+    printf 'Header setifempty Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"\n'
+    printf 'Header setifempty Content-Security-Policy "frame-ancestors '"'"'none'"'"'; base-uri '"'"'self'"'"'; object-src '"'"'none'"'"'; form-action '"'"'self'"'"'"\n'
+    [[ "$SITE_PUBLIC_URL" == https://* ]] && printf 'Header setifempty Strict-Transport-Security "max-age=31536000"\n'
+    printf '</IfModule>\n'
+  } >> "$HTACCESS"
+  log_ok "En-têtes de sécurité ajoutés dans .htaccess."
+fi
 
 log_step "Configuration .htaccess (/health vers l'API PHP)"
 # /health est la seule route hors /api/: elle est réécrite vers le point d'entrée de l'API
@@ -400,6 +433,7 @@ UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = 
 == Formulaire de contact
 RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
 RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
+RECAPTCHA_MIN_SCORE|Score minimal reCAPTCHA v3 accepté, de 0 (robot) à 1 (humain). Défaut : 0.5.
 SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
 SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
 SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
@@ -418,10 +452,11 @@ SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des donné
 == Mesures et journaux (RGPD)
 MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
 |seulement ; none = rien. Défaut : full.
-LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = conservation illimitée.
+LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = 12 mois. 0 = conservation illimitée (à justifier).
 LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
+SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
 RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
 == Essais en local uniquement
 ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.

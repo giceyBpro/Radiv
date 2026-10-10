@@ -92,6 +92,40 @@ function geo_set(string $ip, array $geo): void
     }, null);
 }
 
+// Cache de résultats SFMN (entrées identiques → même résultat) : limite les interrogations du site distant.
+const RESULT_TTL_SECONDS = 600;
+const RESULT_CACHE_MAX = 300;
+
+function result_get(string $key): ?array
+{
+    if (use_apcu()) {
+        $hit = apcu_fetch("radiv:res:{$key}", $ok);
+        return $ok && is_array($hit) ? $hit : null;
+    }
+    $result = null;
+    with_json_file('result-cache.json', static function (array $table) use ($key, &$result): array {
+        $entry = $table[$key] ?? null;
+        if ($entry && time() - ($entry['at'] ?? 0) < RESULT_TTL_SECONDS) $result = $entry['value'];
+        return [$table, null];
+    }, true);
+    return $result;
+}
+
+function result_set(string $key, array $value): void
+{
+    if (use_apcu()) {
+        apcu_store("radiv:res:{$key}", $value, RESULT_TTL_SECONDS);
+        return;
+    }
+    with_json_file('result-cache.json', static function (array $table) use ($key, $value): array {
+        $now = time();
+        $table = array_filter($table, static fn ($e) => $now - ($e['at'] ?? 0) < RESULT_TTL_SECONDS);
+        $table[$key] = ['at' => $now, 'value' => $value];
+        while (count($table) > RESULT_CACHE_MAX) unset($table[array_key_first($table)]);
+        return [$table, null];
+    }, null);
+}
+
 // Lecture-modification-écriture atomique d'un fichier JSON sous verrou exclusif.
 // $fallback: valeur renvoyée si le fichier est inutilisable (volontairement permissif pour le
 // rate-limit côté appelant: ne pas bloquer le service si var/ n'est pas inscriptible, c'est

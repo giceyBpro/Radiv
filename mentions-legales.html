@@ -100,7 +100,7 @@
       français.
     </p>
 
-    <h2 class="section-break">Protection des données personnelles</h2>
+    <h2 class="section-break" id="donnees">Protection des données personnelles</h2>
     <p class="muted">Cette section décrit les données traitées par ce site, conformément au RGPD.</p>
 
     <h2>Responsable du traitement</h2>
@@ -115,8 +115,12 @@
     <h2>Données collectées</h2>
     <p id="donneesCollectees">Chargement…</p>
     <p class="muted">
-      Si vous utilisez le <a href="/contact">formulaire de contact</a>, votre adresse email et
-      le contenu de votre message sont transmis par email à l'éditeur du site, pour vous répondre.
+      Si vous utilisez le <a href="/contact">formulaire de contact</a>, votre adresse email, le
+      contenu de votre message, votre adresse IP et la date d'envoi sont transmis par email à
+      l'éditeur du site, uniquement pour vous répondre (base légale : votre démarche volontaire /
+      intérêt légitime à répondre). Le site ne les enregistre pas ; ils restent dans la boîte de
+      réception de l'éditeur le temps nécessaire au traitement de votre demande. L'envoi est
+      protégé par Google reCAPTCHA, chargé seulement si vous cochez la case d'accord prévue à cet effet.
     </p>
 
     <h2>Durée de conservation</h2>
@@ -127,10 +131,15 @@
 
     <h2>Cookies et stockage local</h2>
     <p>
-      Ce site n'utilise pas de cookie de suivi. Un stockage local (<code>localStorage</code> /
+      Ce site ne dépose aucun cookie de suivi ni de mesure d'audience. Seul le formulaire de contact
+      peut, <strong>après votre accord</strong> (case à cocher), charger Google reCAPTCHA, qui peut
+      déposer des cookies et collecter des données techniques de votre navigateur ; sans accord, rien
+      n'est chargé. Les polices et bibliothèques utilisées par les pages sont hébergées sur ce site :
+      aucun service tiers n'est appelé au simple affichage d'une page. Un stockage local (<code>localStorage</code> /
       <code>sessionStorage</code>) est utilisé uniquement pour transmettre le résultat d'un calcul
       entre les pages de ce site (ex. vue imprimable) : il reste sur votre appareil et n'est jamais
-      transmis au serveur.
+      transmis au serveur. L'espace d'administration (accès réservé, non lié depuis le site) utilise
+      en outre un cookie de session strictement nécessaire à la connexion de l'éditeur.
     </p>
 
     <h2>Vos droits</h2>
@@ -175,12 +184,12 @@
       const items = [];
       if (level !== 'none') {
         items.push(
-          'Services de géolocalisation d’adresse IP (ipapi.co, ip-api.com) : votre adresse IP leur est transmise pour en déduire une localisation approximative.'
+          'Services de géolocalisation d’adresse IP (ipwho.is, puis ipapi.co et ip-api.com en secours) : votre adresse IP leur est transmise pour en déduire une localisation approximative. Ces services tiers peuvent être établis hors de l’Union européenne ; seule l’adresse IP leur est communiquée, sans autre donnée.'
         );
       }
       if (recaptchaEnabled) {
         items.push(
-          'Google reCAPTCHA, sur le formulaire de contact uniquement, pour la protection anti-spam.'
+          'Google reCAPTCHA (Google, États-Unis), sur le formulaire de contact uniquement et seulement après votre accord, pour la protection anti-spam : votre adresse IP et des données techniques de votre navigateur lui sont transmises.'
         );
       }
       if (sfmnEnabled) {
@@ -188,7 +197,7 @@
           'Si vous choisissez le mode de calcul "SFMN" : les paramètres de votre calcul (radiopharmaceutique, débit de dose, taille, nombre de cures — sans autre donnée) sont transmis à l’outil SFMN de référence, hébergé par un tiers, pour effectuer le calcul.'
         );
       }
-      if (!items.length) return 'Aucun destinataire tiers.';
+      items.push('Hébergeur du site (O2SWITCH) et prestataire de messagerie qui achemine les messages du formulaire de contact, en tant que sous-traitants techniques.');
       return items;
     }
 

@@ -42,7 +42,7 @@ function verify_recaptcha(string $token, string $ip): bool
     }
     $params = ['secret' => $secret, 'response' => $token];
     if ($ip !== '') $params['remoteip'] = $ip;
-    $response = Http\fetch('https://www.google.com/recaptcha/api/siteverify', [
+    $response = Http\fetch(Config\env('RECAPTCHA_VERIFY_URL', 'https://www.google.com/recaptcha/api/siteverify'), [
         'method' => 'POST',
         'headers' => ['Content-Type: application/x-www-form-urlencoded'],
         'body' => http_build_query($params, '', '&', PHP_QUERY_RFC1738),
@@ -50,7 +50,27 @@ function verify_recaptcha(string $token, string $ip): bool
     ]);
     if (!$response || $response['status'] < 200 || $response['status'] > 299) return false;
     $data = json_decode($response['body'], true);
-    return is_array($data) && ($data['success'] ?? null) === true;
+    if (!is_array($data) || ($data['success'] ?? null) !== true) return false;
+    // reCAPTCHA v3 renseigne action, score et hostname : un jeton obtenu pour une autre action, un autre site ou
+    // jugé « robot » est refusé. Les champs absents (clé v2) ne sont pas exigés.
+    if (isset($data['action']) && $data['action'] !== 'contact_form') return false;
+    if (isset($data['hostname'])) {
+        $siteHost = parse_url(Config\site_public_url(), PHP_URL_HOST);
+        if (is_string($siteHost) && $siteHost !== '' && !hostname_matches((string) $data['hostname'], $siteHost)) return false;
+    }
+    if (isset($data['score'])) {
+        $raw = trim(Config\env('RECAPTCHA_MIN_SCORE', '0.5'));
+        $min = is_numeric($raw) ? max(0.0, min(1.0, (float) $raw)) : 0.5;
+        if (!is_numeric($data['score']) || (float) $data['score'] < $min) return false;
+    }
+    return true;
+}
+
+// Le jeton vaut pour le site déclaré, avec ou sans « www. ».
+function hostname_matches(string $given, string $site): bool
+{
+    $strip = static fn (string $h): string => preg_replace('/^www\./i', '', strtolower($h)) ?? $h;
+    return $strip($given) === $strip($site);
 }
 
 // Lit une réponse SMTP complète (lignes "250-..." puis "250 ..."). Lève une exception sur
