@@ -18,6 +18,13 @@
 // ============================================================================================
 
 const INSTALL_KEY = 'CHANGEZ-MOI';
+// Fichier .env de déploiement lu par l'installeur s'il existe. Formes acceptées : relatif au dossier du
+// site ('../.env'), absolu ('/home/utilisateur/prive/.env') ou depuis le dossier personnel ('~/prive/.env').
+// Par défaut : le dossier PARENT du site (chez OVH, au-dessus de www/), non accessible depuis le web.
+// Ce chemin n'est pas un secret ; le jeton GitHub, lui, ne doit JAMAIS être écrit dans ce fichier-ci (install.php) :
+// mettez-le dans le .env (UPDATE_GITHUB_TOKEN) ou saisissez-le dans la page. Mettre '' pour désactiver la lecture.
+// Un fichier placé dans le dossier public serait lisible par tous : il est alors supprimé après l'installation.
+const ENV_FILE = '../.env';
 const GITHUB_API = 'https://api.github.com';   // modifié uniquement par les tests (faux GitHub local)
 const DEFAULT_REPO = 'giceyBpro/Radiv';
 const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142&lang=fr';
@@ -33,6 +40,10 @@ $REQUIRED_FILES = array(
     'index.html', 'api/.htaccess', 'api/index.php', 'api/calculation.php', 'api/lib/config.php',
     'api/lib/updater.php', 'api/lib/admin_site.php', 'api/lib/google.php', 'api/lib/session.php',
 );
+$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url');
+$BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
+// Variables du .env transmises telles quelles à api/.runtime.env (réglages sans champ de formulaire).
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS');
 const MAX_ZIP_BYTES = 20971520;
 const MAX_FILE_BYTES = 10485760;
 const MAX_TOTAL_BYTES = 52428800;
@@ -394,6 +405,46 @@ function render_form($key, $values, $errors)
     return $out;
 }
 
+function isInsideDocroot($path, $docroot)
+{
+    return strpos($path, $docroot . '/') === 0;
+}
+
+function mask($value)
+{
+    return $value === '' ? '— (non renseigné)' : '●●● (renseigné)';
+}
+
+// Résumé de la configuration lue dans le .env (secrets masqués, jamais renvoyés dans le HTML).
+function render_env_summary($key, $d, $extras, $errors, $needToken, $inside)
+{
+    $rows = array(
+        array('Dépôt', $d['repo']), array('Version (GIT_BRANCH)', $d['ref']), array('Adresse du site', $d['site_url']),
+        array('Connexion Google', $d['google_id'] !== '' ? 'identifiant ' . $d['google_id'] . ', secret ' . mask($d['google_secret']) : '— (non configurée : /auth répondra 404)'),
+        array('Adresses administrateur', $d['admin_emails'] !== '' ? $d['admin_emails'] : '—'),
+        array('Mises à jour depuis /auth', $d['update_enabled'] ? 'autorisées' : 'désactivées'),
+        array('Contact (SMTP)', $d['smtp_host'] !== '' ? $d['smtp_host'] . ':' . $d['smtp_port'] . ($d['smtp_secure'] ? ' (TLS direct)' : ' (STARTTLS)') . ', utilisateur ' . $d['smtp_user'] . ', mot de passe ' . mask($d['smtp_pass']) . ', vers ' . $d['contact_dest'] : '— (non configuré)'),
+        array('reCAPTCHA', $d['recaptcha_site'] !== '' ? 'clé du site ' . $d['recaptcha_site'] . ', clé secrète ' . mask($d['recaptcha_secret']) : '—'),
+        array('Mode SFMN', $d['sfmn'] ? 'activé' : 'désactivé'),
+        array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] !== '' ? $d['retention'] . ' mois' : 'illimitée') . ', journal ' . $d['logs_mb'] . ' Mo'),
+        array('Autres variables transmises', $extras ? implode(', ', array_keys($extras)) : '—'),
+    );
+    $out = '<h2>Configuration lue dans le fichier .env</h2><table>';
+    foreach ($rows as $r) $out .= '<tr><td>' . h($r[0]) . '</td><td>' . h($r[1]) . '</td></tr>';
+    $out .= '</table>';
+    if ($inside) {
+        $out .= '<p class="msg">Ce fichier est dans le dossier public du site : il peut être lu par n\'importe qui tant qu\'il y reste. Il sera supprimé à la fin de l\'installation. Placez-le de préférence dans le dossier parent.</p>';
+    }
+    if ($errors) {
+        return $out . '<p class="msg">' . implode('<br>', array_map('h', $errors)) . '</p><p>Corrigez le fichier .env puis rechargez cette page (relancez la vérification).</p>'
+            . '<form method="post"><input type="hidden" name="step" value="check"><input type="hidden" name="key" value="' . h($key) . '"><button type="submit">Relire le fichier .env</button></form>';
+    }
+    $out .= '<form method="post" autocomplete="off"><input type="hidden" name="step" value="install"><input type="hidden" name="key" value="' . h($key) . '"><input type="hidden" name="use_env" value="1">'
+        . '<label>Version à installer (tag, branche ou commit)</label><input type="text" name="ref" value="' . h($d['ref']) . '" required>';
+    if ($needToken) $out .= '<label>Jeton d\'accès</label><input type="password" name="token" required>';
+    return $out . '<button type="submit">Installer</button></form>';
+}
+
 if ($step === 'check') {
     $key = (string) $_POST['key'];
     $rows = diagnostics($docroot);
@@ -408,7 +459,24 @@ if ($step === 'check') {
         $out .= '<p class="msg">Corrigez les points en échec avant d\'installer. Si l\'extension zip ou les connexions sortantes sont indisponibles, l\'installation se fait par FTP (voir le README).</p>';
         page('Installation du site', $out, 200);
     }
-    page('Installation du site', $out . render_form($key, array(), array()));
+    $envPath = find_env_file($docroot);
+    if ($envPath === null) {
+        $note = ENV_FILE === '' ? '' : '<p class="small">Aucun fichier .env lisible à l\'emplacement prévu (<code>' . h(ENV_FILE) . '</code>) : saisie manuelle de la configuration.</p>';
+        page('Installation du site', $out . $note . render_form($key, array(), array()));
+    }
+    // Un .env de déploiement a été trouvé: la configuration vient de lui, la page ne demande que la version
+    // et, si aucun jeton du fichier n'est accepté par GitHub, le jeton d'accès.
+    $env = parse_env_file($envPath);
+    list($src, $extras, $envTokens) = env_to_source($env === null ? array() : $env);
+    list($d, $errors) = validate_inputs($src);
+    $errors = array_merge($errors, validate_extras($extras));
+    $needToken = true;
+    if (!$errors && function_exists('curl_init')) {
+        $cands = array();
+        foreach ($envTokens as $n => $v) $cands[] = array($v, $n);
+        $needToken = first_valid_token($d['repo'], $cands) === null;
+    }
+    page('Installation du site', $out . render_env_summary($key, $d, $extras, $errors, $needToken, isInsideDocroot($envPath, $docroot)));
 }
 
 // --- Étape 2 : installation --------------------------------------------------------------------
@@ -418,18 +486,139 @@ function field($name)
     return isset($_POST[$name]) && is_string($_POST[$name]) ? trim($_POST[$name]) : '';
 }
 
-function validate_inputs()
+// Valeurs saisies dans le formulaire manuel.
+function post_fields()
+{
+    global $TEXT_FIELDS, $BOOL_FIELDS;
+    $src = array();
+    foreach ($TEXT_FIELDS as $name) $src[$name] = field($name);
+    foreach ($BOOL_FIELDS as $name) $src[$name] = isset($_POST[$name]) && $_POST[$name] === '1';
+    return $src;
+}
+
+// Lecture d'un fichier .env (mêmes règles que api/lib/config.php: guillemets, commentaires " #").
+function parse_env_file($path)
+{
+    $content = @file_get_contents($path);
+    if ($content === false) return null;
+    $out = array();
+    foreach (preg_split('/\r?\n/', $content) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (strpos($line, 'export ') === 0) $line = ltrim(substr($line, 7));
+        $i = strpos($line, '=');
+        if ($i === false) continue;
+        $name = trim(substr($line, 0, $i));
+        if (!preg_match('/^[A-Z][A-Z0-9_]*$/', $name)) continue;
+        $value = trim(substr($line, $i + 1));
+        if ($value !== '' && ($value[0] === '"' || $value[0] === "'")) {
+            $close = strpos($value, $value[0], 1);
+            if ($close !== false) $value = substr($value, 1, $close - 1);
+        } elseif (preg_match('/\s#/', $value, $m, PREG_OFFSET_CAPTURE)) {
+            $value = trim(substr($value, 0, $m[0][1]));
+        }
+        $out[$name] = $value;
+    }
+    return $out;
+}
+
+// Chemin réel du .env à lire, ou null (absent, illisible, ou open_basedir qui l'interdit).
+// Dossier personnel de l'utilisateur de l'hébergement (pour '~/...'), ou null s'il n'est pas déterminable.
+function home_dir()
+{
+    foreach (array(getenv('HOME'), isset($_SERVER['HOME']) ? $_SERVER['HOME'] : '') as $home) {
+        if (is_string($home) && $home !== '' && $home[0] === '/') return rtrim($home, '/');
+    }
+    if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
+        $pw = @posix_getpwuid(posix_geteuid());
+        if (is_array($pw) && !empty($pw['dir'])) return rtrim($pw['dir'], '/');
+    }
+    return null;
+}
+
+function find_env_file($docroot)
+{
+    if (ENV_FILE === '') return null;
+    $path = ENV_FILE;
+    if ($path === '~' || strpos($path, '~/') === 0) {
+        $home = home_dir();
+        if ($home === null) return null; // '~' non résoluble ici: utiliser un chemin absolu
+        $path = $home . substr($path, 1);
+    } elseif ($path[0] !== '/') {
+        $path = $docroot . '/' . $path;
+    }
+    $real = @realpath($path);
+    return ($real !== false && is_file($real) && is_readable($real)) ? $real : null;
+}
+
+// Traduit un .env en valeurs d'installation. Retourne array($src, $extras, $tokens) où $tokens liste les
+// jetons éventuellement présents (nom => valeur). Les secrets ne sont jamais renvoyés au navigateur.
+function env_to_source($env)
+{
+    global $PASSTHROUGH_VARS;
+    $get = function ($n, $default = '') use ($env) {
+        return isset($env[$n]) ? $env[$n] : $default;
+    };
+    $repo = $get('UPDATE_GITHUB_REPO');
+    if ($repo === '' && preg_match('#^https://(?:[^@/]+@)?github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?$#', $get('GIT_REPO'), $m)) $repo = $m[1];
+    $bytes = $get('LOGS_MAX_BYTES');
+    $src = array(
+        'repo' => $repo, 'ref' => $get('GIT_BRANCH', 'main'), 'site_url' => $get('SITE_PUBLIC_URL'),
+        'google_id' => $get('GOOGLE_CLIENT_ID'), 'google_secret' => $get('GOOGLE_CLIENT_SECRET'), 'admin_emails' => $get('ADMIN_GOOGLE_EMAILS'),
+        'update_enabled' => strtolower($get('ADMIN_UPDATE_ENABLED', 'false')) === 'true',
+        'recaptcha_site' => $get('RECAPTCHA_SITE_KEY'), 'recaptcha_secret' => $get('RECAPTCHA_SECRET_KEY'),
+        'smtp_host' => $get('SMTP_HOST'), 'smtp_port' => $get('SMTP_PORT', '587'), 'smtp_secure' => strtolower($get('SMTP_SECURE', 'false')) === 'true',
+        'smtp_user' => $get('SMTP_USER'), 'smtp_pass' => $get('SMTP_PASS'), 'smtp_from' => $get('SMTP_FROM'), 'contact_dest' => $get('CONTACT_DEST'),
+        'rounding' => $get('RESTRICTION_ROUNDING_MODE', 'round'), 'logging' => $get('MEASUREMENT_LOGGING_LEVEL', 'full'),
+        'retention' => $get('LOGS_RETENTION_MONTHS'),
+        'logs_mb' => preg_match('/^\d+$/', $bytes) ? (string) max(1, (int) ceil((int) $bytes / 1048576)) : '5',
+        // Absent du .env: valeur par défaut de l'application (activé), comme avec le backend Node.
+        'sfmn' => strtolower($get('SFMN_MODE_ENABLED', 'true')) !== 'false',
+        'sfmn_url' => $get('SFMN_CALCULATOR_URL'),
+    );
+    $extras = array();
+    foreach ($PASSTHROUGH_VARS as $name) {
+        if (isset($env[$name])) $extras[$name] = $env[$name];
+    }
+    $tokens = array();
+    foreach (array('UPDATE_GITHUB_TOKEN', 'GIT_TOKEN') as $name) {
+        if (isset($env[$name]) && $env[$name] !== '') $tokens[$name] = $env[$name];
+    }
+    return array($src, $extras, $tokens);
+}
+
+function validate_extras($extras)
 {
     $e = array();
+    foreach ($extras as $name => $value) {
+        if (strlen($value) > 300 || strpbrk($value, "\r\n\0") !== false) $e[] = 'Variable ' . $name . ' invalide dans le .env.';
+    }
+    return $e;
+}
+
+// Premier jeton accepté par GitHub pour ce dépôt. Retourne array(jeton, nom_de_la_source) ou null.
+function first_valid_token($repo, $candidates)
+{
+    foreach ($candidates as $c) {
+        if (!preg_match('/^[A-Za-z0-9_\-.]{20,255}$/', $c[0])) continue;
+        $r = http_get(GITHUB_API . '/repos/' . $repo, gh_headers($c[0]));
+        if ($r !== null && $r[0] === 200) return $c;
+    }
+    return null;
+}
+
+function validate_inputs($src)
+{
+    global $TEXT_FIELDS, $BOOL_FIELDS;
+    $e = array();
     $d = array();
-    foreach (array('repo', 'ref', 'token', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb') as $name) {
-        $d[$name] = field($name);
+    foreach ($TEXT_FIELDS as $name) {
+        $d[$name] = isset($src[$name]) ? trim((string) $src[$name]) : '';
         if (strpbrk($d[$name], "\r\n\0") !== false) $e[] = 'Le champ « ' . $name . ' » contient un caractère interdit.';
     }
-    foreach (array('update_enabled', 'smtp_secure', 'sfmn') as $name) $d[$name] = isset($_POST[$name]) && $_POST[$name] === '1';
+    foreach ($BOOL_FIELDS as $name) $d[$name] = !empty($src[$name]);
     if (!preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $d['repo'])) $e[] = 'Dépôt invalide (attendu : propriétaire/nom).';
     if (!preg_match('#^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$#', $d['ref']) || strpos($d['ref'], '..') !== false) $e[] = 'Version invalide.';
-    if (!preg_match('/^[A-Za-z0-9_\-.]{20,255}$/', $d['token'])) $e[] = 'Jeton invalide.';
     $local = preg_match('#^http://(localhost|127\.0\.0\.1)(:\d+)?$#', $d['site_url']) === 1;
     if (!$local && !preg_match('#^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:\d+)?$#', $d['site_url'])) $e[] = 'Adresse du site invalide (https://exemple.fr, sans chemin).';
     $d['local'] = $local;
@@ -450,6 +639,7 @@ function validate_inputs()
         }
         if ($d['contact_dest'] !== '' && !filter_var($d['contact_dest'], FILTER_VALIDATE_EMAIL)) $e[] = 'Adresse destinataire invalide.';
     }
+    if ($d['sfmn_url'] !== '' && !preg_match('#^https://[^\s"\'<>]{4,250}$#', $d['sfmn_url'])) $e[] = 'Adresse SFMN invalide (https:// attendu).';
     if (!in_array($d['rounding'], array('round', 'floor'), true)) $e[] = 'Arrondi invalide.';
     if (!in_array($d['logging'], array('full', 'user', 'none'), true)) $e[] = 'Niveau de journalisation invalide.';
     if ($d['retention'] !== '' && !preg_match('/^[1-9]\d{0,2}$/', $d['retention'])) $e[] = 'Conservation des journaux invalide.';
@@ -502,8 +692,34 @@ if ($step !== 'install') page('Introuvable', '<p>Cette page n\'existe pas.</p>',
 @set_time_limit(300);
 ignore_user_abort(true);
 $key = (string) $_POST['key'];
-list($d, $errors) = validate_inputs();
-if ($errors) page('Installation du site', render_form($key, $d, $errors), 400);
+$envPath = null;
+$extras = array();
+$envTokens = array();
+if (isset($_POST['use_env']) && $_POST['use_env'] === '1') {
+    // Configuration lue dans le .env (jamais dans le navigateur): seuls la version et le jeton peuvent être saisis.
+    $envPath = find_env_file($docroot);
+    $env = $envPath === null ? null : parse_env_file($envPath);
+    if ($env === null) page('Installation du site', '<p class="msg">Le fichier .env est introuvable ou illisible.</p><form method="post"><input type="hidden" name="step" value="check"><input type="hidden" name="key" value="' . h($key) . '"><button type="submit">Reprendre</button></form>', 400);
+    list($src, $extras, $envTokens) = env_to_source($env);
+    if (field('ref') !== '') $src['ref'] = field('ref');
+    list($d, $errors) = validate_inputs($src);
+    $errors = array_merge($errors, validate_extras($extras));
+    if ($errors) page('Installation du site', render_env_summary($key, $d, $extras, $errors, true, isInsideDocroot($envPath, $docroot)), 400);
+} else {
+    list($d, $errors) = validate_inputs(post_fields());
+    if ($errors) page('Installation du site', render_form($key, $d, $errors), 400);
+}
+$candidates = array();
+if (field('token') !== '' && !preg_match('/^[A-Za-z0-9_\-.]{20,255}$/', field('token'))) {
+    $msg = array('Jeton invalide.');
+    page('Installation du site', $envPath !== null ? render_env_summary($key, $d, $extras, $msg, true, isInsideDocroot($envPath, $docroot)) : render_form($key, $d, $msg), 400);
+}
+if (field('token') !== '') $candidates[] = array(field('token'), 'form');
+foreach ($envTokens as $n => $v) $candidates[] = array($v, $n);
+if (!$candidates) {
+    $msg = array('Un jeton d\'accès est nécessaire.');
+    page('Installation du site', $envPath !== null ? render_env_summary($key, $d, $extras, $msg, true, isInsideDocroot($envPath, $docroot)) : render_form($key, $d, $msg), 400);
+}
 if (!class_exists('ZipArchive') || !function_exists('curl_init')) page('Installation du site', render_form($key, $d, array('Extensions zip et cURL requises.')), 400);
 
 $tmp = $docroot . '/.install-tmp-' . bin2hex(random_bytes(4));
@@ -512,21 +728,24 @@ $backups = array();    // rel => chemin de la copie de ce qui existait avant
 $fatal = null;
 try {
     // 1) Jeton valide + commit exact
-    $r = http_get(GITHUB_API . '/repos/' . $d['repo'], gh_headers($d['token']));
-    if ($r === null || $r[0] !== 200) throw new RuntimeException('Le jeton n\'est pas valide ou n\'a pas accès à ce dépôt.');
+    $good = first_valid_token($d['repo'], $candidates);
+    if ($good === null) throw new RuntimeException('Le jeton n\'est pas valide ou n\'a pas accès à ce dépôt.');
+    $token = $good[0];
+    $persistToken = $good[1] === 'UPDATE_GITHUB_TOKEN'; // conservé seulement s'il a été écrit tel quel dans le .env
+    $candidates = array();
     $encoded = str_replace('%2F', '/', rawurlencode($d['ref']));
-    $r = http_get(GITHUB_API . '/repos/' . $d['repo'] . '/commits/' . $encoded, gh_headers($d['token'], 'application/vnd.github.sha'));
+    $r = http_get(GITHUB_API . '/repos/' . $d['repo'] . '/commits/' . $encoded, gh_headers($token, 'application/vnd.github.sha'));
     $sha = ($r !== null && $r[0] === 200) ? strtolower(trim($r[1])) : '';
     if (!preg_match('/^[0-9a-f]{40}$/', $sha)) throw new RuntimeException('Version introuvable dans le dépôt.');
 
     // 2) Téléchargement: la redirection est suivie à la main pour ne JAMAIS envoyer le jeton au second appel
     if (!make_dir($tmp) || !guard_dir($tmp)) throw new RuntimeException('Dossier temporaire inaccessible.');
-    $r = http_get(GITHUB_API . '/repos/' . $d['repo'] . '/zipball/' . $sha, gh_headers($d['token']));
+    $r = http_get(GITHUB_API . '/repos/' . $d['repo'] . '/zipball/' . $sha, gh_headers($token));
     if ($r === null || $r[0] !== 302 || !preg_match('#^https?://#i', (string) $r[2])) throw new RuntimeException('Téléchargement impossible.');
     $zipFile = $tmp . '/repo.zip';
     if (!download_to($r[2], $zipFile, MAX_ZIP_BYTES)) throw new RuntimeException('Téléchargement impossible.');
     if (@file_get_contents($zipFile, false, null, 0, 2) !== 'PK') throw new RuntimeException('Fichier téléchargé invalide.');
-    $d['token'] = ''; // plus utile: jamais conservé
+    $token = ''; // plus utile: jamais conservé (sauf UPDATE_GITHUB_TOKEN écrit par l'utilisateur dans son .env)
 
     // 3) Validation complète avant toute écriture sur le site
     $staging = $tmp . '/new';
@@ -597,17 +816,22 @@ try {
         'RECAPTCHA_SITE_KEY' => $d['recaptcha_site'], 'RECAPTCHA_SECRET_KEY' => $d['recaptcha_secret'],
         'SMTP_HOST' => $d['smtp_host'], 'SMTP_PORT' => $d['smtp_host'] !== '' ? $d['smtp_port'] : '', 'SMTP_SECURE' => $d['smtp_host'] !== '' ? ($d['smtp_secure'] ? 'true' : 'false') : '',
         'SMTP_USER' => $d['smtp_user'], 'SMTP_PASS' => $d['smtp_pass'], 'SMTP_FROM' => $d['smtp_from'], 'CONTACT_DEST' => $d['contact_dest'],
-        'SFMN_MODE_ENABLED' => $d['sfmn'] ? 'true' : 'false', 'SFMN_CALCULATOR_URL' => $d['sfmn'] ? DEFAULT_SFMN_URL : '',
+        'SFMN_MODE_ENABLED' => $d['sfmn'] ? 'true' : 'false', 'SFMN_CALCULATOR_URL' => $d['sfmn'] ? ($d['sfmn_url'] !== '' ? $d['sfmn_url'] : DEFAULT_SFMN_URL) : '',
         'RESTRICTION_ROUNDING_MODE' => $d['rounding'], 'MEASUREMENT_LOGGING_LEVEL' => $d['logging'],
         'LOGS_RETENTION_MONTHS' => $d['retention'], 'LOGS_MAX_BYTES' => (string) ((int) $d['logs_mb'] * 1048576),
     );
     if ($d['local']) $vars['ADMIN_ALLOW_INSECURE_HTTP'] = 'true'; // uniquement pour un essai en local (http://127.0.0.1)
+    foreach ($extras as $name => $value) $vars[$name] = $value; // réglages du .env sans champ de formulaire
+    if ($persistToken) $vars['UPDATE_GITHUB_TOKEN'] = $good[0];
     foreach ($vars as $name => $value) $env .= env_line($name, $value);
+    if (isset($extras['TRUSTED_PROXIES']) && $extras['TRUSTED_PROXIES'] === '') $env .= 'TRUSTED_PROXIES=""' . "\n"; // vide = ne jamais croire X-Forwarded-For
     $envFile = $apiDir . '/.runtime.env';
     if (is_file($envFile)) { $bk = $tmp . '/backup/api/.runtime.env'; make_dir(dirname($bk)); @copy($envFile, $bk); $backups['api/.runtime.env'] = $bk; }
     if (@file_put_contents($envFile, $env) === false) throw new RuntimeException('Écriture impossible : api/.runtime.env');
     @chmod($envFile, 0600);
     $written[] = 'api/.runtime.env';
+    $good = null; // le jeton n'est plus nécessaire
+    $candidates = array();
     if (!is_readable($envFile)) throw new RuntimeException('api/.runtime.env illisible par le serveur web.');
 
     // 7) État de référence pour les mises à jour de /auth
@@ -672,7 +896,18 @@ if ($bad) {
 }
 file_put_contents($docroot . '/api/var/install.done', gmdate('c'));
 $removed = @unlink(__FILE__);
+$envNote = '';
+if ($envPath !== null) {
+    if (isInsideDocroot($envPath, $docroot)) {
+        $envNote = @unlink($envPath)
+            ? '<p class="ok">Le fichier .env, qui se trouvait dans le dossier public, a été supprimé.</p>'
+            : '<p class="msg"><strong>Supprimez le fichier .env du dossier public par FTP</strong> (suppression automatique impossible) : il contient des secrets.</p>';
+    } else {
+        $envNote = '<p class="small">Le fichier .env lu pour l\'installation (hors du dossier public) n\'a pas été modifié.</p>';
+    }
+}
 foreach (glob($docroot . '/.install-attempts-*') ?: array() as $f) @unlink($f);
+$out .= $envNote;
 $out .= $removed
     ? '<p class="ok"><code>install.php</code> a été supprimé.</p>'
     : '<p class="msg"><strong>Supprimez maintenant <code>install.php</code> par FTP</strong> (suppression automatique impossible). Il est déjà inactif.</p>';
