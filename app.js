@@ -288,6 +288,7 @@
       $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
       $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
       $('resultsBody').innerHTML = '';
+      updateResultsVisibility();
       $('errorBox').style.display = 'none';
       $('errorBox').textContent = '';
       $('durationHead').innerHTML = 'Durée restriction<br>(jours)';
@@ -453,6 +454,12 @@
           <td class="conditions">${escapeHtml(row.condition)}</td>
         </tr>
       `).join('');
+      updateResultsVisibility();
+    }
+
+    // Période effective et tableau ne s'affichent que s'il y a des lignes de résultat.
+    function updateResultsVisibility() {
+      $('resultsSection').hidden = $('resultsBody').children.length === 0;
     }
 
     function ensureCalculationModeButtons(availableModes) {
