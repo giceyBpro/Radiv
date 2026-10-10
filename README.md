@@ -14,15 +14,15 @@ Application web de calcul des durées de restriction de contact après Radiothé
 | `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
-| `tox.html` | Page de diagnostic interne, sans lien depuis l'interface. |
 | `config.js` | Configuration runtime (URLs API/site) injectée par `deploy.sh` en production. |
 | `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
 | `robots.txt` | Autorise l'indexation de la page d'accueil uniquement (voir [Référencement](#référencement)). |
 
-`deploy.sh` ajoute dans `.htaccess` des raccourcis sans `.html` pour ces pages : `/tox`,
-`/legal`, `/contact`, `/print`, `/explain`, `/doc` (→ `api-fonctionnement.html`),
+`deploy.sh` ajoute dans `.htaccess` des raccourcis sans `.html` pour ces pages : `/legal`, `/contact`, `/print`, `/explain`, `/doc` (→ `api-fonctionnement.html`),
 `/test-api`, `/xplore`. La consultation des mesures n'a plus de page statique : elle fait partie
 de l'administration du site, derrière la connexion Google (voir [Version PHP](#version-php-api)).
+
+Les pages `tox.html` et `.tox-complet.html` ont été retirées du dépôt (`tox` devient un site indépendant). Les scripts de déploiement et les mises à jour de `/auth` les suppriment des sites déjà installés (sauvegardées d'abord par `/auth`) et retirent l'ancienne règle `/tox` du `.htaccess`.
 
 ## Référencement
 
@@ -30,8 +30,7 @@ Seule `index.html` (l'accueil) doit être indexée par les moteurs de recherche.
 niveaux de protection, indépendants l'un de l'autre :
 
 - `robots.txt` interdit le crawl de tout le reste (`Disallow: /` avec deux exceptions
-  `Allow: /$` et `Allow: /index.html$`). Les noms des pages cachées (`tox.html`,
-  `xplore.html`…) n'y sont volontairement pas listés : ce fichier
+  `Allow: /$` et `Allow: /index.html$`). Les noms des pages cachées (`xplore.html`…) n'y sont volontairement pas listés : ce fichier
   est public, les y nommer reviendrait à les annoncer.
 - Chaque page sauf l'accueil porte `<meta name="robots" content="noindex, nofollow">`,
   qui bloque l'indexation même si un lien externe venait un jour à pointer vers elle.

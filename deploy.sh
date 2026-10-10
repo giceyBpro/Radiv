@@ -115,7 +115,7 @@ fi
 # échouerait en mode ouvert, publiant automatiquement tout nouveau fichier du dépôt.
 # admin-mesures.html ne contient aucun secret: seuls les appels qu'elle fait vers
 # /api/admin/* exigent le jeton (header X-Admin-Token, saisi dans la page). Page
-# statique sans lien de navigation, comme tox.html/xplore.html.
+# statique sans lien de navigation, comme xplore.html.
 # v1.html: ancienne version de l'interface (design précédent), conservée sans
 # lien de/vers index.html. Accessible uniquement en tapant l'URL. Pas de route
 # courte dans SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que
@@ -123,10 +123,6 @@ fi
 # app.js: logique JS partagée entre index.html et v1.html (chargée via <script
 # src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
 # deux pages depuis un seul fichier, sans duplication à maintenir à la main.
-# tox.html: version d'aperçu réduite à 7 termes (maquette avant le site CTCAE
-# définitif, prévu détaché de dosimetrieRIV). La version complète (~850 termes)
-# est conservée sous .tox-complet.html, publiée mais sans route courte ni lien
-# — accessible uniquement en tapant son nom complet.
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
@@ -139,8 +135,6 @@ rsync -a --delete \
   --include='mentions-legales.html' \
   --include='api-fonctionnement.html' \
   --include='test-api.html' \
-  --include='tox.html' \
-  --include='.tox-complet.html' \
   --include='xplore.html' \
   --include='admin-mesures.html' \
   --include='favicon.ico' \
@@ -152,6 +146,16 @@ rsync -a --delete \
   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
 log_ok "Frontend synchronisé vers $FRONTEND_DIR"
+
+# Pages retirées du site (tox est devenu un site indépendant). La liste blanche rsync ne supprime
+# jamais ce qu'elle n'inclut pas: un site déjà déployé garderait ces pages en ligne, on les retire donc
+# explicitement, ainsi que l'ancienne règle /tox du .htaccess (uniquement le bloc écrit par ce script).
+for _retired in tox.html .tox-complet.html; do
+  if [[ -e "$FRONTEND_DIR/$_retired" ]]; then
+    rm -f "$FRONTEND_DIR/$_retired"
+    log_ok "Page retirée: $_retired"
+  fi
+done
 
 log_step "Configuration .htaccess (raccourcis de pages sans .html)"
 HTACCESS="$FRONTEND_DIR/.htaccess"
@@ -165,7 +169,6 @@ fi
 # interrupteur ADMIN_MEASUREMENTS_ENABLED). Elle reste accessible via son nom de fichier
 # complet uniquement.
 declare -A SHORT_ROUTES=(
-  [tox]="tox.html"
   [legal]="mentions-legales.html"
   [contact]="contact.html"
   [print]="print.html"
@@ -174,6 +177,10 @@ declare -A SHORT_ROUTES=(
   [test-api]="test-api.html"
   [xplore]="xplore.html"
 )
+if [[ -f "$HTACCESS" ]] && grep -Fq 'RewriteRule ^tox/?$ tox.html [L]' "$HTACCESS"; then
+  sed -i '/^# \/tox$/,/^RewriteRule \^tox\/?\$ tox\.html \[L\]$/d' "$HTACCESS"
+  log_ok "Ancienne règle /tox retirée de .htaccess."
+fi
 for route in "${!SHORT_ROUTES[@]}"; do
   target="${SHORT_ROUTES[$route]}"
   if grep -Fq "$target" "$HTACCESS"; then

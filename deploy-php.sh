@@ -135,10 +135,6 @@ fi
 # app.js: logique JS partagée entre index.html et v1.html (chargée via <script
 # src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
 # deux pages depuis un seul fichier, sans duplication à maintenir à la main.
-# tox.html: version d'aperçu réduite à 7 termes (maquette avant le site CTCAE
-# définitif, prévu détaché de dosimetrieRIV). La version complète (~850 termes)
-# est conservée sous .tox-complet.html, publiée mais sans route courte ni lien
-# — accessible uniquement en tapant son nom complet.
 # api/ n'est volontairement pas dans cette liste: il a sa propre synchronisation plus bas
 # (avec ses fichiers protégés: .env, logs/, var/), et les fichiers non listés ici ne sont
 # jamais supprimés (pas de --delete-excluded).
@@ -154,8 +150,6 @@ rsync -a --delete \
   --include='mentions-legales.html' \
   --include='api-fonctionnement.html' \
   --include='test-api.html' \
-  --include='tox.html' \
-  --include='.tox-complet.html' \
   --include='xplore.html' \
   --include='favicon.ico' \
   --include='robots.txt' \
@@ -166,6 +160,16 @@ rsync -a --delete \
   "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
 
 log_ok "Frontend synchronisé vers $FRONTEND_DIR"
+
+# Pages retirées du site (tox est devenu un site indépendant). La liste blanche rsync ne supprime
+# jamais ce qu'elle n'inclut pas: un site déjà déployé garderait ces pages en ligne, on les retire donc
+# explicitement, ainsi que l'ancienne règle /tox du .htaccess (uniquement le bloc écrit par ce script).
+for _retired in tox.html .tox-complet.html; do
+  if [[ -e "$FRONTEND_DIR/$_retired" ]]; then
+    rm -f "$FRONTEND_DIR/$_retired"
+    log_ok "Page retirée: $_retired"
+  fi
+done
 
 log_step "Synchronisation de l'API PHP"
 API_DIR="$FRONTEND_DIR/api"
@@ -199,7 +203,6 @@ fi
 # L'administration du site n'a ni page statique ni raccourci: elle vit sous /auth (voir plus bas)
 # et n'est liée depuis aucune page.
 declare -A SHORT_ROUTES=(
-  [tox]="tox.html"
   [legal]="mentions-legales.html"
   [contact]="contact.html"
   [print]="print.html"
@@ -208,6 +211,10 @@ declare -A SHORT_ROUTES=(
   [test-api]="test-api.html"
   [xplore]="xplore.html"
 )
+if [[ -f "$HTACCESS" ]] && grep -Fq 'RewriteRule ^tox/?$ tox.html [L]' "$HTACCESS"; then
+  sed -i '/^# \/tox$/,/^RewriteRule \^tox\/?\$ tox\.html \[L\]$/d' "$HTACCESS"
+  log_ok "Ancienne règle /tox retirée de .htaccess."
+fi
 for route in "${!SHORT_ROUTES[@]}"; do
   target="${SHORT_ROUTES[$route]}"
   if grep -Fq "$target" "$HTACCESS"; then

@@ -54,6 +54,8 @@ async function update(c, ref, token) {
 
 (async () => {
   resetLimits(); await ctl('email=admin@example.org&verified=1&aud=test-client-id.apps.googleusercontent.com');
+  // Site « ancien »: pages retirées du dépôt (tox est devenu un site indépendant) encore en ligne
+  for (const f of ['tox.html', '.tox-complet.html']) { fs.writeFileSync(path.join(WWW, f), `ancienne page ${f}`); fs.chmodSync(path.join(WWW, f), 0o644); }
   const base = treeHash(); const envBefore = runtimeEnv();
 
   console.log('\n— Accès sans connexion');
@@ -104,6 +106,8 @@ async function update(c, ref, token) {
   await ghLog(); resetLimits();
   r = await update(c, 'v1.1', TOKEN);
   t('installée', /Mise à jour installée : 1111111/.test(r.msg), r.msg);
+  t('pages retirées (tox) supprimées du site', !exists('tox.html') && !exists('.tox-complet.html'));
+  t('…mais sauvegardées pour un éventuel retour arrière', exists('api/var/backup/prev/files/tox.html') && exists('api/var/backup/prev/files/.tox-complet.html'));
   t('app.js remplacé', read('app.js').includes('fixture v1.1')); t('nouveau fichier créé', exists('downloads/ajout-v1_1.xml'));
   const version = JSON.parse(read('api/var/version.json'));
   t('version enregistrée (sha, ref, par)', version.sha === '1'.repeat(40) && version.ref === 'v1.1' && version.by === 'admin@example.org');
