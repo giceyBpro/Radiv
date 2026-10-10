@@ -1,0 +1,6 @@
+# Le backend (code, configuration, données) ne sert jamais de fichier directement : jamais lisible par HTTP, même placé
+# dans la racine web. Les fichiers PHP refusent en plus de s'exécuter hors de l'API.
+Require all denied
+<IfModule !mod_authz_core.c>
+Deny from all
+</IfModule>

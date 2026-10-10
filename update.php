@@ -10,7 +10,7 @@
 // supprimez-le vous-même par FTP si vous y renoncez.
 //
 // Ce fichier n'est JAMAIS publié par deploy.sh ni par /auth ; il s'appuie sur le code déjà
-// installé dans api/ (le site doit donc avoir été installé une première fois, voir install.php).
+// installé dans le backend (le site doit donc avoir été installé une première fois, voir install.php).
 //
 // AVANT DE L'ENVOYER : remplacez la clé ci-dessous par une valeur secrète d'au moins 24 caractères
 // (par exemple le résultat de `openssl rand -hex 24`). Sans cette clé, la page refuse tout.
@@ -51,13 +51,23 @@ if (strlen(UPDATE_KEY) < 24 || UPDATE_KEY === 'CHANGEZ-MOI') {
     page('Page non configurée', '<p>Remplacez la clé dans <code>update.php</code> avant de l\'envoyer.</p>', 403);
 }
 
-$api = __DIR__ . '/api';
-if (!is_file($api . '/lib/updater.php')) {
-    page('Site non installé', '<p class="ko">Le dossier <code>api/</code> est introuvable : utilisez <code>install.php</code>.</p>', 500);
+// Emplacement du backend : comme la façade api/index.php (variable RADIV_BACKEND, puis api/backend.php, puis <racine>/backend).
+$backend = (string) (getenv('RADIV_BACKEND') ? getenv('RADIV_BACKEND') : '');
+if ($backend === '' && is_file(__DIR__ . '/api/backend.php')) {
+    $pointer = include __DIR__ . '/api/backend.php';
+    if (is_string($pointer)) $backend = $pointer;
 }
+if ($backend === '') $backend = __DIR__ . '/backend';
+$backend = rtrim($backend, '/\\');
+if (!is_file($backend . '/src/lib/updater.php')) {
+    page('Site non installé', '<p class="ko">Le backend est introuvable : utilisez <code>install.php</code>.</p>', 500);
+}
+define('RADIV_ENTRY', true);
+define('RADIV_BACKEND_DIR', $backend);
+define('RADIV_WEB_ROOT', __DIR__);
 foreach (array('calculation.php', 'lib/json.php', 'lib/config.php', 'lib/store.php', 'lib/http.php', 'lib/geo.php',
     'lib/measurements.php', 'lib/sfmn.php', 'lib/contact.php', 'lib/updater.php') as $f) {
-    require_once $api . '/' . $f;
+    require_once $backend . '/src/' . $f;
 }
 
 $formTail = function ($needToken, $ref) {
@@ -69,7 +79,7 @@ $formTail = function ($needToken, $ref) {
         . '<p class="small">Le fichier <code>update.php</code> se supprime après une mise à jour réussie.</p>';
 };
 
-\Radiv\Config\boot(); // charge api/.runtime.env (dépôt, jeton, SMTP...)
+\Radiv\Config\boot(); // charge backend/config/runtime.env (dépôt, jeton, SMTP...)
 $envToken = \Radiv\Config\env('UPDATE_GITHUB_TOKEN');
 $needToken = true;
 if ($envToken !== '' && $_SERVER['REQUEST_METHOD'] !== 'POST') {

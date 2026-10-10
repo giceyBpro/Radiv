@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Déploiement/mise à jour idempotent de la version PHP (api/) + frontend statique.
-# PHP s'exécute par requête sous Apache: déployer = copier les fichiers. Frontend et API vivent
-# dans un seul dossier (FRONTEND_DIR, la racine web), l'API sous <racine>/api/.
+# Déploiement/mise à jour idempotent : front-end public (dépôt: public/) + backend privé (dépôt: backend/).
+# PHP s'exécute par requête sous Apache: déployer = copier les fichiers. Le front-end va dans FRONTEND_DIR (la racine
+# web, avec la façade api/index.php) ; le backend (code, configuration, données) dans BACKEND_DIR, par défaut
+# <FRONTEND_DIR>/backend (protégé par .htaccess), idéalement hors de la racine web.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,21 +19,21 @@ source "$ENV_FILE"
 : "${GIT_REPO:?GIT_REPO est requis dans .env}"
 : "${GIT_TOKEN:?GIT_TOKEN est requis dans .env}"
 
-# Le site en ligne n'a pas accès à ce .env : le dépôt à mettre à jour lui est transmis (api/.runtime.env).
+# Le site en ligne n'a pas accès à ce .env : le dépôt à mettre à jour lui est transmis (backend/config/runtime.env).
 # Déduit de GIT_REPO (https://github.com/propriétaire/nom[.git]) sauf si UPDATE_GITHUB_REPO est fourni.
 if [[ -z "${UPDATE_GITHUB_REPO:-}" && "$GIT_REPO" =~ ^https://([^@/]+@)?github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/?$ ]]; then
   UPDATE_GITHUB_REPO="${BASH_REMATCH[2]%.git}"
 fi
 
 GIT_BRANCH="${GIT_BRANCH:-main}"
-# BACKEND_DIR ne sert plus qu'à retrouver le
-# dossier du clone, pour qu'un .env écrit pour deploy.sh fonctionne tel quel.
-BACKEND_DIR="${BACKEND_DIR:-$HOME/backend}"
 FRONTEND_DIR="${FRONTEND_DIR:-$HOME/public_html/frontend}"
-CHECKOUT_DIR="${CHECKOUT_DIR:-$BACKEND_DIR/repo}"
+# Backend : par défaut dans la racine web (protégé par son .htaccess), modifiable (chemin hors de la racine conseillé).
+FRONTEND_DIR="${FRONTEND_DIR/#\~/$HOME}"
+BACKEND_DIR="${BACKEND_DIR:-$FRONTEND_DIR/backend}"
+# Clone du dépôt : jamais dans la racine web.
+CHECKOUT_DIR="${CHECKOUT_DIR:-$HOME/radiv-repo}"
 # Étend un éventuel ~ initial même si la valeur était entre guillemets dans .env
 BACKEND_DIR="${BACKEND_DIR/#\~/$HOME}"
-FRONTEND_DIR="${FRONTEND_DIR/#\~/$HOME}"
 CHECKOUT_DIR="${CHECKOUT_DIR/#\~/$HOME}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
 # Par défaut l'API est sous le site (/api): une URL d'exemple écrite en dur se retrouverait dans config.js
@@ -52,7 +53,13 @@ log_ok() { echo "[DEPLOY][OK] $1"; }
 log_warn() { echo "[DEPLOY][WARN] $1"; }
 
 log_step "Initialisation"
-log_info "Racine web (frontend + api/): $FRONTEND_DIR | clone: $CHECKOUT_DIR"
+log_info "Racine web: $FRONTEND_DIR | backend: $BACKEND_DIR | clone: $CHECKOUT_DIR"
+# Garde-fous : le backend ne peut être ni la racine web ni un dossier qui la contient (ni inversement pour le clone).
+case "$FRONTEND_DIR/" in "$BACKEND_DIR/"*) log_warn "BACKEND_DIR ($BACKEND_DIR) ne peut pas contenir la racine web. Abandon."; exit 1;; esac
+if [[ "$BACKEND_DIR" == "$FRONTEND_DIR" || "$BACKEND_DIR" == "$FRONTEND_DIR/api" || "$BACKEND_DIR" == "$FRONTEND_DIR/api/"* ]]; then
+  log_warn "BACKEND_DIR ($BACKEND_DIR) est invalide (racine web ou dossier api/). Abandon."; exit 1
+fi
+case "$CHECKOUT_DIR/" in "$FRONTEND_DIR/"*) log_warn "CHECKOUT_DIR ($CHECKOUT_DIR) ne doit pas être dans la racine web. Abandon."; exit 1;; esac
 mkdir -p "$FRONTEND_DIR" "$(dirname "$CHECKOUT_DIR")"
 
 # Le token ne doit jamais apparaître dans argv (lisible via `ps` par tout utilisateur
@@ -97,7 +104,7 @@ log_step "Contrôle PHP"
 if command -v php >/dev/null 2>&1; then
   php_version="$(php -r 'echo PHP_VERSION;')"
   if ! php -r 'exit(version_compare(PHP_VERSION, "8.0.0", ">=") ? 0 : 1);'; then
-    log_warn "php en ligne de commande est en $php_version (< 8.0): le code d'api/ exige PHP 8.0+. Abandon."
+    log_warn "php en ligne de commande est en $php_version (< 8.0): le code du backend exige PHP 8.0+. Abandon."
     log_warn "Vérifiez aussi la version PHP choisie pour le site dans cPanel (Sélecteur PHP)."
     exit 1
   fi
@@ -107,7 +114,7 @@ if command -v php >/dev/null 2>&1; then
       log_warn "Erreur de syntaxe PHP: $phpfile"
       syntax_errors=$((syntax_errors + 1))
     fi
-  done < <(find api -name '*.php' -print0)
+  done < <(find public backend -name '*.php' -print0)
   if [[ "$syntax_errors" -gt 0 ]]; then
     log_warn "$syntax_errors fichier(s) PHP invalide(s): déploiement abandonné, rien n'a été modifié."
     exit 1
@@ -141,12 +148,12 @@ fi
 # app.js: logique JS partagée entre index.html et v1.html (chargée via <script
 # src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
 # deux pages depuis un seul fichier, sans duplication à maintenir à la main.
-# api/ n'est volontairement pas dans cette liste: il a sa propre synchronisation plus bas
-# (avec ses fichiers protégés: .env, logs/, var/), et les fichiers non listés ici ne sont
-# jamais supprimés (pas de --delete-excluded).
+# Source: public/ du dépôt. Les fichiers non listés ici ne sont jamais supprimés (pas de --delete-excluded) ;
+# api/ ne reçoit que la façade (index.php, .htaccess), jamais api/backend.php (emplacement du backend, généré plus bas).
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
+  --filter='P api/backend.php' \
   --include='index.html' \
   --include='v1.html' \
   --include='app.js' \
@@ -164,36 +171,29 @@ rsync -a --delete \
   --include='downloads/**' \
   --include='vendor/' \
   --include='vendor/**' \
+  --include='api/' \
+  --include='api/index.php' \
+  --include='api/.htaccess' \
   --exclude='*' \
-  "$CHECKOUT_DIR/" "$FRONTEND_DIR/"
+  "$CHECKOUT_DIR/public/" "$FRONTEND_DIR/"
 
 log_ok "Frontend synchronisé vers $FRONTEND_DIR"
 
-# Pages retirées du site (tox est devenu un site indépendant). La liste blanche rsync ne supprime
-# jamais ce qu'elle n'inclut pas: un site déjà déployé garderait ces pages en ligne, on les retire donc
-# explicitement, ainsi que l'ancienne règle /tox du .htaccess (uniquement le bloc écrit par ce script).
-for _retired in tox.html .tox-complet.html; do
-  if [[ -e "$FRONTEND_DIR/$_retired" ]]; then
-    rm -f "$FRONTEND_DIR/$_retired"
-    log_ok "Page retirée: $_retired"
-  fi
-done
-
-log_step "Synchronisation de l'API PHP"
-API_DIR="$FRONTEND_DIR/api"
-mkdir -p "$API_DIR"
-# Protégés contre --delete (jamais écrasés ni supprimés): la configuration locale (.env,
-# .runtime.env) et les données d'exécution (logs/ = mesures RGPD, var/ = compteurs de rate-limit
-# et cache géoIP). tests/ est un outillage de développement: il n'est pas publié.
+log_step "Synchronisation du backend"
+mkdir -p "$BACKEND_DIR"
+# Protégés contre --delete (jamais écrasés ni supprimés): la configuration (config/) et les données d'exécution
+# (data/ : mesures RGPD, sessions, état des mises à jour). Un dossier non vide qui n'est pas un backend est refusé.
+if [[ -n "$(ls -A "$BACKEND_DIR" 2>/dev/null)" && ! -f "$BACKEND_DIR/src/app.php" ]]; then
+  log_warn "BACKEND_DIR=$BACKEND_DIR n'est pas vide et ne contient pas de backend (src/app.php). Abandon (rsync --delete effacerait son contenu)."
+  exit 1
+fi
 rsync -a --delete \
-  --filter='P .env' \
-  --filter='P .runtime.env' \
-  --filter='P logs/' \
-  --filter='P var/' \
-  --exclude='tests/' \
-  "$CHECKOUT_DIR/api/" "$API_DIR/"
-rm -rf "${API_DIR:?}/tests"
-log_ok "API synchronisée vers $API_DIR"
+  --filter='P config/' \
+  --filter='P data/' \
+  "$CHECKOUT_DIR/backend/" "$BACKEND_DIR/"
+log_ok "Backend synchronisé vers $BACKEND_DIR"
+# Emplacement du backend pour la façade publique (toujours écrit, explicite).
+printf '<?php\n// Généré par deploy.sh : emplacement du backend.\nreturn %s;\n' "'${BACKEND_DIR//\'/\\\'}'" > "$FRONTEND_DIR/api/backend.php"
 
 log_step "Configuration .htaccess (raccourcis de pages sans .html)"
 HTACCESS="$FRONTEND_DIR/.htaccess"
@@ -240,6 +240,24 @@ if [[ "$SITE_PUBLIC_URL" == https://* ]]; then
     cat "$HTACCESS" >> "$_tmp_ht" && cat "$_tmp_ht" > "$HTACCESS" && rm -f "$_tmp_ht"
     log_ok "Redirection HTTP -> HTTPS ajoutée en tête de .htaccess."
   fi
+fi
+# Backend dans la racine web : son adresse est interdite par une règle en tête de .htaccess (en plus de son propre
+# .htaccess). Fichiers de configuration éventuellement copiés dans la racine (.env, .runtime.env) : jamais servis.
+if [[ "$BACKEND_DIR" == "$FRONTEND_DIR/"* ]]; then
+  _backend_rel="${BACKEND_DIR#"$FRONTEND_DIR"/}"
+  BACKEND_DENY_MARKER="# /${_backend_rel} (backend : accès refusé) v1"
+  if grep -Fq "$BACKEND_DENY_MARKER" "$HTACCESS"; then
+    log_info "Règle d'interdiction du backend déjà présente dans .htaccess."
+  else
+    _tmp_ht="$(mktemp)"
+    printf '%s\nRewriteEngine On\nRewriteRule ^%s(/|$) - [F,L]\n\n' "$BACKEND_DENY_MARKER" "$(sed 's/[][\.^$*+?(){}|]/\\&/g' <<< "$_backend_rel")" > "$_tmp_ht"
+    cat "$HTACCESS" >> "$_tmp_ht" && cat "$_tmp_ht" > "$HTACCESS" && rm -f "$_tmp_ht"
+    log_ok "Backend (/${_backend_rel}) interdit d'accès HTTP dans .htaccess."
+  fi
+fi
+CONFIG_DENY_MARKER="# Fichiers de configuration refusés v1"
+if ! grep -Fq "$CONFIG_DENY_MARKER" "$HTACCESS"; then
+  printf '\n%s\n<FilesMatch "^\\.(env|runtime\\.env)$">\nRequire all denied\n</FilesMatch>\n' "$CONFIG_DENY_MARKER" >> "$HTACCESS"
 fi
 HEADERS_MARKER="# En-têtes de sécurité des pages v1"
 if grep -Fq "$HEADERS_MARKER" "$HTACCESS"; then
@@ -383,7 +401,7 @@ if ! grep -Fq "Sitemap:" "$FRONTEND_DIR/robots.txt" 2>/dev/null; then
   printf '\nSitemap: %s\n' "$SITEMAP_ABS_URL" >> "$FRONTEND_DIR/robots.txt"
 fi
 
-log_step "Configuration de l'API (api/.runtime.env)"
+log_step "Configuration de l'API (backend/config/runtime.env)"
 # Seules les variables d'exécution y sont copiées (jamais GIT_TOKEN ni les chemins de déploiement),
 # et seulement si elles sont renseignées: sinon c'est le défaut du code qui s'applique.
 # Le fichier doit être en 600 dès sa création: une redirection simple le crée en 644
@@ -402,11 +420,11 @@ runtime_line() {
   elif [[ "$value" != *\'* ]]; then
     printf "%s='%s'\n" "$name" "$value"
   else
-    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans api/.env)." >&2
+    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans backend/config/local.env)." >&2
   fi
 }
 # Description du fichier : sections, variables dans l'ordre, commentaires (lignes « | » = suite du commentaire).
-# Strictement identique à celle de install.php (api/tests/check-runtime-layout.js le vérifie).
+# Strictement identique à celle de install.php (tests/check-runtime-layout.js le vérifie).
 RUNTIME_LAYOUT="$(cat <<'LAYOUT'
 == Site et API
 SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
@@ -418,6 +436,9 @@ API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en gé
 |« * » l'ouvre à tous les sites : à éviter.
 TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
 |séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
+== Emplacement des données
+DATA_DIR|Dossier des journaux et de l'état du site (sessions, version installée, sauvegarde). Facultatif :
+|par défaut le dossier data/ du backend. Chemin absolu, ou relatif au backend ; jamais lisible depuis le web.
 == Administration du site (/auth, connexion Google)
 GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
 GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
@@ -483,14 +504,14 @@ runtime_assignment() {
   elif [[ "$value" != *\'* ]]; then
     printf "%s='%s'\n" "$name" "$value"
   else
-    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans api/.env)." >&2
+    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans backend/config/local.env)." >&2
     return 1
   fi
 }
 render_runtime_env() {
   echo "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement."
   echo "# Généré par deploy.sh le $(date '+%Y-%m-%d %H:%M') — chaque déploiement RÉÉCRIT ce fichier à partir du .env"
-  echo "# de déploiement : reportez-y vos changements durables. api/.env reste pour les réglages purement locaux."
+  echo "# de déploiement : reportez-y vos changements durables. backend/config/local.env reste pour les réglages purement locaux."
   echo "#"
   echo "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site"
   echo "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets."
@@ -519,23 +540,43 @@ render_runtime_env() {
   done <<< "$RUNTIME_LAYOUT"
   flush_var
 }
-install -m 600 /dev/null "$API_DIR/.runtime.env"
-render_runtime_env > "$API_DIR/.runtime.env"
-chmod 600 "$API_DIR/.runtime.env"
-log_ok "api/.runtime.env généré et protégé (600)."
+mkdir -p "$BACKEND_DIR/config"
+install -m 600 /dev/null "$BACKEND_DIR/config/runtime.env"
+render_runtime_env > "$BACKEND_DIR/config/runtime.env"
+chmod 600 "$BACKEND_DIR/config/runtime.env"
+log_ok "backend/config/runtime.env généré et protégé (600)."
 
-# Les données d'exécution (mesures, compteurs) ne doivent jamais être lisibles par HTTP: le
-# code d'api/ pose lui-même un .htaccess dans logs/ et var/ à la création, on le fait aussi ici
-# pour couvrir un dossier créé avant ce déploiement.
-for _dir in logs var; do
-  mkdir -p "$API_DIR/$_dir"
-  chmod 750 "$API_DIR/$_dir"
-  [[ -f "$API_DIR/$_dir/.htaccess" ]] || printf 'Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n' > "$API_DIR/$_dir/.htaccess"
+# Les données d'exécution (mesures, sessions, état) ne doivent jamais être lisibles par HTTP: le code du backend
+# pose lui-même un .htaccess dans chaque dossier de données à la création, on le fait aussi ici pour couvrir un
+# dossier créé avant ce déploiement.
+DATA_PATH="${DATA_DIR:-$BACKEND_DIR/data}"
+[[ "$DATA_PATH" == /* ]] || DATA_PATH="$BACKEND_DIR/$DATA_PATH"
+for _dir in "$BACKEND_DIR/config" "$DATA_PATH" "$DATA_PATH/logs" "$DATA_PATH/var"; do
+  mkdir -p "$_dir"
+  chmod 750 "$_dir"
+  [[ -f "$_dir/.htaccess" ]] || printf 'Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n' > "$_dir/.htaccess"
 done
 
 popd >/dev/null
 
 log_ok "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
+
+log_step "Contrôle de la protection du backend"
+# Le backend ne doit JAMAIS être lisible par HTTP quand il est dans la racine web (contrôle non bloquant: l'URL publique
+# peut ne pas pointer encore vers ce serveur).
+if [[ "$BACKEND_DIR" == "$FRONTEND_DIR/"* ]] && command -v curl >/dev/null 2>&1; then
+  _probe_name="probe-$$.txt"
+  printf 'x' > "$BACKEND_DIR/config/$_probe_name"
+  _probe_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${SITE_PUBLIC_URL%/}/${BACKEND_DIR#"$FRONTEND_DIR"/}/config/$_probe_name" || true)"
+  rm -f "$BACKEND_DIR/config/$_probe_name"
+  case "$_probe_code" in
+    200) log_warn "ATTENTION: le backend est LISIBLE par HTTP. Placez BACKEND_DIR hors de la racine web et redéployez."; exit 1;;
+    000|"") log_info "Protection du backend non vérifiable depuis ce serveur.";;
+    *) log_ok "Backend illisible par HTTP (HTTP $_probe_code).";;
+  esac
+else
+  log_info "Backend hors de la racine web ou curl absent: contrôle HTTP sans objet."
+fi
 
 log_step "Contrôle de l'API déployée"
 # Non bloquant: l'URL publique peut ne pas encore pointer vers ce serveur (DNS, bascule en cours).
