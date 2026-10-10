@@ -20,6 +20,12 @@ source "$ENV_FILE"
 : "${GIT_REPO:?GIT_REPO est requis dans .env}"
 : "${GIT_TOKEN:?GIT_TOKEN est requis dans .env}"
 
+# Le site en ligne n'a pas accès à ce .env : le dépôt à mettre à jour lui est transmis (api/.runtime.env).
+# Déduit de GIT_REPO (https://github.com/propriétaire/nom[.git]) sauf si UPDATE_GITHUB_REPO est fourni.
+if [[ -z "${UPDATE_GITHUB_REPO:-}" && "$GIT_REPO" =~ ^https://([^@/]+@)?github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/?$ ]]; then
+  UPDATE_GITHUB_REPO="${BASH_REMATCH[2]%.git}"
+fi
+
 GIT_BRANCH="${GIT_BRANCH:-main}"
 # BACKEND_DIR n'a plus de rôle propre (plus de process Node): il ne sert qu'à retrouver le
 # dossier du clone, pour qu'un .env écrit pour deploy.sh fonctionne tel quel.
