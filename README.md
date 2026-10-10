@@ -265,6 +265,15 @@ Ensuite : déclarez dans Google Cloud l'URI de redirection `https://<votre-domai
 
 Vérification : `api/tests/test-install.js` (110 contrôles sur un Apache vierge : clé absente/courte/fausse/limitée, lecture du `.env` (emplacements parent / public / `~/` / absolu, jetons valides ou périmés, `.env` invalide, secrets jamais renvoyés), diagnostic, 15 saisies invalides, jeton refusé, 6 archives piégées, retour arrière complet sur échec d'écriture, fichiers préexistants de l'hébergeur conservés ou restaurés, version qui ne démarre pas, installation réussie, jeton jamais écrit, listes blanches identiques à `updater.php` et `deploy.sh`).
 
+### Mise à jour ponctuelle sans connexion (`update.php`)
+
+Pour mettre le site à jour sans passer par `/auth` (connexion Google indisponible, par exemple) :
+1. Remplacez la clé `UPDATE_KEY` en tête de `update.php` par une valeur secrète d'au moins 24 caractères.
+2. Envoyez le fichier seul à la racine web (FTP) et ouvrez `https://<votre-domaine>/update.php`.
+3. Saisissez la clé et la version voulue (tag, branche ou commit) ; un jeton d'accès n'est demandé que si celui de `api/.runtime.env` manque ou n'est plus valide, et n'est jamais conservé.
+
+Même effet qu'une mise à jour depuis `/auth` (le script appelle le même code d'`api/`) : archive validée avant toute écriture, sauvegarde, contrôle de fonctionnement, retour arrière automatique en cas d'échec, entrée dans le journal ; le retour arrière manuel reste possible depuis `/auth`. Après une mise à jour réussie le fichier **se supprime** ; en cas d'échec il est conservé pour une nouvelle tentative (supprimez-le par FTP si vous y renoncez). Il n'est jamais publié par `deploy.sh` ni par les mises à jour. Il s'appuie sur le code déjà installé : une correction de l'outil de mise à jour lui-même ne s'applique qu'à la mise à jour suivante. Vérifié par `api/tests/test-admin-site.js`.
+
 ### Tests
 
 Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et navigateur de test) :

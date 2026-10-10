@@ -18,7 +18,7 @@ jobs:
       # Port PHP (api/): syntaxe de chaque fichier, puis non-régression du calcul
       # (cas figés, modes d'arrondi round et floor). PHP est préinstallé sur ubuntu-latest.
       - name: Lint PHP
-        run: find api install.php -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find api install.php update.php -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Non-régression du calcul
         run: node api/tests/test-calcul.js
       - name: Cohérence de la mise en forme de .runtime.env

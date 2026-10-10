@@ -158,6 +158,29 @@ async function update(c, ref, token) {
   t('état exactement identique à la v1.1', treeHash() === afterGood); t('version = v1.1', JSON.parse(read('api/var/version.json')).sha === '1'.repeat(40));
   page = await c.req('GET', `${BASE}/auth`); t('plus de retour arrière possible', !/Rétablir la version précédente/.test(page.text));
 
+  console.log('\n— update.php (mise à jour ponctuelle qui se supprime)');
+  const UKEY = 'cle-de-test-update-0123456789abcdef';
+  const dropUpdate = (key = UKEY) => fs.writeFileSync(path.join(WWW, 'update.php'), fs.readFileSync(path.join(__dirname, '..', '..', 'update.php'), 'utf8').replace("'CHANGEZ-MOI'", `'${key}'`));
+  const up = (fields) => fetch(`${BASE}/update.php`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields) }).then(async (x) => ({ status: x.status, text: await x.text() }));
+  dropUpdate('CHANGEZ-MOI'); let u = await fetch(`${BASE}/update.php`); t('clé non personnalisée → 403', u.status === 403);
+  dropUpdate('courte'); u = await fetch(`${BASE}/update.php`); t('clé trop courte → 403', u.status === 403);
+  dropUpdate(); resetLimits(); u = await fetch(`${BASE}/update.php`); const uForm = await u.text();
+  t('formulaire affiché (clé, version, jeton neutre)', u.status === 200 && /name="key"/.test(uForm) && /name="ref"/.test(uForm) && /name="token"/.test(uForm));
+  t('aucune mention de GitHub dans le formulaire', !/github/i.test(uForm.replace(/<style[\s\S]*?<\/style>/, '')));
+  const treeBefore = treeHash();
+  u = await up({ key: 'mauvaise-cle', ref: 'main', token: TOKEN }); t('mauvaise clé → 403, site inchangé, fichier conservé', u.status === 403 && treeHash() === treeBefore && exists('update.php'));
+  resetLimits(); u = await up({ key: UKEY, ref: 'main', token: 'ghp_mauvaisjetonmauvaisjeton12345' }); t('jeton refusé → 403, fichier conservé', u.status === 403 && exists('update.php'));
+  resetLimits(); u = await up({ key: UKEY, ref: '../x', token: TOKEN }); t('référence invalide → échec, fichier conservé', u.status === 500 && /Référence invalide/.test(u.text) && exists('update.php'));
+  resetLimits(); u = await up({ key: UKEY, ref: 't3', token: TOKEN }); t('archive piégée → échec, site inchangé, fichier conservé', u.status === 500 && exists('update.php'));
+  resetLimits(); u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('mise à jour réussie', u.status === 200 && /2222222/.test(u.text), u.text.slice(0, 200)); t('app.js en v1.2', read('app.js').includes('fixture v1.2'));
+  t('update.php supprimé', !exists('update.php')); t('version enregistrée par update.php', JSON.parse(read('api/var/version.json')).by === 'update.php');
+  t('jeton jamais écrit sur le disque', !fs.readdirSync(path.join(WWW, 'api/var')).some((f) => !fs.statSync(path.join(WWW, 'api/var', f)).isDirectory() && read(`api/var/${f}`).includes(TOKEN)));
+  t('retour arrière possible depuis /auth après update.php', /Rétablir la version précédente/.test((await c.req('GET', `${BASE}/auth`)).text));
+  page = await c.req('GET', `${BASE}/auth`);
+  const rb2 = await c.req('POST', `${BASE}/auth/rollback`, { form: { csrf: csrfOf(page.text) }, headers: { Origin: BASE } });
+  t('…et il rétablit l\'état précédent', (await c.req('GET', rb2.loc)).text.includes('Version précédente rétablie') && treeHash() === afterGood);
+
   console.log('\n— Fichiers hors liste blanche (.env, .htaccess, config.js, tests...)');
   const cfgBefore = read('config.js'); const htBefore = read('.htaccess'); resetLimits();
   r = await update(c, 't10', TOKEN);
