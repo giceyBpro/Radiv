@@ -2,7 +2,7 @@ FORMULES ET METHODE DE CALCUL — RADIOPROTECTION RIV
 ===================================================
 
 Source de vérité du calcul
-- Les calculs sont réalisés côté backend dans `server.js`.
+- Les calculs sont réalisés côté backend dans `api/calculation.php`.
 - Les paramètres isotopes et scénarios standards sont définis dans des tableaux constants.
 
 1) Grandeurs d'entrée

@@ -49,7 +49,7 @@
 
     function setFooterMeta() {
       // window.RADIOPROTECTION_LAST_DEPLOYED_AT est la date réelle du dernier déploiement
-      // (injectée par deploy.sh), pas la date du jour de consultation.
+      // (injectée par le script de déploiement), pas la date du jour de consultation.
       const lastDeployedAt = window.RADIOPROTECTION_LAST_DEPLOYED_AT;
       const lastUpdatedRow = $('lastUpdatedRow');
       if (lastDeployedAt) {
@@ -129,7 +129,7 @@
       const url = `${API_BASE}/config`;
       const response = await fetchWithTimeout(url, {}, 12000);
       if (!response.ok) {
-        throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez le proxy /api vers Node.js.`);
+        throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez que /api est joignable.`);
       }
       return response.json();
     }
@@ -430,7 +430,7 @@
               : (audienceMeta[audienceCode]?.condition || '-');
             // result.rows (mode local) porte déjà cette précision de façon dynamique ; ce
             // repli (mode sfmn, où le texte n'est pas fourni par l'API) la reconstruit ici,
-            // seulement si le nombre de cures le justifie — même règle que calculation.js.
+            // seulement si le nombre de cures le justifie — même règle que api/calculation.php.
             if (audienceCode === 'transport_commun' && result.cure_count > 1) {
               condition += ' (par cure, non cumulée)';
             }

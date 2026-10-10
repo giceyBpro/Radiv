@@ -1,6 +1,6 @@
 <?php
 // Géolocalisation approximative de l'IP pour la journalisation (même fournisseurs, même ordre
-// et mêmes délais que server.js). Résultats mis en cache (APCu ou fichier, voir store.php).
+//). Résultats mis en cache (APCu ou fichier, voir store.php).
 declare(strict_types=1);
 
 namespace Radiv\Geo;

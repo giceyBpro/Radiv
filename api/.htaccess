@@ -1,5 +1,5 @@
 # Déployé dans <racine web>/api/. Toutes les requêtes sous /api/ passent par index.php:
-# les URLs restent /api/calculate, /api/config... (aucun .php visible, contrat Node inchangé)
+# les URLs restent /api/calculate, /api/config... (aucun .php visible)
 # et aucun fichier de ce dossier (lib/, .env...) n'est jamais servi ni exécuté directement.
 Options -Indexes
 <IfModule mod_rewrite.c>

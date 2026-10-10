@@ -3,7 +3,7 @@
 // INSTALLATION INITIALE DU SITE (à envoyer seul par FTP, à la racine web, puis ouvrir dans un
 // navigateur : https://<votre-domaine>/install.php).
 //
-// Ce fichier n'est JAMAIS publié par deploy.sh, deploy-php.sh ni par la page /auth : il ne sert
+// Ce fichier n'est JAMAIS publié par deploy.sh ni par la page /auth : il ne sert
 // qu'une fois. Il télécharge le dépôt GitHub privé (archive ZIP du commit demandé), valide tout
 // dans un dossier de préparation, installe le site et l'API, génère la configuration puis SE
 // SUPPRIME. Les mises à jour suivantes se font depuis https://<votre-domaine>/auth.
@@ -29,7 +29,7 @@ const GITHUB_API = 'https://api.github.com';   // modifié uniquement par les te
 const DEFAULT_REPO = 'giceyBpro/Radiv';
 const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142&lang=fr';
 
-// Même liste blanche que api/lib/updater.php et deploy-php.sh (api/tests/test-install.js vérifie
+// Même liste blanche que api/lib/updater.php et deploy.sh (api/tests/test-install.js vérifie
 // qu'elles restent identiques). api/ et downloads/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
@@ -45,7 +45,7 @@ $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à api/.runtime.env (réglages sans champ de formulaire).
 $PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS');
 // Description de api/.runtime.env : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
-// commentaire). Strictement identique à celle de deploy-php.sh (api/tests/check-runtime-layout.js le vérifie).
+// commentaire). Strictement identique à celle de deploy.sh (api/tests/check-runtime-layout.js le vérifie).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
 == Site et API
 SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
@@ -624,7 +624,7 @@ function env_to_source($env)
         'rounding' => $get('RESTRICTION_ROUNDING_MODE', 'round'), 'logging' => $get('MEASUREMENT_LOGGING_LEVEL', 'full'),
         'retention' => $get('LOGS_RETENTION_MONTHS'),
         'logs_mb' => preg_match('/^\d+$/', $bytes) ? (string) max(1, (int) ceil((int) $bytes / 1048576)) : '5',
-        // Absent du .env: valeur par défaut de l'application (activé), comme avec le backend Node.
+        // Absent du .env: valeur par défaut de l'application (activé).
         'sfmn' => strtolower($get('SFMN_MODE_ENABLED', 'true')) !== 'false',
         'sfmn_url' => $get('SFMN_CALCULATOR_URL'),
     );
@@ -721,7 +721,7 @@ function htaccess_blocks($siteUrl)
     return $blocks;
 }
 
-// Contenu de api/.runtime.env : mêmes sections et mêmes commentaires que celui de deploy-php.sh. Une variable non définie
+// Contenu de api/.runtime.env : mêmes sections et mêmes commentaires que celui de deploy.sh. Une variable non définie
 // est écrite « #NOM= » (valeur par défaut du site) ; TRUSTED_PROXIES défini mais vide reste une valeur (jamais de X-Forwarded-For).
 function render_runtime_env($vars)
 {

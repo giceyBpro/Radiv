@@ -1,6 +1,6 @@
 <?php
-// Journalisation des mesures (RGPD): mêmes fichiers logs/measurements-AAAA-MM.jsonl que la
-// version Node (un fichier par mois, rotation en .1 au-delà de LOGS_MAX_BYTES, purge par
+// Journalisation des mesures (RGPD): fichiers logs/measurements-AAAA-MM.jsonl
+// (un fichier par mois, rotation en .1 au-delà de LOGS_MAX_BYTES, purge par
 // ancienneté, migration de l'ancien measurements.jsonl). Les fichiers existants restent donc
 // lisibles tels quels après bascule.
 declare(strict_types=1);
@@ -88,7 +88,7 @@ function purge_old_logs(): void
     }
 }
 
-// Node purgeait au démarrage puis une fois par jour; sans process persistant, on le fait au
+// Sans process persistant, la purge se fait au
 // plus une fois par 24 h, déclenché par une requête (marqueur = mtime de logs/.last-purge).
 function maintenance(): void
 {

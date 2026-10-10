@@ -150,7 +150,7 @@ async function update(c, ref, token) {
   r = await update(c, 't10', TOKEN);
   t('installée', /aaaaaaa/.test(r.msg), r.msg);
   t('config.js et .htaccess racine inchangés', read('config.js') === cfgBefore && read('.htaccess') === htBefore);
-  t('.env / api/.env / deploy-php.sh / api/logs/x / api/tests absents', !exists('.env') && !exists('api/.env') && !exists('deploy-php.sh') && !exists('api/logs/x.jsonl') && !exists('api/tests/x.php'));
+  t('.env / api/.env / deploy.sh / api/logs/x / api/tests absents', !exists('.env') && !exists('api/.env') && !exists('deploy.sh') && !exists('api/logs/x.jsonl') && !exists('api/tests/x.php'));
   t('.runtime.env intact', runtimeEnv() === envBefore);
 
   console.log('\n— Onglet « Mesures »');

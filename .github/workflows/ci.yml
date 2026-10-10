@@ -15,13 +15,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node --check server.js
-      # Port PHP (api/): syntaxe de chaque fichier, puis parité du calcul avec calculation.js
-      # (2000 cas aléatoires + cas de référence, modes d'arrondi round et floor). PHP est
-      # préinstallé sur ubuntu-latest; aucun accès réseau n'est nécessaire.
+      # Port PHP (api/): syntaxe de chaque fichier, puis non-régression du calcul
+      # (cas figés, modes d'arrondi round et floor). PHP est préinstallé sur ubuntu-latest.
       - name: Lint PHP
         run: find api install.php -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Parité calcul Node / PHP
-        run: node api/tests/compare-node-php.js 2000
+      - name: Non-régression du calcul
+        run: node api/tests/test-calcul.js
       - name: Cohérence de la mise en forme de .runtime.env
         run: node api/tests/check-runtime-layout.js
