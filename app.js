@@ -1,5 +1,6 @@
     const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
     const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
+    let LAST_UPDATED = '';
     let SITE_NAME = window.RADIOPROTECTION_SITE_NAME || (() => {
       try {
         return new URL(SITE_URL).hostname.replace(/^www\./, '');
@@ -50,7 +51,7 @@
     function setFooterMeta() {
       // window.RADIOPROTECTION_LAST_DEPLOYED_AT est la date réelle du dernier déploiement
       // (injectée par le script de déploiement), pas la date du jour de consultation.
-      const lastDeployedAt = window.RADIOPROTECTION_LAST_DEPLOYED_AT;
+      const lastDeployedAt = LAST_UPDATED || window.RADIOPROTECTION_LAST_DEPLOYED_AT;
       const lastUpdatedRow = $('lastUpdatedRow');
       if (lastDeployedAt) {
         const parsed = new Date(`${lastDeployedAt}T00:00:00`);
@@ -573,6 +574,7 @@
         const data = await response.json();
         if (typeof data.site_name === 'string' && data.site_name) SITE_NAME = data.site_name;
         if (typeof data.copyright_owner === 'string' && data.copyright_owner) COPYRIGHT_OWNER = data.copyright_owner;
+        if (typeof data.last_updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.last_updated)) LAST_UPDATED = data.last_updated;
         setFooterMeta();
       } catch (_) { /* repli: valeurs de config.js */ }
     }

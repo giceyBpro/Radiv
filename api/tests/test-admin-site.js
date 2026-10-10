@@ -122,6 +122,8 @@ async function update(c, ref, token) {
   t('app.js remplacé', read('app.js').includes('fixture v1.1')); t('nouveau fichier créé', exists('downloads/ajout-v1_1.xml'));
   const version = JSON.parse(read('api/var/version.json'));
   t('version enregistrée (sha, ref, par)', version.sha === '1'.repeat(40) && version.ref === 'v1.1' && version.by === 'admin@example.org');
+  const lu = (await (await fetch(`${BASE}/api/public-config`)).json()).last_updated;
+  t('public-config.last_updated suit la date de la mise à jour', /^\d{4}-\d{2}-\d{2}$/.test(lu) && lu === new Date().toLocaleDateString('sv'), lu);
   const log = await ghLog();
   t("jeton envoyé à l'API GitHub", log.filter((l) => l.path.startsWith('/repos')).every((l) => l.auth === 'present'));
   t('jeton NON transmis au téléchargement redirigé', log.filter((l) => l.path.startsWith('/codeload')).every((l) => l.auth === 'absent') && log.some((l) => l.path.startsWith('/codeload')));
