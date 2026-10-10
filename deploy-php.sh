@@ -36,8 +36,10 @@ CHECKOUT_DIR="${CHECKOUT_DIR:-$BACKEND_DIR/repo}"
 BACKEND_DIR="${BACKEND_DIR/#\~/$HOME}"
 FRONTEND_DIR="${FRONTEND_DIR/#\~/$HOME}"
 CHECKOUT_DIR="${CHECKOUT_DIR/#\~/$HOME}"
-API_PUBLIC_URL="${API_PUBLIC_URL:-https://www.example.org/api}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
+# Par défaut l'API est sous le site (/api): une URL d'exemple écrite en dur se retrouverait dans config.js
+# et dans la configuration de l'API si le .env ne définit pas API_PUBLIC_URL.
+API_PUBLIC_URL="${API_PUBLIC_URL:-${SITE_PUBLIC_URL%/}/api}"
 # Défaut restrictif: retomber sur "*" ouvrirait l'API à toutes les origines.
 API_CORS_ORIGIN="${API_CORS_ORIGIN:-${SITE_PUBLIC_URL}}"
 SITE_NAME="${SITE_NAME:-$(sed -E 's#^https?://##; s#/.*$##; s#^www\.##' <<< "${SITE_PUBLIC_URL}")}"
@@ -380,30 +382,118 @@ runtime_line() {
     log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans api/.env)." >&2
   fi
 }
-RUNTIME_VARS=(
-  API_CORS_ORIGIN TRUSTED_PROXIES ADMIN_MEASUREMENTS_ENABLED SITE_PUBLIC_URL
-  RECAPTCHA_SECRET_KEY RECAPTCHA_SITE_KEY
-  SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_USER SMTP_PASS SMTP_FROM CONTACT_DEST SMTP_TIMEOUT_MS
-  SFMN_MODE_ENABLED SFMN_CALCULATOR_URL SFMN_DEBUG
-  RESTRICTION_ROUNDING_MODE CALCULATE_RATE_LIMIT RATE_LIMIT_BACKEND
-  MEASUREMENT_LOGGING_LEVEL LOGS_RETENTION_MONTHS LOGS_MAX_BYTES
-  API_PUBLIC_URL ADMIN_SITE_ENABLED ADMIN_UPDATE_ENABLED ADMIN_GOOGLE_EMAILS GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET
-  UPDATE_GITHUB_REPO UPDATE_GITHUB_TOKEN
-)
-# TRUSTED_PROXIES vide est une valeur valable (= ne jamais croire X-Forwarded-For): runtime_line
-# l'omettrait; on le réécrit explicitement s'il est défini mais vide.
-install -m 600 /dev/null "$API_DIR/.runtime.env"
-{
-  echo "# Généré par deploy-php.sh à chaque déploiement — ne pas éditer ici (utiliser le .env de déploiement"
-  echo "# ou, pour un réglage purement local, api/.env qui n'est jamais écrasé)."
-  for _name in "${RUNTIME_VARS[@]}"; do
-    if [[ "$_name" == "TRUSTED_PROXIES" ]]; then
-      if [[ -n "${TRUSTED_PROXIES+x}" ]]; then printf 'TRUSTED_PROXIES="%s"\n' "$TRUSTED_PROXIES"; fi
+# Description du fichier : sections, variables dans l'ordre, commentaires (lignes « | » = suite du commentaire).
+# Strictement identique à celle de install.php (api/tests/check-runtime-layout.js le vérifie).
+RUNTIME_LAYOUT="$(cat <<'LAYOUT'
+== Site et API
+SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
+|Sert à l'URL de retour Google (/auth/callback) et au contrôle d'origine des formulaires.
+API_PUBLIC_URL|URL publique de l'API. Facultatif : par défaut SITE_PUBLIC_URL suivi de /api.
+API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en général l'adresse du site).
+|« * » l'ouvre à tous les sites : à éviter.
+TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
+|séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
+== Administration du site (/auth, connexion Google)
+GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
+GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
+ADMIN_GOOGLE_EMAILS|Adresses Google autorisées à se connecter à /auth, séparées par des virgules.
+|Comparaison exacte : ni domaine entier, ni joker.
+ADMIN_SITE_ENABLED|true ou false. false coupe entièrement /auth (réponse 404). Défaut : true.
+ADMIN_MEASUREMENTS_ENABLED|true ou false. false retire la consultation des mesures de /auth. Défaut : true.
+== Mises à jour depuis /auth
+ADMIN_UPDATE_ENABLED|true ou false. Autorise les mises à jour du site depuis /auth. Défaut : false.
+UPDATE_GITHUB_REPO|Dépôt GitHub à télécharger lors d'une mise à jour (propriétaire/nom).
+UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = /auth en demande un à chaque
+|mise à jour et ne le conserve pas.
+== Formulaire de contact
+RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
+RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
+SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
+SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
+SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
+SMTP_USER|Identifiant SMTP.
+SMTP_PASS|Mot de passe SMTP (confidentiel).
+SMTP_FROM|Expéditeur affiché, ex. Site <no-reply@exemple.fr>.
+CONTACT_DEST|Adresse qui reçoit les messages du formulaire.
+SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 15000.
+== Calcul des durées de restriction
+RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
+SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
+|false = calcul local seul.
+SFMN_CALCULATOR_URL|Adresse du calculateur SFMN distant (utile seulement si le mode SFMN est actif).
+SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
+|à laisser sur false. Défaut : false.
+== Mesures et journaux (RGPD)
+MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
+|seulement ; none = rien. Défaut : full.
+LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = conservation illimitée.
+LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
+== Protection contre les abus
+CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
+RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
+== Essais en local uniquement
+ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.
+LAYOUT
+)"
+# Écrit « NOM="valeur" » (ou « NOM='valeur' » si la valeur contient des guillemets doubles), rien si la
+# variable n'est pas définie. Retourne 1 si rien n'a été écrit.
+runtime_assignment() {
+  local name="$1" value="${!1:-}"
+  # TRUSTED_PROXIES vide est une valeur valable (= ne jamais croire X-Forwarded-For).
+  if [[ "$name" == "TRUSTED_PROXIES" && -n "${TRUSTED_PROXIES+x}" && -z "$value" ]]; then
+    printf 'TRUSTED_PROXIES=""\n'
+    return 0
+  fi
+  [[ -n "$value" ]] || return 1
+  if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+    log_warn "$name contient un saut de ligne: variable ignorée." >&2
+    return 1
+  fi
+  # Guillemets doubles, ou simples si la valeur contient déjà des guillemets doubles (mot de passe
+  # SMTP, par ex.): le lecteur de .env d'api/ coupe à la première guillemet fermante.
+  if [[ "$value" != *\"* ]]; then
+    printf '%s="%s"\n' "$name" "$value"
+  elif [[ "$value" != *\'* ]]; then
+    printf "%s='%s'\n" "$name" "$value"
+  else
+    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans api/.env)." >&2
+    return 1
+  fi
+}
+render_runtime_env() {
+  echo "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement."
+  echo "# Généré par deploy-php.sh le $(date '+%Y-%m-%d %H:%M') — chaque déploiement RÉÉCRIT ce fichier à partir du .env"
+  echo "# de déploiement : reportez-y vos changements durables. api/.env reste pour les réglages purement locaux."
+  echo "#"
+  echo "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site"
+  echo "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets."
+  local line first=1 name comment pending_name="" pending_comment="" assignment
+  flush_var() {
+    [[ -n "$pending_name" ]] || return 0
+    echo
+    printf '%s\n' "$pending_comment"
+    if assignment="$(runtime_assignment "$pending_name")"; then printf '%s\n' "$assignment"; else printf '#%s=\n' "$pending_name"; fi
+    pending_name=""; pending_comment=""
+  }
+  while IFS= read -r line; do
+    if [[ "$line" == "== "* ]]; then
+      flush_var
+      echo; echo
+      echo "# ------------------------------------------------------------------------------------------"
+      echo "# ${line#== }"
+      echo "# ------------------------------------------------------------------------------------------"
+    elif [[ "$line" == "|"* ]]; then
+      pending_comment+=$'\n'"# ${line#|}"
     else
-      runtime_line "$_name"
+      flush_var
+      pending_name="${line%%|*}"
+      pending_comment="# ${line#*|}"
     fi
-  done
-} > "$API_DIR/.runtime.env"
+  done <<< "$RUNTIME_LAYOUT"
+  flush_var
+}
+install -m 600 /dev/null "$API_DIR/.runtime.env"
+render_runtime_env > "$API_DIR/.runtime.env"
 chmod 600 "$API_DIR/.runtime.env"
 log_ok "api/.runtime.env généré et protégé (600)."
 

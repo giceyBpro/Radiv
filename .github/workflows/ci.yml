@@ -23,3 +23,5 @@ jobs:
         run: find api install.php -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Parité calcul Node / PHP
         run: node api/tests/compare-node-php.js 2000
+      - name: Cohérence de la mise en forme de .runtime.env
+        run: node api/tests/check-runtime-layout.js

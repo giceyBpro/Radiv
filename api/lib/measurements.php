@@ -55,10 +55,13 @@ function list_periods(): array
     if (!is_dir($dir)) return [];
     $periods = [];
     foreach (scandir($dir) ?: [] as $name) {
-        if (preg_match('/^measurements-(\d{4})-(\d{2})\.jsonl$/', $name, $m)) {
-            $periods[] = ['year' => (int) $m[1], 'month' => (int) $m[2]];
+        // Le fichier de rotation (.1) compte aussi : juste après une rotation, le fichier du mois n'existe plus
+        // jusqu'à la mesure suivante, et ses données ne doivent pas disparaître de l'historique.
+        if (preg_match('/^measurements-(\d{4})-(\d{2})\.jsonl(?:\.1)?$/', $name, $m)) {
+            $periods["{$m[1]}-{$m[2]}"] = ['year' => (int) $m[1], 'month' => (int) $m[2]];
         }
     }
+    $periods = array_values($periods);
     usort($periods, static fn ($a, $b) => ($b['year'] <=> $a['year']) ?: ($b['month'] <=> $a['month']));
     return $periods;
 }
@@ -185,6 +188,43 @@ function read_logs(?string $year, ?string $month): array
     };
     usort($rows, static fn ($a, $b) => $ts($b) <=> $ts($a));
     return $rows;
+}
+
+// Horodatage Unix d'une ligne de journal (0 si illisible).
+function row_ts($row): int
+{
+    $ts = strtotime((string) ($row->timestamp ?? ''));
+    return $ts === false ? 0 : (int) $ts;
+}
+
+// Lignes dont l'horodatage est dans [$since, $until] (secondes Unix), de la plus récente à la plus ancienne,
+// limitées aux $cap plus récentes. Seuls les fichiers mensuels qui recoupent la période sont lus (rotation
+// .1 incluse), du plus récent au plus ancien, et la lecture s'arrête dès que $cap est dépassé : un historique
+// de plusieurs années ne se charge donc jamais en entier en mémoire.
+// Retourne ['rows' => [...], 'truncated' => bool].
+function read_range(int $since, int $until, int $cap = 50000): array
+{
+    $rows = [];
+    $truncated = false;
+    foreach (list_periods() as $p) { // du plus récent au plus ancien
+        $start = gmmktime(0, 0, 0, $p['month'], 1, $p['year']);
+        $end = gmmktime(0, 0, 0, $p['month'] + 1, 1, $p['year']) - 1;
+        if ($end < $since || $start > $until) continue;
+        $file = log_file_for_period($p['year'], $p['month']);
+        $chunk = read_file($file);
+        if (is_file("{$file}.1")) array_push($chunk, ...read_file("{$file}.1"));
+        foreach ($chunk as $row) {
+            $ts = row_ts($row);
+            if ($ts >= $since && $ts <= $until) $rows[] = $row;
+        }
+        if (count($rows) > $cap) { $truncated = true; break; }
+    }
+    usort($rows, static fn ($a, $b) => row_ts($b) <=> row_ts($a));
+    if (count($rows) > $cap) {
+        $rows = array_slice($rows, 0, $cap);
+        $truncated = true;
+    }
+    return ['rows' => $rows, 'truncated' => $truncated];
 }
 
 // String(value ?? '') côté JS, pour les valeurs issues d'un JSON.
