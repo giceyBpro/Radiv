@@ -95,16 +95,25 @@ function csrf_token(): string
     return (string) $_SESSION['csrf'];
 }
 
-// Jeton CSRF (champ de formulaire) + contrôle de l'origine de la requête.
+// Contrôles d'une requête qui modifie quelque chose :
+//  1. jeton CSRF du formulaire (secret de la session, inconnu d'un autre site) : protection principale ;
+//  2. Sec-Fetch-Site, quand le navigateur l'envoie : refus de toute requête venant d'un autre site ;
+//  3. Origin (à défaut Referer) : doit être l'adresse du site. Un « Origin: null » n'est pas une adresse : les
+//     navigateurs l'envoient quand la politique de référent est no-referrer (ou depuis une page isolée). Il est
+//     donc ignoré ici — le jeton et le cookie SameSite=Lax couvrent ce cas — plutôt que de refuser un
+//     administrateur légitime (c'était le cas de tous les formulaires de /auth).
 function csrf_valid(): bool
 {
     start();
     $given = $_POST['csrf'] ?? '';
     if (!is_string($given) || empty($_SESSION['csrf']) || !hash_equals((string) $_SESSION['csrf'], $given)) return false;
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
-    if ($origin !== '') {
+    $fetchSite = (string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '');
+    if ($fetchSite !== '' && !in_array($fetchSite, ['same-origin', 'none'], true)) return false;
+    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($origin === '' || $origin === 'null') $origin = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+    if ($origin !== '' && $origin !== 'null') {
         $expected = parse_url(Config\site_public_url(), PHP_URL_HOST);
-        if (parse_url((string) $origin, PHP_URL_HOST) !== $expected) return false;
+        if (parse_url($origin, PHP_URL_HOST) !== $expected) return false;
     }
     return true;
 }

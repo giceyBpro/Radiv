@@ -44,6 +44,58 @@ $TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'a
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à api/.runtime.env (réglages sans champ de formulaire).
 $PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS');
+// Description de api/.runtime.env : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
+// commentaire). Strictement identique à celle de deploy-php.sh (api/tests/check-runtime-layout.js le vérifie).
+$RUNTIME_LAYOUT = <<<'LAYOUT'
+== Site et API
+SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
+|Sert à l'URL de retour Google (/auth/callback) et au contrôle d'origine des formulaires.
+API_PUBLIC_URL|URL publique de l'API. Facultatif : par défaut SITE_PUBLIC_URL suivi de /api.
+API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en général l'adresse du site).
+|« * » l'ouvre à tous les sites : à éviter.
+TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
+|séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
+== Administration du site (/auth, connexion Google)
+GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
+GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
+ADMIN_GOOGLE_EMAILS|Adresses Google autorisées à se connecter à /auth, séparées par des virgules.
+|Comparaison exacte : ni domaine entier, ni joker.
+ADMIN_SITE_ENABLED|true ou false. false coupe entièrement /auth (réponse 404). Défaut : true.
+ADMIN_MEASUREMENTS_ENABLED|true ou false. false retire la consultation des mesures de /auth. Défaut : true.
+== Mises à jour depuis /auth
+ADMIN_UPDATE_ENABLED|true ou false. Autorise les mises à jour du site depuis /auth. Défaut : false.
+UPDATE_GITHUB_REPO|Dépôt GitHub à télécharger lors d'une mise à jour (propriétaire/nom).
+UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = /auth en demande un à chaque
+|mise à jour et ne le conserve pas.
+== Formulaire de contact
+RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
+RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
+SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
+SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
+SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
+SMTP_USER|Identifiant SMTP.
+SMTP_PASS|Mot de passe SMTP (confidentiel).
+SMTP_FROM|Expéditeur affiché, ex. Site <no-reply@exemple.fr>.
+CONTACT_DEST|Adresse qui reçoit les messages du formulaire.
+SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 15000.
+== Calcul des durées de restriction
+RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
+SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
+|false = calcul local seul.
+SFMN_CALCULATOR_URL|Adresse du calculateur SFMN distant (utile seulement si le mode SFMN est actif).
+SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
+|à laisser sur false. Défaut : false.
+== Mesures et journaux (RGPD)
+MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
+|seulement ; none = rien. Défaut : full.
+LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = conservation illimitée.
+LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
+== Protection contre les abus
+CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
+RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
+== Essais en local uniquement
+ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.
+LAYOUT;
 const MAX_ZIP_BYTES = 20971520;
 const MAX_FILE_BYTES = 10485760;
 const MAX_TOTAL_BYTES = 52428800;
@@ -669,6 +721,47 @@ function htaccess_blocks($siteUrl)
     return $blocks;
 }
 
+// Contenu de api/.runtime.env : mêmes sections et mêmes commentaires que celui de deploy-php.sh. Une variable non définie
+// est écrite « #NOM= » (valeur par défaut du site) ; TRUSTED_PROXIES défini mais vide reste une valeur (jamais de X-Forwarded-For).
+function render_runtime_env($vars)
+{
+    global $RUNTIME_LAYOUT;
+    $out = "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement.\n"
+        . "# Généré par install.php le " . date('Y-m-d H:i') . " — les mises à jour de /auth ne modifient jamais ce fichier.\n"
+        . "# Pour réinstaller ou régénérer, voir le README ; api/.env reste pour les réglages purement locaux.\n"
+        . "#\n"
+        . "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site\n"
+        . "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets.\n";
+    $name = '';
+    $comment = array();
+    $flush = function () use (&$name, &$comment, &$out, $vars) {
+        if ($name === '') return;
+        $line = '';
+        if (array_key_exists($name, $vars) && ($vars[$name] !== '' || $name === 'TRUSTED_PROXIES')) {
+            $line = $name === 'TRUSTED_PROXIES' && $vars[$name] === '' ? 'TRUSTED_PROXIES=""' . "\n" : env_line($name, $vars[$name]);
+        }
+        $out .= "\n" . implode("\n", $comment) . "\n" . ($line !== '' ? $line : '#' . $name . "=\n");
+        $name = '';
+        $comment = array();
+    };
+    foreach (explode("\n", $RUNTIME_LAYOUT) as $row) {
+        if (strpos($row, '== ') === 0) {
+            $flush();
+            $out .= "\n\n# ------------------------------------------------------------------------------------------\n# " . substr($row, 3)
+                . "\n# ------------------------------------------------------------------------------------------\n";
+        } elseif (isset($row[0]) && $row[0] === '|') {
+            $comment[] = '# ' . substr($row, 1);
+        } else {
+            $flush();
+            $parts = explode('|', $row, 2);
+            $name = $parts[0];
+            $comment = array('# ' . (isset($parts[1]) ? $parts[1] : ''));
+        }
+    }
+    $flush();
+    return $out;
+}
+
 function copy_atomic($src, $dest)
 {
     make_dir(dirname($dest));
@@ -807,7 +900,6 @@ try {
     // 6) Configuration de l'API (jamais écrasée par les mises à jour) et dossiers de données protégés
     $apiDir = $docroot . '/api';
     if (!guard_dir($apiDir . '/logs') || !guard_dir($apiDir . '/var')) throw new RuntimeException('Dossiers de données inaccessibles.');
-    $env = "# Généré par install.php — les mises à jour de /auth ne modifient jamais ce fichier.\n";
     $vars = array(
         'SITE_PUBLIC_URL' => $site, 'API_PUBLIC_URL' => $site . '/api', 'API_CORS_ORIGIN' => $site,
         'GOOGLE_CLIENT_ID' => $d['google_id'], 'GOOGLE_CLIENT_SECRET' => $d['google_secret'], 'ADMIN_GOOGLE_EMAILS' => $d['admin_emails'],
@@ -823,8 +915,7 @@ try {
     if ($d['local']) $vars['ADMIN_ALLOW_INSECURE_HTTP'] = 'true'; // uniquement pour un essai en local (http://127.0.0.1)
     foreach ($extras as $name => $value) $vars[$name] = $value; // réglages du .env sans champ de formulaire
     if ($persistToken) $vars['UPDATE_GITHUB_TOKEN'] = $good[0];
-    foreach ($vars as $name => $value) $env .= env_line($name, $value);
-    if (isset($extras['TRUSTED_PROXIES']) && $extras['TRUSTED_PROXIES'] === '') $env .= 'TRUSTED_PROXIES=""' . "\n"; // vide = ne jamais croire X-Forwarded-For
+    $env = render_runtime_env($vars);
     $envFile = $apiDir . '/.runtime.env';
     if (is_file($envFile)) { $bk = $tmp . '/backup/api/.runtime.env'; make_dir(dirname($bk)); @copy($envFile, $bk); $backups['api/.runtime.env'] = $bk; }
     if (@file_put_contents($envFile, $env) === false) throw new RuntimeException('Écriture impossible : api/.runtime.env');
