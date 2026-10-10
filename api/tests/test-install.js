@@ -8,9 +8,10 @@ let pass = 0; let fail = 0;
 const t = (name, cond, detail = '') => { if (cond) { pass += 1; console.log(`OK    ${name}`); } else { fail += 1; console.log(`ÉCHEC ${name} ${detail}`); } };
 const src = fs.readFileSync(path.join(REPO_DIR, 'install.php'), 'utf8');
 
-function deployInstaller({ key = KEY, extra = {} } = {}) { // dossier vierge + install.php « préparé » par l'utilisateur
+function deployInstaller({ key = KEY, extra = {}, envConst = null } = {}) { // dossier vierge + install.php « préparé » par l'utilisateur
   fs.rmSync(WWW, { recursive: true, force: true }); fs.mkdirSync(WWW, { recursive: true });
   let code = src.replace("const INSTALL_KEY = 'CHANGEZ-MOI';", `const INSTALL_KEY = '${key}';`).replace("const GITHUB_API = 'https://api.github.com';", "const GITHUB_API = 'http://127.0.0.1:9202';");
+  if (envConst !== null) code = code.replace("const ENV_FILE = '../.env';", `const ENV_FILE = '${envConst}';`);
   fs.writeFileSync(path.join(WWW, 'install.php'), code);
   for (const [f, c] of Object.entries(extra)) { fs.mkdirSync(path.dirname(path.join(WWW, f)), { recursive: true }); fs.writeFileSync(path.join(WWW, f), c); }
   require('child_process').execSync(`chown -R www-data:www-data ${WWW}; chmod -R u+rwX,go+rX ${WWW}`);
@@ -104,6 +105,79 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   t('GET /health → 200', (await fetch(`${BASE}/health`)).status === 200);
   const au = await fetch(`${BASE}/auth`, { redirect: 'manual' }); t('/auth redirige vers Google', au.status === 302 && /accounts\.google\.com/.test(au.headers.get('location')), `${au.status} ${au.headers.get('location')}`);
   t('/install.php inexistant après installation', (await fetch(`${BASE}/install.php`)).status === 404);
+
+  console.log('\n— Configuration lue dans un .env (hors du dossier public)');
+  const ENVDIR = path.dirname(WWW); const ENVF = path.join(ENVDIR, '.env');
+  const baseEnv = (extra = '') => ['# déploiement', 'GIT_REPO=https://github.com/giceyBpro/Radiv.git', 'GIT_BRANCH=v1.1', `SITE_PUBLIC_URL="${BASE}"   # commentaire en fin de ligne`,
+    'GOOGLE_CLIENT_ID=cid.apps.googleusercontent.com', `GOOGLE_CLIENT_SECRET=${GSECRET}`, 'ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"', 'ADMIN_UPDATE_ENABLED=true',
+    'SMTP_HOST=smtp.example.org', 'SMTP_PORT=587', 'SMTP_USER=contact@example.org', `SMTP_PASS='${SECRET_SMTP}'`, 'SMTP_FROM=Site <no-reply@example.org>', 'CONTACT_DEST=dest@example.org',
+    'RECAPTCHA_SITE_KEY=sitekey', 'RECAPTCHA_SECRET_KEY=recaptchasecret', 'SFMN_MODE_ENABLED=true', 'SFMN_CALCULATOR_URL=https://sfmn.example.org/calc',
+    'RESTRICTION_ROUNDING_MODE=floor', 'MEASUREMENT_LOGGING_LEVEL=user', 'LOGS_RETENTION_MONTHS=6', 'LOGS_MAX_BYTES=3145728', 'CALCULATE_RATE_LIMIT=33', 'TRUSTED_PROXIES=', 'RATE_LIMIT_BACKEND=file', extra].join('\n') + '\n';
+  const writeEnv = (text, file = ENVF) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); require('child_process').execSync(`chown -R www-data:www-data ${path.dirname(file)}; chmod 640 ${file}`); };
+  const dropEnv = () => { for (const f of [ENVF, path.join(ENVDIR, 'private')]) fs.rmSync(f, { recursive: true, force: true }); };
+  const envForm = (over = {}) => ({ step: 'install', key: KEY, use_env: '1', ...over });
+
+  deployInstaller(); writeEnv(baseEnv());
+  r = await post({ step: 'check', key: KEY }); html = r.text;
+  t('.env trouvé: configuration affichée', /Configuration lue dans le fichier \.env/.test(html) && html.includes('giceyBpro/Radiv') && html.includes('v1.1') && html.includes(BASE));
+  t('secrets masqués, jamais renvoyés au navigateur', ![GSECRET, SECRET_SMTP, 'p@ss', 'recaptchasecret'].some((x) => html.includes(x)) && /●●●/.test(html));
+  t('seuls la version et le jeton sont demandés', /name="use_env" value="1"/.test(html) && /name="ref"/.test(html) && /name="token"/.test(html) && !/name="smtp_host"/.test(html) && !/name="google_secret"/.test(html));
+  const beforeEnv = snapshot();
+  r = await post(envForm({ ref: 'v1.1' })); t('sans jeton → refusé, rien écrit', r.status === 400 && /jeton/i.test(r.text) && snapshot() === beforeEnv, msg(r.text));
+  r = await post(envForm({ ref: 'v1.1', token: 'ghp_mauvaisjetonmauvaisjeton12345' })); t('jeton refusé par GitHub → interrompu, rien écrit', r.status === 500 && snapshot() === beforeEnv);
+  r = await post(envForm({ ref: 'v1.1', token: 'court' })); t('jeton de forme invalide → refusé', r.status === 400 && snapshot() === beforeEnv);
+
+  r = await post(envForm({ ref: 'v1.1', token: TOKEN, site_url: 'https://evil.example', google_id: 'evil', smtp_host: 'evil.example', admin_emails: 'pirate@evil.example', repo: 'evil/repo' }));
+  html = r.text;
+  t('installation depuis le .env avec le seul jeton saisi', r.status === 200 && /Site installé/.test(html) && /1111111/.test(html), msg(html));
+  const env2 = fs.readFileSync(path.join(WWW, 'api/.runtime.env'), 'utf8');
+  t('champs du formulaire ne peuvent pas écraser le .env (site, Google, SMTP, dépôt)', !/evil/.test(env2) && env2.includes(`SITE_PUBLIC_URL="${BASE}"`) && env2.includes('ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"') && env2.includes('SMTP_HOST="smtp.example.org"'));
+  t('valeurs du .env reportées (arrondi, journal, limites, SFMN, proxies, rate-limit)', ['RESTRICTION_ROUNDING_MODE="floor"', 'MEASUREMENT_LOGGING_LEVEL="user"', 'LOGS_RETENTION_MONTHS="6"', 'LOGS_MAX_BYTES="3145728"', 'CALCULATE_RATE_LIMIT="33"', 'TRUSTED_PROXIES=""', 'RATE_LIMIT_BACKEND="file"', 'SFMN_MODE_ENABLED="true"', 'SFMN_CALCULATOR_URL="https://sfmn.example.org/calc"', 'ADMIN_UPDATE_ENABLED="true"', `SMTP_PASS='${SECRET_SMTP}'`].every((x) => env2.includes(x)), env2);
+  t('jeton saisi absent du disque', ![...(function* w(d) { for (const n of fs.readdirSync(d, { withFileTypes: true })) { const q = path.join(d, n.name); if (n.isDirectory()) yield* w(q); else yield q; } })(ENVDIR)].some((f) => fs.readFileSync(f).includes(TOKEN)));
+  t('.env d\'origine intact (hors dossier public, conservé)', fs.readFileSync(ENVF, 'utf8') === baseEnv() && /n'a pas été modifié/.test(html.replace(/&#039;/g, "'")));
+  t('mode SFMN du .env pris en compte par l\'API', (await (await fetch(`${BASE}/api/config`)).json()).calculation_modes.includes('sfmn'));
+  t('version installée = celle du .env (v1.1)', JSON.parse(fs.readFileSync(path.join(WWW, 'api/var/version.json'), 'utf8')).sha === '1'.repeat(40));
+
+  console.log('\n— Jetons présents dans le .env');
+  deployInstaller(); writeEnv(baseEnv(`UPDATE_GITHUB_TOKEN=${TOKEN}`));
+  r = await post({ step: 'check', key: KEY }); t('UPDATE_GITHUB_TOKEN valide → champ jeton masqué', !/name="token"/.test(r.text) && /name="use_env"/.test(r.text) && !r.text.includes(TOKEN));
+  r = await post(envForm({ ref: 'main' })); const envT = fs.readFileSync(path.join(WWW, 'api/var/version.json'), 'utf8');
+  t('installation sans rien saisir, version surchargeable (main → v1.2)', /Site installé/.test(r.text) && JSON.parse(envT).sha === '2'.repeat(40) && fs.readFileSync(path.join(WWW, 'app.js'), 'utf8').includes('fixture v1.2'));
+  t('UPDATE_GITHUB_TOKEN reporté dans api/.runtime.env (600) pour que /auth ne le redemande pas', fs.readFileSync(path.join(WWW, 'api/.runtime.env'), 'utf8').includes(`UPDATE_GITHUB_TOKEN="${TOKEN}"`) && (fs.statSync(path.join(WWW, 'api/.runtime.env')).mode & 0o777) === 0o600);
+  deployInstaller(); writeEnv(baseEnv(`GIT_TOKEN=${TOKEN}`));
+  r = await post({ step: 'check', key: KEY }); t('GIT_TOKEN valide → champ jeton masqué', !/name="token"/.test(r.text));
+  r = await post(envForm({ ref: 'v1.1' })); t('installation avec GIT_TOKEN', /Site installé/.test(r.text));
+  t('GIT_TOKEN (jeton de déploiement) NON reporté dans api/', !fs.readFileSync(path.join(WWW, 'api/.runtime.env'), 'utf8').includes(TOKEN));
+  deployInstaller(); writeEnv(baseEnv('UPDATE_GITHUB_TOKEN=ghp_perimeperimeperimeperime1234'));
+  r = await post({ step: 'check', key: KEY }); t('jeton du .env refusé par GitHub → le champ jeton réapparaît', /name="token"/.test(r.text));
+  const snap2 = snapshot(); r = await post(envForm({ ref: 'v1.1' })); t('…et sans jeton saisi, l\'installation échoue proprement', r.status === 500 && /jeton/.test(r.text) && snapshot() === snap2);
+  r = await post(envForm({ ref: 'v1.1', token: TOKEN })); t('…avec un jeton saisi elle réussit', /Site installé/.test(r.text));
+  t('le jeton périmé du .env n\'est pas reporté', !fs.readFileSync(path.join(WWW, 'api/.runtime.env'), 'utf8').includes('ghp_perime'));
+
+  console.log('\n— .env invalide ou absent');
+  deployInstaller(); writeEnv(baseEnv().replace('admin@example.org, second@example.org', 'pas-un-mail'));
+  r = await post({ step: 'check', key: KEY }); t('valeur invalide signalée au diagnostic, pas de bouton d\'installation', /Adresse administrateur invalide/.test(r.text) && !/name="use_env"/.test(r.text));
+  const snap3 = snapshot(); r = await post(envForm({ ref: 'v1.1', token: TOKEN })); t('installation refusée avec ce .env, rien écrit', r.status === 400 && /Adresse administrateur invalide/.test(r.text) && snapshot() === snap3);
+  writeEnv(baseEnv().replace(/^SITE_PUBLIC_URL.*$/m, ''));
+  r = await post({ step: 'check', key: KEY }); t('SITE_PUBLIC_URL manquant signalé', /Adresse du site invalide/.test(r.text));
+  writeEnv(baseEnv('SMTP_TIMEOUT_MS=15\nINJECT_ME=1'));
+  r = await post({ step: 'check', key: KEY }); t('variables inconnues du .env ignorées (liste blanche)', !/INJECT_ME/.test(r.text) && /name="use_env"/.test(r.text));
+  dropEnv(); r = await post({ step: 'check', key: KEY }); t('pas de .env → formulaire manuel + indication de l\'emplacement attendu', /name="smtp_host"/.test(r.text) && /Aucun fichier \.env lisible/.test(r.text));
+  r = await post(envForm({ ref: 'v1.1', token: TOKEN })); t('use_env sans fichier → refusé', r.status === 400 && /introuvable/.test(r.text) && listing().join() === 'install.php');
+
+  console.log('\n— Emplacements: dossier public et ~/');
+  deployInstaller({ envConst: 'install.env' }); writeEnv(baseEnv(), path.join(WWW, 'install.env'));
+  r = await post({ step: 'check', key: KEY }); t('.env dans le dossier public: avertissement', /dossier public/.test(r.text), r.text.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 700));
+  r = await post(envForm({ ref: 'v1.1', token: TOKEN })); t('installation réussie…', /Site installé/.test(r.text));
+  t('…et ce .env public est supprimé après l\'installation', !fs.existsSync(path.join(WWW, 'install.env')) && /a été supprimé/.test(r.text));
+  deployInstaller({ envConst: '~/private/install.env' }); writeEnv(baseEnv(), path.join(ENVDIR, 'private/install.env'));
+  r = await post({ step: 'check', key: KEY }); t('chemin ~/... résolu depuis le dossier personnel', /Configuration lue dans le fichier \.env/.test(r.text), r.text.slice(r.text.indexOf('<h2>'), r.text.indexOf('<h2>') + 200));
+  r = await post(envForm({ ref: 'v1.1', token: TOKEN })); t('installation via ~/...', /Site installé/.test(r.text) && !/qui se trouvait dans le dossier public/.test(r.text) && fs.existsSync(path.join(ENVDIR, 'private/install.env')));
+  deployInstaller({ envConst: '/srv/install-test/private/install.env' });
+  r = await post({ step: 'check', key: KEY }); t('chemin absolu accepté', /Configuration lue dans le fichier \.env/.test(r.text));
+  deployInstaller({ envConst: '' }); writeEnv(baseEnv(), ENVF);
+  r = await post({ step: 'check', key: KEY }); t('ENV_FILE vide: lecture du .env désactivée', /name="smtp_host"/.test(r.text) && !/Configuration lue/.test(r.text));
+  dropEnv();
 
   console.log('\n— Cohérence des listes blanches (install.php ↔ updater.php)');
   const list = (text, re) => [...(text.match(re) || [''])[0].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort().join(',');
