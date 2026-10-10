@@ -1,13 +1,13 @@
     const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
     const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
-    const SITE_NAME = window.RADIOPROTECTION_SITE_NAME || (() => {
+    let SITE_NAME = window.RADIOPROTECTION_SITE_NAME || (() => {
       try {
         return new URL(SITE_URL).hostname.replace(/^www\./, '');
       } catch (_) {
         return 'Nom du site';
       }
     })();
-    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME;
+    let COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_NAME;
     const $ = (id) => document.getElementById(id);
     const escapeHtml = (value) => String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -564,8 +564,22 @@
       $('calculateBtn').addEventListener('click', renderResults);
     }
 
+    // Nom du site et propriétaire du copyright: lus à chaud côté serveur (api/.runtime.env), les
+    // valeurs de config.js ne servent que d'affichage initial et de repli si l'API ne répond pas.
+    async function applyBranding() {
+      try {
+        const response = await fetchWithTimeout(`${API_BASE}/public-config`, {}, 8000);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (typeof data.site_name === 'string' && data.site_name) SITE_NAME = data.site_name;
+        if (typeof data.copyright_owner === 'string' && data.copyright_owner) COPYRIGHT_OWNER = data.copyright_owner;
+        setFooterMeta();
+      } catch (_) { /* repli: valeurs de config.js */ }
+    }
+
     async function bootstrap() {
       setFooterMeta();
+      applyBranding();
       try {
         const config = await fetchConfig();
         isotopes = config.isotopes || [];
