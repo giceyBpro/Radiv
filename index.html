@@ -433,9 +433,10 @@
       margin-top: 10px;
       padding: 14px 16px;
       background: var(--bg);
-      color: var(--muted);
-      font-size: 13.5px;
-      line-height: 1.4;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.45;
       border-radius: 12px;
     }
     .copyright {
@@ -789,6 +790,7 @@
 
     <div class="error" id="errorBox"></div>
 
+    <div id="resultsSection" hidden>
     <div class="effective-box">
       <div id="effectiveDaysText">Période effective retenue en jours : -</div>
       <div id="effectiveHoursText">Période effective retenue en heures : -</div>
@@ -804,6 +806,7 @@
       </thead>
       <tbody id="resultsBody"></tbody>
     </table>
+    </div>
 
     <div class="warning-block">
       Attention: ce tableur ne tient compte que de l'exposition externe aux rayonnements ionisants. les risques de contamination (externe et interne) doivent être gérés conformément aux recommandations.
