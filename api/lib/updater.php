@@ -24,9 +24,13 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 // Même liste blanche que deploy-php.sh. api/ et downloads/ sont traités par préfixe (voir allowed()).
 const FRONTEND_FILES = [
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
-    'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'tox.html',
-    '.tox-complet.html', 'xplore.html', 'favicon.ico', 'robots.txt',
+    'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
+    'favicon.ico', 'robots.txt',
 ];
+
+// Pages retirées du site (tox est devenu un site indépendant): supprimées des sites existants lors de la
+// prochaine mise à jour (sauvegardées d'abord), même si elles ne figurent pas dans le manifeste.
+const RETIRED_FILES = ['tox.html', '.tox-complet.html'];
 
 // Sans ces fichiers dans la version cible, le site ne saurait plus se mettre à jour lui-même
 // (cible trop ancienne, archive tronquée): refusé avant toute écriture.
@@ -79,6 +83,12 @@ function allowed(string $rel): bool
         return true;
     }
     return false;
+}
+
+// Chemins que la mise à jour peut sauvegarder, restaurer ou supprimer: la liste blanche + les pages retirées.
+function removable(string $rel): bool
+{
+    return allowed($rel) || in_array($rel, RETIRED_FILES, true);
 }
 
 // --- État persistant (dans var/, jamais écrasé par une mise à jour) -------------------------
@@ -260,7 +270,7 @@ function make_backup(array $newFiles, array $oldManifest, array $versionBefore, 
     $existing = [];
     $added = [];
     foreach (array_unique(array_merge($newFiles, $oldManifest)) as $rel) {
-        if (!allowed($rel)) continue;
+        if (!removable($rel)) continue;
         if (is_file("{$root}/{$rel}")) {
             Config\ensure_dir(dirname("{$dir}/files/{$rel}"));
             if (!copy("{$root}/{$rel}", "{$dir}/files/{$rel}")) throw new \RuntimeException('Sauvegarde impossible.');
@@ -283,7 +293,7 @@ function restore_backup(): bool
     $dir = backup_dir();
     $root = Config\web_root();
     foreach (install_order($info['existing'] ?? []) as $rel) {
-        if (allowed($rel)) install_file("{$dir}/files/{$rel}", "{$root}/{$rel}");
+        if (removable($rel)) install_file("{$dir}/files/{$rel}", "{$root}/{$rel}");
     }
     foreach ($info['added'] ?? [] as $rel) {
         if (allowed($rel)) { @unlink("{$root}/{$rel}"); if (function_exists('opcache_invalidate')) @opcache_invalidate("{$root}/{$rel}", true); }
@@ -368,13 +378,13 @@ function run(string $ref, string $token, string $by): array
         unlink($zipFile); // plus utile: libère l'espace avant le remplacement
 
         // À partir d'ici, le site est modifié: toute erreur déclenche un retour arrière.
-        $oldManifest = manifest();
+        $oldManifest = array_values(array_unique(array_merge(manifest(), RETIRED_FILES)));
         make_backup($files, $oldManifest, $before ?? [], $sha);
         $root = Config\web_root();
         $applied = true;
         foreach (install_order($files) as $rel) install_file("{$staging}/{$rel}", "{$root}/{$rel}");
         foreach (array_diff($oldManifest, $files) as $obsolete) {
-            if (allowed($obsolete)) { @unlink("{$root}/{$obsolete}"); if (function_exists('opcache_invalidate')) @opcache_invalidate("{$root}/{$obsolete}", true); }
+            if (removable($obsolete)) { @unlink("{$root}/{$obsolete}"); if (function_exists('opcache_invalidate')) @opcache_invalidate("{$root}/{$obsolete}", true); }
         }
         write_json_file(state_dir() . '/manifest.json', ['files' => $files]);
         write_json_file(state_dir() . '/version.json', ['sha' => $sha, 'ref' => $ref, 'at' => Measurements\now_iso(), 'by' => $by]);

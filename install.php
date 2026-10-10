@@ -26,8 +26,8 @@ const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_eviction
 // qu'elles restent identiques). api/ et downloads/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
-    'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'tox.html',
-    '.tox-complet.html', 'xplore.html', 'favicon.ico', 'robots.txt',
+    'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
+    'favicon.ico', 'robots.txt',
 );
 $REQUIRED_FILES = array(
     'index.html', 'api/.htaccess', 'api/index.php', 'api/calculation.php', 'api/lib/config.php',
@@ -460,7 +460,7 @@ function validate_inputs()
 function htaccess_blocks($siteUrl)
 {
     $routes = array(
-        'tox' => 'tox.html', 'legal' => 'mentions-legales.html', 'contact' => 'contact.html', 'print' => 'print.html',
+        'legal' => 'mentions-legales.html', 'contact' => 'contact.html', 'print' => 'print.html',
         'explain' => 'explain.html', 'doc' => 'api-fonctionnement.html', 'test-api' => 'test-api.html', 'xplore' => 'xplore.html',
     );
     $blocks = array();
