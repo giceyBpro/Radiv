@@ -1,12 +1,12 @@
 <?php
 // ===== MODULE DE CALCUL LOCAL — AUCUNE DÉPENDANCE AU RESTE DU BACKEND =====
-// Port PHP de calculation.js. Ce fichier contient l'intégralité du calcul des durées de
+// Calcul des durées de restriction. Ce fichier contient l'intégralité du calcul des durées de
 // restriction (mode "local"): données sources, formalisme mathématique, validation et
 // orchestration. Il ne dépend d'aucun autre fichier du projet ni d'aucun secret — il peut
 // être lu, audité ou testé isolément. Seule dépendance externe: la variable d'environnement
 // RESTRICTION_ROUNDING_MODE (voir plus bas), qui ne contient jamais de valeur sensible.
 //
-// Le contrat est volontairement identique à celui de calculation.js (mêmes données, mêmes
+// Le contrat est volontairement stable (mêmes données, mêmes
 // formules, même JSON): un client externe (questionnaire RIS Xplore, scripts) ne doit voir
 // aucune différence. Les écarts de sémantique PHP/JS qui pourraient le casser sont traités
 // explicitement et commentés là où ils interviennent (arrondi, formatage des nombres,

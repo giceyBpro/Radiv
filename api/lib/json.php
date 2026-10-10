@@ -1,6 +1,6 @@
 <?php
-// Encodage JSON aligné sur JSON.stringify de Node, pour que les réponses de l'API PHP soient
-// identiques octet pour octet à celles de l'API Node (contrat inchangé pour les appelants).
+// Encodage JSON aligné sur JSON.stringify, pour que les réponses de l'API PHP soient
+// stables pour les appelants.
 declare(strict_types=1);
 
 namespace Radiv\Json;

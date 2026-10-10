@@ -1,5 +1,5 @@
 <?php
-// Configuration runtime: même fichiers .env et mêmes variables que server.js (noms inchangés),
+// Configuration runtime: fichiers .env et variables documentés dans .env.example,
 // pour qu'un .env existant fonctionne tel quel après bascule.
 declare(strict_types=1);
 

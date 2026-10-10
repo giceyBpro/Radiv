@@ -1,4 +1,4 @@
-// Vérifie que install.php et deploy-php.sh produisent EXACTEMENT le même api/.runtime.env :
+// Vérifie que install.php et deploy.sh produisent EXACTEMENT le même api/.runtime.env :
 //   1. la description (sections, variables, commentaires) est identique dans les deux fichiers ;
 //   2. chaque variable décrite est réellement lue quelque part dans api/ (pas de faute de frappe) ;
 //   3. les deux rendus, exécutés pour de vrai sur le même jeu de valeurs, donnent le même fichier
@@ -7,13 +7,13 @@
 // Aucun réseau. Usage: node api/tests/check-runtime-layout.js
 const fs = require('fs'); const path = require('path'); const os = require('os'); const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..', '..');
-const inst = fs.readFileSync(path.join(root, 'install.php'), 'utf8'); const dep = fs.readFileSync(path.join(root, 'deploy-php.sh'), 'utf8');
+const inst = fs.readFileSync(path.join(root, 'install.php'), 'utf8'); const dep = fs.readFileSync(path.join(root, 'deploy.sh'), 'utf8');
 let pass = 0; let fail = 0;
 const t = (name, cond, detail = '') => { if (cond) { pass += 1; console.log(`OK    ${name}`); } else { fail += 1; console.log(`ÉCHEC ${name} ${detail}`); } };
 
 const phpLayout = (inst.match(/\$RUNTIME_LAYOUT = <<<'LAYOUT'\n([\s\S]*?)\nLAYOUT;/) || [])[1];
 const shLayout = (dep.match(/RUNTIME_LAYOUT="\$\(cat <<'LAYOUT'\n([\s\S]*?)\nLAYOUT\n\)"/) || [])[1];
-t('description trouvée dans install.php et deploy-php.sh', !!phpLayout && !!shLayout);
+t('description trouvée dans install.php et deploy.sh', !!phpLayout && !!shLayout);
 t('descriptions identiques (sections, variables, commentaires)', phpLayout === shLayout);
 const names = (phpLayout || '').split('\n').filter((l) => l && !l.startsWith('== ') && !l.startsWith('|')).map((l) => l.split('|')[0]);
 t('aucune variable en double', new Set(names).size === names.length);
@@ -37,13 +37,13 @@ try {
   const jsonFile = path.join(tmp, 'vars.json'); fs.writeFileSync(jsonFile, JSON.stringify(values));
   const phpOut = execFileSync('php', [phpFile, jsonFile]).toString();
 
-  // rendu bash: bloc extrait de deploy-php.sh
+  // rendu bash: bloc extrait de deploy.sh
   const shBlock = dep.slice(dep.indexOf('RUNTIME_LAYOUT="$(cat'), dep.indexOf('install -m 600 /dev/null "$API_DIR/.runtime.env"'));
   const shFile = path.join(tmp, 'render.sh'); fs.writeFileSync(shFile, `log_warn() { :; }\n${shBlock}\nrender_runtime_env\n`);
   const shOut = execFileSync('bash', [shFile], { env: { PATH: process.env.PATH, ...values } }).toString();
 
   const body = (s) => s.split('\n').slice(3).join('\n');
-  t('en-têtes: le générateur est nommé', /install\.php/.test(phpOut.split('\n')[1]) && /deploy-php\.sh/.test(shOut.split('\n')[1]));
+  t('en-têtes: le générateur est nommé', /install\.php/.test(phpOut.split('\n')[1]) && /deploy\.sh/.test(shOut.split('\n')[1]));
   t('les deux rendus sont IDENTIQUES (hors en-tête)', body(phpOut) === body(shOut), (() => { const a = body(phpOut).split('\n'); const b = body(shOut).split('\n'); const i = a.findIndex((l, k) => l !== b[k]); return `ligne ${i}: «${a[i]}» ≠ «${b[i]}»`; })());
   t('variables définies écrites, les autres en commentaire « #NOM= »', phpOut.includes('SITE_PUBLIC_URL="https://www.exemple.fr"') && phpOut.includes(`SMTP_PASS='p@ss"w0rd'`) && phpOut.includes('TRUSTED_PROXIES=""') && /^#RECAPTCHA_SECRET_KEY=$/m.test(phpOut) && !/^RECAPTCHA_SECRET_KEY=/m.test(phpOut));
   t('sections lisibles (titres encadrés, lignes blanches)', (phpOut.match(/^# -{20,}$/gm) || []).length === 2 * (phpLayout.match(/^== /gm) || []).length && /\n\n# URL publique du site/.test(phpOut));

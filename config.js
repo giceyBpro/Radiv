@@ -1,4 +1,4 @@
-// Valeur par défaut locale. En production, deploy.sh régénère ce fichier.
+// Valeur par défaut locale. En production, le script de déploiement régénère ce fichier.
 window.RADIOPROTECTION_API_URL = window.RADIOPROTECTION_API_URL || 'api';
 window.RADIOPROTECTION_SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
 window.RADIOPROTECTION_SITE_NAME = window.RADIOPROTECTION_SITE_NAME || '';

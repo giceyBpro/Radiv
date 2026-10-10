@@ -108,7 +108,7 @@ HTML;
     echo $body;
 }
 
-// Corps brut, limité comme côté Node (64 Ko). null = trop gros.
+// Corps brut, limité à 64 Ko. null = trop gros.
 function read_body(int $maxBytes = 65536): ?string
 {
     $body = (string) file_get_contents('php://input', false, null, 0, $maxBytes + 1);
@@ -116,8 +116,7 @@ function read_body(int $maxBytes = 65536): ?string
 }
 
 // Termine la réponse côté client puis laisse le script continuer (journalisation, géoIP):
-// ces étapes peuvent prendre plusieurs secondes et ne doivent pas retarder l'appelant — en
-// Node, la réponse attendait la résolution géoIP. Exige que send_json ait posé Content-Length.
+// ces étapes peuvent prendre plusieurs secondes et ne doivent pas retarder l'appelant ; exige que send_json ait posé Content-Length.
 function finish_response(): void
 {
     ignore_user_abort(true);

@@ -1,5 +1,5 @@
 <?php
-// État partagé entre requêtes. Node le gardait dans des Map en mémoire du process; PHP n'a pas
+// État partagé entre requêtes. Sans process persistant, PHP n'a pas
 // de process persistant, donc: APCu si disponible (équivalent direct, en mémoire partagée),
 // sinon fichiers JSON verrouillés (flock) dans var/.
 //
@@ -31,7 +31,7 @@ function backend_name(): string
     return use_apcu() ? 'apcu' : 'file';
 }
 
-// Fenêtre fixe d'une minute à partir de la première requête, comme checkRateLimit de Node:
+// Fenêtre fixe d'une minute à partir de la première requête:
 // les $max premières requêtes passent, les suivantes sont refusées jusqu'à l'expiration.
 function rate_limit_hit(string $bucket, string $key, int $max, int $windowSeconds = 60): bool
 {

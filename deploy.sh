@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Déploiement/mise à jour idempotent de la version PHP (api/) + frontend statique.
+# PHP s'exécute par requête sous Apache: déployer = copier les fichiers. Frontend et API vivent
+# dans un seul dossier (FRONTEND_DIR, la racine web), l'API sous <racine>/api/.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +18,15 @@ source "$ENV_FILE"
 : "${GIT_REPO:?GIT_REPO est requis dans .env}"
 : "${GIT_TOKEN:?GIT_TOKEN est requis dans .env}"
 
+# Le site en ligne n'a pas accès à ce .env : le dépôt à mettre à jour lui est transmis (api/.runtime.env).
+# Déduit de GIT_REPO (https://github.com/propriétaire/nom[.git]) sauf si UPDATE_GITHUB_REPO est fourni.
+if [[ -z "${UPDATE_GITHUB_REPO:-}" && "$GIT_REPO" =~ ^https://([^@/]+@)?github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/?$ ]]; then
+  UPDATE_GITHUB_REPO="${BASH_REMATCH[2]%.git}"
+fi
+
 GIT_BRANCH="${GIT_BRANCH:-main}"
+# BACKEND_DIR ne sert plus qu'à retrouver le
+# dossier du clone, pour qu'un .env écrit pour deploy.sh fonctionne tel quel.
 BACKEND_DIR="${BACKEND_DIR:-$HOME/backend}"
 FRONTEND_DIR="${FRONTEND_DIR:-$HOME/public_html/frontend}"
 CHECKOUT_DIR="${CHECKOUT_DIR:-$BACKEND_DIR/repo}"
@@ -23,10 +34,10 @@ CHECKOUT_DIR="${CHECKOUT_DIR:-$BACKEND_DIR/repo}"
 BACKEND_DIR="${BACKEND_DIR/#\~/$HOME}"
 FRONTEND_DIR="${FRONTEND_DIR/#\~/$HOME}"
 CHECKOUT_DIR="${CHECKOUT_DIR/#\~/$HOME}"
-API_PORT="${API_PORT:-3003}"
-API_PUBLIC_URL="${API_PUBLIC_URL:-http://127.0.0.1:${API_PORT}/api}"
-MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-${API_PUBLIC_URL%/}/config}"
 SITE_PUBLIC_URL="${SITE_PUBLIC_URL:-https://www.example.org}"
+# Par défaut l'API est sous le site (/api): une URL d'exemple écrite en dur se retrouverait dans config.js
+# et dans la configuration de l'API si le .env ne définit pas API_PUBLIC_URL.
+API_PUBLIC_URL="${API_PUBLIC_URL:-${SITE_PUBLIC_URL%/}/api}"
 # Défaut restrictif: retomber sur "*" ouvrirait l'API à toutes les origines.
 API_CORS_ORIGIN="${API_CORS_ORIGIN:-${SITE_PUBLIC_URL}}"
 SITE_NAME="${SITE_NAME:-$(sed -E 's#^https?://##; s#/.*$##; s#^www\.##' <<< "${SITE_PUBLIC_URL}")}"
@@ -34,7 +45,6 @@ COPYRIGHT_OWNER="${COPYRIGHT_OWNER:-${SITE_NAME}}"
 # Host complet (avec le www éventuel) déduit de SITE_PUBLIC_URL, utilisé pour la
 # redirection 301 vers www ci-dessous.
 SITE_HOST="$(sed -E 's#^https?://##; s#/.*$##' <<< "${SITE_PUBLIC_URL}")"
-INSTALL_CRON_MONITOR="${INSTALL_CRON_MONITOR:-true}"
 
 log_step() { echo -e "\n[DEPLOY][STEP] $1"; }
 log_info() { echo "[DEPLOY][INFO] $1"; }
@@ -42,8 +52,8 @@ log_ok() { echo "[DEPLOY][OK] $1"; }
 log_warn() { echo "[DEPLOY][WARN] $1"; }
 
 log_step "Initialisation"
-log_info "Répertoires cibles: backend=$BACKEND_DIR | frontend=$FRONTEND_DIR"
-mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
+log_info "Racine web (frontend + api/): $FRONTEND_DIR | clone: $CHECKOUT_DIR"
+mkdir -p "$FRONTEND_DIR" "$(dirname "$CHECKOUT_DIR")"
 
 # Le token ne doit jamais apparaître dans argv (lisible via `ps` par tout utilisateur
 # local) ni être écrit dans .git/config, ni sur disque sous forme d'un script exécutable:
@@ -80,21 +90,32 @@ run_git fetch --all --prune
 git checkout "$GIT_BRANCH"
 run_git pull --ff-only origin "$GIT_BRANCH"
 
-log_step "Dépendances backend"
-npm install --omit=dev
-
-# Synchronisation backend avec suppression des fichiers supprimés du repo
-# tout en protégeant les fichiers de configuration/runtime locaux.
-log_step "Synchronisation backend"
-rsync -a --delete   --filter='P .env'   --filter='P .runtime.env'   --filter='P monitor_node.sh'   --filter='P radioprotection-api.log'   --filter='P radioprotection-api.pid'   --filter='P logs/'   --include='server.js'   --include='calculation.js'   --include='formules.txt'   --include='deploy.sh'   --include='package.json'   --include='package-lock.json'   --exclude='*'   "$CHECKOUT_DIR/" "$BACKEND_DIR/"
-
-log_info "Mise à jour des droits d'exécution deploy.sh"
-chmod +x "$BACKEND_DIR/deploy.sh"
-
-mkdir -p "$BACKEND_DIR/node_modules"
-if [[ -d "$CHECKOUT_DIR/node_modules" ]]; then
-  log_info "Synchronisation node_modules"
-  rsync -a --delete "$CHECKOUT_DIR/node_modules/" "$BACKEND_DIR/node_modules/"
+log_step "Contrôle PHP"
+# Garde-fou avant de publier quoi que ce soit: un fichier PHP à la syntaxe invalide mettrait
+# l'API hors service jusqu'au prochain déploiement. Sans php en ligne de commande (rare sur
+# cPanel), le contrôle est simplement sauté.
+if command -v php >/dev/null 2>&1; then
+  php_version="$(php -r 'echo PHP_VERSION;')"
+  if ! php -r 'exit(version_compare(PHP_VERSION, "8.0.0", ">=") ? 0 : 1);'; then
+    log_warn "php en ligne de commande est en $php_version (< 8.0): le code d'api/ exige PHP 8.0+. Abandon."
+    log_warn "Vérifiez aussi la version PHP choisie pour le site dans cPanel (Sélecteur PHP)."
+    exit 1
+  fi
+  syntax_errors=0
+  while IFS= read -r -d '' phpfile; do
+    if ! php -l "$phpfile" >/dev/null 2>&1; then
+      log_warn "Erreur de syntaxe PHP: $phpfile"
+      syntax_errors=$((syntax_errors + 1))
+    fi
+  done < <(find api -name '*.php' -print0)
+  if [[ "$syntax_errors" -gt 0 ]]; then
+    log_warn "$syntax_errors fichier(s) PHP invalide(s): déploiement abandonné, rien n'a été modifié."
+    exit 1
+  fi
+  log_ok "Syntaxe PHP valide (php $php_version en ligne de commande)."
+  log_info "Rappel: la version PHP du SITE se règle dans cPanel (Sélecteur PHP) et doit aussi être >= 8.0."
+else
+  log_warn "php introuvable en ligne de commande: contrôle de syntaxe sauté."
 fi
 
 # Synchronisation frontend avec suppression contrôlée des fichiers supprimés du repo,
@@ -113,9 +134,6 @@ if [[ -n "$(ls -A "$FRONTEND_DIR" 2>/dev/null)" ]] && [[ ! -f "$FRONTEND_DIR/ind
 fi
 # Liste blanche: tout ce qui n'est pas listé ici n'est PAS publié. Une liste noire
 # échouerait en mode ouvert, publiant automatiquement tout nouveau fichier du dépôt.
-# admin-mesures.html ne contient aucun secret: seuls les appels qu'elle fait vers
-# /api/admin/* exigent le jeton (header X-Admin-Token, saisi dans la page). Page
-# statique sans lien de navigation, comme xplore.html.
 # v1.html: ancienne version de l'interface (design précédent), conservée sans
 # lien de/vers index.html. Accessible uniquement en tapant l'URL. Pas de route
 # courte dans SHORT_ROUTES ci-dessous, pour ne pas la rendre plus visible que
@@ -123,6 +141,9 @@ fi
 # app.js: logique JS partagée entre index.html et v1.html (chargée via <script
 # src="app.js">), pour qu'une évolution du calcul/de l'affichage s'applique aux
 # deux pages depuis un seul fichier, sans duplication à maintenir à la main.
+# api/ n'est volontairement pas dans cette liste: il a sa propre synchronisation plus bas
+# (avec ses fichiers protégés: .env, logs/, var/), et les fichiers non listés ici ne sont
+# jamais supprimés (pas de --delete-excluded).
 rsync -a --delete \
   --filter='P .htaccess' \
   --filter='P .user.ini' \
@@ -136,7 +157,6 @@ rsync -a --delete \
   --include='api-fonctionnement.html' \
   --include='test-api.html' \
   --include='xplore.html' \
-  --include='admin-mesures.html' \
   --include='favicon.ico' \
   --include='robots.txt' \
   --include='config.js' \
@@ -157,17 +177,30 @@ for _retired in tox.html .tox-complet.html; do
   fi
 done
 
+log_step "Synchronisation de l'API PHP"
+API_DIR="$FRONTEND_DIR/api"
+mkdir -p "$API_DIR"
+# Protégés contre --delete (jamais écrasés ni supprimés): la configuration locale (.env,
+# .runtime.env) et les données d'exécution (logs/ = mesures RGPD, var/ = compteurs de rate-limit
+# et cache géoIP). tests/ est un outillage de développement: il n'est pas publié.
+rsync -a --delete \
+  --filter='P .env' \
+  --filter='P .runtime.env' \
+  --filter='P logs/' \
+  --filter='P var/' \
+  --exclude='tests/' \
+  "$CHECKOUT_DIR/api/" "$API_DIR/"
+rm -rf "${API_DIR:?}/tests"
+log_ok "API synchronisée vers $API_DIR"
+
 log_step "Configuration .htaccess (raccourcis de pages sans .html)"
 HTACCESS="$FRONTEND_DIR/.htaccess"
 if [[ ! -f "$HTACCESS" ]]; then
   printf 'Options -Indexes\nRewriteEngine On\n' > "$HTACCESS"
   log_ok ".htaccess créé."
 fi
-# admin-mesures.html est volontairement exclu: cette page n'a pas de lien de navigation
-# et sa découverte ne doit reposer sur aucun chemin devinable — lui donner un raccourci
-# court irait à l'encontre du durcissement déjà en place dessus (rate-limit, 404 uniforme,
-# interrupteur ADMIN_MEASUREMENTS_ENABLED). Elle reste accessible via son nom de fichier
-# complet uniquement.
+# L'administration du site n'a ni page statique ni raccourci: elle vit sous /auth (voir plus bas)
+# et n'est liée depuis aucune page.
 declare -A SHORT_ROUTES=(
   [legal]="mentions-legales.html"
   [contact]="contact.html"
@@ -190,6 +223,30 @@ for route in "${!SHORT_ROUTES[@]}"; do
     log_ok "Règle /$route ajoutée dans .htaccess."
   fi
 done
+
+log_step "Configuration .htaccess (/health vers l'API PHP)"
+# /health est la seule route hors /api/: elle est réécrite vers le point d'entrée de l'API
+# (api/.htaccess ne voit que ce qui commence par /api/). L'URL reste /health, sans .php.
+HEALTH_MARKER="# /health (API PHP)"
+if grep -Fq "$HEALTH_MARKER" "$HTACCESS"; then
+  log_info "Règle /health déjà présente dans .htaccess."
+else
+  printf '\n%s\nRewriteEngine On\nRewriteRule ^health/?$ api/index.php [L]\n' "$HEALTH_MARKER" >> "$HTACCESS"
+  log_ok "Règle /health ajoutée dans .htaccess."
+fi
+
+log_step "Configuration .htaccess (/auth vers l'API PHP)"
+# L'administration du site (connexion Google, mesures, mises à jour) répond sous /auth, point
+# d'entrée volontairement discret et lié depuis aucune page. Comme /health, la règle est ici et non
+# dans api/.htaccess (qui ne voit que ce qui commence par /api/). Sans effet visible tant que la
+# configuration Google n'est pas renseignée: l'API répond alors le 404 générique.
+AUTH_MARKER="# /auth (API PHP)"
+if grep -Fq "$AUTH_MARKER" "$HTACCESS"; then
+  log_info "Règle /auth déjà présente dans .htaccess."
+else
+  printf '\n%s\nRewriteEngine On\nRewriteRule ^auth(/.*)?$ api/index.php [L]\n' "$AUTH_MARKER" >> "$HTACCESS"
+  log_ok "Règle /auth ajoutée dans .htaccess."
+fi
 
 log_step "Configuration .htaccess (redirection 301 vers www)"
 # N'active la redirection que si SITE_PUBLIC_URL est explicitement en www: on ne force
@@ -246,30 +303,6 @@ else
   log_info "SITE_PUBLIC_URL (${SITE_HOST}) n'est pas en www: pas de redirection forcée."
 fi
 
-log_step "Configuration .htaccess (blocage HTTP des fichiers backend)"
-# Sur certains hébergements (cPanel/Passenger), FRONTEND_DIR et BACKEND_DIR pointent
-# vers le même dossier (PassengerAppRoot): .env, server.js, node_modules/, logs/ se
-# retrouvent alors physiquement dans le docroot public. Ce bloc les rend inaccessibles
-# en HTTP sans toucher au routage Passenger (aucune règle de portée globale: seuls ces
-# noms de fichiers précis sont concernés, tout le reste — y compris les routes /api/*
-# gérées par le Node app — n'est pas affecté). Inoffensif si FRONTEND_DIR est déjà un
-# dossier purement statique séparé.
-DENY_MARKER="# /deny-backend-files"
-if grep -Fq "$DENY_MARKER" "$HTACCESS"; then
-  log_info "Blocage des fichiers backend déjà présent dans .htaccess."
-else
-  cat >> "$HTACCESS" <<'DENYRULES'
-
-# /deny-backend-files
-RewriteEngine On
-<FilesMatch "^\.env|^\.runtime\.env$|^package(-lock)?\.json$|^server\.js$|^deploy_update\.sh$|^monitor_node\.sh$|^formules\.txt$">
-  Require all denied
-</FilesMatch>
-RewriteRule ^(logs|node_modules)/ - [F,L]
-DENYRULES
-  log_ok "Blocage HTTP des fichiers backend (.env, server.js, node_modules/, logs/...) ajouté dans .htaccess."
-fi
-
 log_step "Configuration frontend runtime"
 # Valide que les valeurs ne contiennent pas de caractères dangereux pour JS
 for _var_name in API_PUBLIC_URL SITE_PUBLIC_URL SITE_NAME COPYRIGHT_OWNER; do
@@ -317,258 +350,162 @@ if ! grep -Fq "Sitemap:" "$FRONTEND_DIR/robots.txt" 2>/dev/null; then
   printf '\nSitemap: %s\n' "$SITEMAP_ABS_URL" >> "$FRONTEND_DIR/robots.txt"
 fi
 
-log_step "Configuration backend runtime (.runtime.env)"
+log_step "Configuration de l'API (api/.runtime.env)"
+# Seules les variables d'exécution y sont copiées (jamais GIT_TOKEN ni les chemins de déploiement),
+# et seulement si elles sont renseignées: sinon c'est le défaut du code qui s'applique.
 # Le fichier doit être en 600 dès sa création: une redirection simple le crée en 644
-# et laisse une fenêtre où ADMIN_TOKEN/SMTP_PASS sont lisibles par tout le monde.
-install -m 600 /dev/null "$BACKEND_DIR/.runtime.env"
-cat > "$BACKEND_DIR/.runtime.env" <<RUNTIME
-PORT="${API_PORT}"
-API_CORS_ORIGIN="${API_CORS_ORIGIN}"
-TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1,::1}"
-ADMIN_TOKEN="${ADMIN_TOKEN:-}"
-RECAPTCHA_SECRET_KEY="${RECAPTCHA_SECRET_KEY:-}"
-RECAPTCHA_SITE_KEY="${RECAPTCHA_SITE_KEY:-}"
-SMTP_HOST="${SMTP_HOST:-}"
-SMTP_PORT="${SMTP_PORT:-587}"
-SMTP_SECURE="${SMTP_SECURE:-false}"
-SMTP_USER="${SMTP_USER:-}"
-SMTP_PASS="${SMTP_PASS:-}"
-SMTP_FROM="${SMTP_FROM:-}"
-CONTACT_DEST="${CONTACT_DEST:-}"
-SFMN_MODE_ENABLED="${SFMN_MODE_ENABLED:-true}"
-SFMN_CALCULATOR_URL="${SFMN_CALCULATOR_URL:-}"
-ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
-ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
-MONITOR_PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL}"
-RUNTIME
-
-chmod 600 "$BACKEND_DIR/.runtime.env"
-log_ok ".runtime.env protégé (600)."
-
-log_step "Génération du script monitor_node.sh"
-cat > "$BACKEND_DIR/monitor_node.sh" <<'MONITOR'
-#!/usr/bin/env bash
-set -euo pipefail
-
-BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNTIME_FILE="$BACKEND_DIR/.runtime.env"
-PID_FILE="$BACKEND_DIR/radioprotection-api.pid"
-LOG_FILE="$BACKEND_DIR/radioprotection-api.log"
-
-if [[ -f "$RUNTIME_FILE" ]]; then
-  # shellcheck source=/dev/null
-  source "$RUNTIME_FILE"
-fi
-
-PORT="${PORT:-3003}"
-HEALTH_URL="http://127.0.0.1:${PORT}/health"
-PUBLIC_CONFIG_URL="${MONITOR_PUBLIC_CONFIG_URL:-}"
-ALERT_ON_API_DOWN_EMAIL="${ALERT_ON_API_DOWN_EMAIL:-false}"
-ALERT_ON_API_DOWN_COOLDOWN_SEC="${ALERT_ON_API_DOWN_COOLDOWN_SEC:-600}"
-ALERT_STATE_FILE="$BACKEND_DIR/.api_down_alert.last"
-log() { echo "[MONITOR] $1"; }
-ok() { echo "[MONITOR][OK] $1"; }
-warn() { echo "[MONITOR][WARN] $1"; }
-
-send_api_down_alert() {
-  [[ "$ALERT_ON_API_DOWN_EMAIL" == "true" ]] || { log "Alerte email désactivée."; return 0; }
-  [[ -n "${SMTP_HOST:-}" && -n "${SMTP_PORT:-}" && -n "${SMTP_USER:-}" && -n "${SMTP_PASS:-}" && -n "${CONTACT_DEST:-}" ]] || { warn "Alerte email activée mais configuration SMTP incomplète."; return 0; }
-
-  now_ts="$(date +%s)"
-  last_ts=0
-  if [[ -f "$ALERT_STATE_FILE" ]]; then
-    last_ts="$(cat "$ALERT_STATE_FILE" 2>/dev/null || echo 0)"
-  fi
-  if (( now_ts - last_ts < ALERT_ON_API_DOWN_COOLDOWN_SEC )); then
-    log "Cooldown alerte actif, aucun email envoyé."
+# et laisse une fenêtre où GOOGLE_CLIENT_SECRET/SMTP_PASS sont lisibles par tout le monde.
+runtime_line() {
+  local name="$1" value="${!1:-}"
+  [[ -n "$value" ]] || return 0
+  if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+    log_warn "$name contient un saut de ligne: variable ignorée." >&2
     return 0
   fi
-
-  from_header="${SMTP_FROM:-$SMTP_USER}"
-  from_match="$(sed -n 's/.*<\([^>]*\)>.*/\1/p' <<< "$from_header")"
-  envelope_from="${from_match:-$SMTP_USER}"
-  smtp_url="smtp://${SMTP_HOST}:${SMTP_PORT}"
-  if [[ "${SMTP_SECURE:-false}" == "true" ]]; then
-    smtp_url="smtps://${SMTP_HOST}:${SMTP_PORT}"
-  fi
-
-  mail_payload="$(cat <<EOF
-From: ${from_header}
-To: <${CONTACT_DEST}>
-Subject: [Radioprotection RIV] Alerte indisponibilité API
-Date: $(date -R)
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-
-L'API Radioprotection RIV est indisponible malgré une tentative de redémarrage.
-Serveur: $(hostname)
-Date: $(date -Is)
-Healthcheck: ${HEALTH_URL}
-EOF
-)"
-
-  # Les identifiants passent par un fichier de config temporaire en 600 plutôt que par
-  # --user: la ligne de commande est lisible via `ps` par tout utilisateur local, et ce
-  # script tourne toutes les minutes via cron.
-  curl_cfg="$(umask 077 && mktemp "${TMPDIR:-/tmp}/monitor-smtp.XXXXXX")"
-  printf 'user = "%s:%s"\n' "$SMTP_USER" "$SMTP_PASS" > "$curl_cfg"
-
-  if curl -fsS --config "$curl_cfg" --url "$smtp_url" \
-    --mail-from "<${envelope_from}>" \
-    --mail-rcpt "<${CONTACT_DEST}>" \
-    --upload-file - <<< "$mail_payload" >/dev/null 2>&1; then
-    rm -f "$curl_cfg"
-    echo "$now_ts" > "$ALERT_STATE_FILE"
-    ok "Email d'alerte indisponibilité envoyé à ${CONTACT_DEST}."
+  # Guillemets doubles, ou simples si la valeur contient déjà des guillemets doubles (mot
+  # de passe SMTP, par ex.): le lecteur de .env d'api/ coupe à la première guillemet fermante.
+  if [[ "$value" != *\"* ]]; then
+    printf '%s="%s"\n' "$name" "$value"
+  elif [[ "$value" != *\'* ]]; then
+    printf "%s='%s'\n" "$name" "$value"
   else
-    rm -f "$curl_cfg"
-    warn "Échec envoi email d'alerte indisponibilité."
+    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans api/.env)." >&2
   fi
 }
-
-is_healthy() {
-  curl -fsS --max-time 3 "$HEALTH_URL" >/dev/null 2>&1
-}
-
-is_public_ok() {
-  if [[ -z "$PUBLIC_CONFIG_URL" ]]; then
+# Description du fichier : sections, variables dans l'ordre, commentaires (lignes « | » = suite du commentaire).
+# Strictement identique à celle de install.php (api/tests/check-runtime-layout.js le vérifie).
+RUNTIME_LAYOUT="$(cat <<'LAYOUT'
+== Site et API
+SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
+|Sert à l'URL de retour Google (/auth/callback) et au contrôle d'origine des formulaires.
+API_PUBLIC_URL|URL publique de l'API. Facultatif : par défaut SITE_PUBLIC_URL suivi de /api.
+API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en général l'adresse du site).
+|« * » l'ouvre à tous les sites : à éviter.
+TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
+|séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
+== Administration du site (/auth, connexion Google)
+GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
+GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
+ADMIN_GOOGLE_EMAILS|Adresses Google autorisées à se connecter à /auth, séparées par des virgules.
+|Comparaison exacte : ni domaine entier, ni joker.
+ADMIN_SITE_ENABLED|true ou false. false coupe entièrement /auth (réponse 404). Défaut : true.
+ADMIN_MEASUREMENTS_ENABLED|true ou false. false retire la consultation des mesures de /auth. Défaut : true.
+== Mises à jour depuis /auth
+ADMIN_UPDATE_ENABLED|true ou false. Autorise les mises à jour du site depuis /auth. Défaut : false.
+UPDATE_GITHUB_REPO|Dépôt GitHub à télécharger lors d'une mise à jour (propriétaire/nom).
+UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = /auth en demande un à chaque
+|mise à jour et ne le conserve pas.
+== Formulaire de contact
+RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
+RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
+SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
+SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
+SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
+SMTP_USER|Identifiant SMTP.
+SMTP_PASS|Mot de passe SMTP (confidentiel).
+SMTP_FROM|Expéditeur affiché, ex. Site <no-reply@exemple.fr>.
+CONTACT_DEST|Adresse qui reçoit les messages du formulaire.
+SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 15000.
+== Calcul des durées de restriction
+RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
+SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
+|false = calcul local seul.
+SFMN_CALCULATOR_URL|Adresse du calculateur SFMN distant (utile seulement si le mode SFMN est actif).
+SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
+|à laisser sur false. Défaut : false.
+== Mesures et journaux (RGPD)
+MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
+|seulement ; none = rien. Défaut : full.
+LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = conservation illimitée.
+LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
+== Protection contre les abus
+CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
+RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
+== Essais en local uniquement
+ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.
+LAYOUT
+)"
+# Écrit « NOM="valeur" » (ou « NOM='valeur' » si la valeur contient des guillemets doubles), rien si la
+# variable n'est pas définie. Retourne 1 si rien n'a été écrit.
+runtime_assignment() {
+  local name="$1" value="${!1:-}"
+  # TRUSTED_PROXIES vide est une valeur valable (= ne jamais croire X-Forwarded-For).
+  if [[ "$name" == "TRUSTED_PROXIES" && -n "${TRUSTED_PROXIES+x}" && -z "$value" ]]; then
+    printf 'TRUSTED_PROXIES=""\n'
     return 0
   fi
-  curl -fsS --max-time 8 "$PUBLIC_CONFIG_URL" >/dev/null 2>&1
-}
-
-kill_managed_processes() {
-  if [[ -f "$PID_FILE" ]]; then
-    old_pid="$(cat "$PID_FILE" || true)"
-    if [[ -n "${old_pid}" ]] && kill -0 "$old_pid" >/dev/null 2>&1; then
-      cmdline="$(ps -p "$old_pid" -o args= 2>/dev/null || true)"
-      if [[ "$cmdline" == *"$BACKEND_DIR/server.js"* ]]; then
-        kill "$old_pid" >/dev/null 2>&1 || true
-      fi
-    fi
-  fi
-
-  # pgrep -f interprète son motif comme une regex: un chemin contenant . + ( [ élargirait
-  # la correspondance. On échappe les métacaractères, puis on revérifie la cmdline exacte.
-  backend_re="$(printf '%s' "${BACKEND_DIR}/server.js" | sed -E 's/[][(){}.*+?^$|\\\/]/\\&/g')"
-  pids="$(pgrep -f "node .*${backend_re}" 2>/dev/null || true)"
-  if [[ -n "$pids" ]]; then
-    while IFS= read -r pid; do
-      [[ -n "$pid" ]] || continue
-      pid_cmdline="$(ps -p "$pid" -o args= 2>/dev/null || true)"
-      [[ "$pid_cmdline" == *"$BACKEND_DIR/server.js"* ]] || continue
-      kill "$pid" >/dev/null 2>&1 || true
-    done <<< "$pids"
-  fi
-}
-
-start_nohup() {
-  nohup node "$BACKEND_DIR/server.js" >>"$LOG_FILE" 2>&1 &
-  echo $! > "$PID_FILE"
-}
-
-restart_service() {
-  if command -v pm2 >/dev/null 2>&1; then
-    if pm2 describe radioprotection-api >/dev/null 2>&1; then
-      pm2 restart radioprotection-api --update-env >/dev/null
-    else
-      pm2 start "$BACKEND_DIR/server.js" --name radioprotection-api --time >/dev/null
-      pm2 save >/dev/null 2>&1 || true
-    fi
-    return
-  fi
-
-  kill_managed_processes
-  sleep 1
-  start_nohup
-}
-
-# --force-restart (utilisé par deploy.sh juste après une resynchronisation): redémarre
-# inconditionnellement, sans attendre un échec du health-check. Sans cet argument (usage
-# cron normal, toutes les minutes), le comportement reste conditionnel comme avant — un
-# service déjà sain ne doit pas être redémarré à chaque passage cron.
-FORCE_RESTART=0
-[[ "${1:-}" == "--force-restart" ]] && FORCE_RESTART=1
-
-if [[ "$FORCE_RESTART" == "1" ]]; then
-  log "Redémarrage forcé demandé (déploiement)."
-  restart_service
-  sleep 3
-  if ! is_healthy || ! is_public_ok; then
-    echo "[$(date -Is)] Échec redémarrage API (forcé)" >> "$LOG_FILE"
-    warn "Redémarrage échoué. Voir le log: $LOG_FILE"
-    send_api_down_alert
-    exit 1
-  fi
-  ok "API redémarrée et opérationnelle (nouvelle configuration/code pris en compte)."
-elif ! is_healthy || ! is_public_ok; then
-  warn "API indisponible (local/public). Tentative de redémarrage..."
-  restart_service
-  sleep 3
-  if ! is_healthy || ! is_public_ok; then
-    echo "[$(date -Is)] Échec redémarrage API" >> "$LOG_FILE"
-    warn "Redémarrage échoué. Voir le log: $LOG_FILE"
-    send_api_down_alert
-    exit 1
-  fi
-  ok "API relancée et opérationnelle."
-else
-  ok "API opérationnelle (checks local/public OK)."
-fi
-MONITOR
-
-chmod +x "$BACKEND_DIR/monitor_node.sh"
-log_step "Redémarrage du service (prise en compte du nouveau code/config)"
-# Sans --force-restart, un service déjà en bonne santé (donc l'ancien process, avant ce
-# déploiement) n'est jamais relancé: le nouveau server.js et le nouveau .runtime.env restent
-# sur le disque mais ne sont jamais chargés tant que le process n'est pas redémarré.
-"$BACKEND_DIR/monitor_node.sh" --force-restart
-
-# Sur cPanel/Passenger, l'app Node est démarrée/gérée par Passenger lui-même (PassengerAppRoot),
-# indépendamment du process nohup/pm2 que monitor_node.sh vient de relancer ci-dessus: les deux
-# peuvent tourner en parallèle, et c'est celui de Passenger qui sert réellement le site public.
-# Convention Passenger: toucher tmp/restart.txt déclenche son redémarrage à la requête suivante.
-# Sans effet (fichier ignoré) si Passenger n'est pas utilisé pour ce déploiement.
-mkdir -p "$BACKEND_DIR/tmp"
-touch "$BACKEND_DIR/tmp/restart.txt"
-log_info "tmp/restart.txt touché (redémarrage Passenger si applicable)."
-
-CRON_LINE="* * * * * $BACKEND_DIR/monitor_node.sh >/dev/null 2>&1"
-
-cron_present() {
-  command -v crontab >/dev/null 2>&1 && \
-    grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$(crontab -l 2>/dev/null || true)"
-}
-
-install_cron() {
-  if ! command -v crontab >/dev/null 2>&1; then
-    log_warn "crontab indisponible sur ce système, installation automatique impossible."
+  [[ -n "$value" ]] || return 1
+  if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+    log_warn "$name contient un saut de ligne: variable ignorée." >&2
     return 1
   fi
-  local current
-  current="$(crontab -l 2>/dev/null || true)"
-  if grep -Fq "$BACKEND_DIR/monitor_node.sh" <<< "$current"; then
-    log_info "Entrée cron déjà présente (aucune modification)."
-    return 0
+  # Guillemets doubles, ou simples si la valeur contient déjà des guillemets doubles (mot de passe
+  # SMTP, par ex.): le lecteur de .env d'api/ coupe à la première guillemet fermante.
+  if [[ "$value" != *\"* ]]; then
+    printf '%s="%s"\n' "$name" "$value"
+  elif [[ "$value" != *\'* ]]; then
+    printf "%s='%s'\n" "$name" "$value"
+  else
+    log_warn "$name contient à la fois des guillemets simples et doubles: variable ignorée (à définir directement dans api/.env)." >&2
+    return 1
   fi
-  { echo "$current"; echo "$CRON_LINE"; } | crontab -
-  log_ok "Entrée cron ajoutée: $CRON_LINE"
 }
+render_runtime_env() {
+  echo "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement."
+  echo "# Généré par deploy.sh le $(date '+%Y-%m-%d %H:%M') — chaque déploiement RÉÉCRIT ce fichier à partir du .env"
+  echo "# de déploiement : reportez-y vos changements durables. api/.env reste pour les réglages purement locaux."
+  echo "#"
+  echo "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site"
+  echo "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets."
+  local line first=1 name comment pending_name="" pending_comment="" assignment
+  flush_var() {
+    [[ -n "$pending_name" ]] || return 0
+    echo
+    printf '%s\n' "$pending_comment"
+    if assignment="$(runtime_assignment "$pending_name")"; then printf '%s\n' "$assignment"; else printf '#%s=\n' "$pending_name"; fi
+    pending_name=""; pending_comment=""
+  }
+  while IFS= read -r line; do
+    if [[ "$line" == "== "* ]]; then
+      flush_var
+      echo; echo
+      echo "# ------------------------------------------------------------------------------------------"
+      echo "# ${line#== }"
+      echo "# ------------------------------------------------------------------------------------------"
+    elif [[ "$line" == "|"* ]]; then
+      pending_comment+=$'\n'"# ${line#|}"
+    else
+      flush_var
+      pending_name="${line%%|*}"
+      pending_comment="# ${line#*|}"
+    fi
+  done <<< "$RUNTIME_LAYOUT"
+  flush_var
+}
+install -m 600 /dev/null "$API_DIR/.runtime.env"
+render_runtime_env > "$API_DIR/.runtime.env"
+chmod 600 "$API_DIR/.runtime.env"
+log_ok "api/.runtime.env généré et protégé (600)."
 
-if [[ "$INSTALL_CRON_MONITOR" == "true" ]]; then
-  log_step "Configuration cron de supervision"
-  install_cron
-fi
+# Les données d'exécution (mesures, compteurs) ne doivent jamais être lisibles par HTTP: le
+# code d'api/ pose lui-même un .htaccess dans logs/ et var/ à la création, on le fait aussi ici
+# pour couvrir un dossier créé avant ce déploiement.
+for _dir in logs var; do
+  mkdir -p "$API_DIR/$_dir"
+  chmod 750 "$API_DIR/$_dir"
+  [[ -f "$API_DIR/$_dir/.htaccess" ]] || printf 'Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n' > "$API_DIR/$_dir/.htaccess"
+done
 
 popd >/dev/null
 
 log_ok "Déploiement terminé. Site: ${SITE_PUBLIC_URL} | API: ${API_PUBLIC_URL}"
-log_info "Contrôle Node: $BACKEND_DIR/monitor_node.sh"
 
-# Validation finale — toujours vérifiée, quelle que soit la valeur de INSTALL_CRON_MONITOR
-if cron_present; then
-  log_ok "Supervision cron active."
-else
-  log_warn "Supervision cron ABSENTE. Ajoutez manuellement via 'crontab -e' :"
-  log_warn "  $CRON_LINE"
+log_step "Contrôle de l'API déployée"
+# Non bloquant: l'URL publique peut ne pas encore pointer vers ce serveur (DNS, bascule en cours).
+if command -v curl >/dev/null 2>&1; then
+  if curl -fsS --max-time 10 "${API_PUBLIC_URL%/}/config" >/dev/null 2>&1; then
+    log_ok "GET ${API_PUBLIC_URL%/}/config répond."
+  else
+    log_warn "GET ${API_PUBLIC_URL%/}/config ne répond pas (DNS ? version PHP du site ?)."
+  fi
 fi

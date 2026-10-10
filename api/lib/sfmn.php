@@ -1,6 +1,6 @@
 <?php
 // Mode "sfmn": calcul délégué à l'outil SFMN distant (scraping du formulaire). Port de
-// calculateSfmn() de server.js: mêmes étapes, mêmes codes d'erreur, mêmes formes de réponse.
+// Calcul SFMN distant: mêmes étapes, mêmes codes d'erreur, mêmes formes de réponse.
 // Désactivable entièrement par SFMN_MODE_ENABLED=false (voir Config\sfmn_mode_enabled).
 declare(strict_types=1);
 
@@ -54,7 +54,7 @@ function normalize_text(?string $value): string
     return trim(preg_replace('/\s+/u', ' ', $v) ?? $v);
 }
 
-// resp.text() de Node remplace les octets invalides par U+FFFD; sans cela les regex /u de PHP
+// Un décodage tolérant remplace les octets invalides par U+FFFD; sans cela les regex /u de PHP
 // échouent entièrement sur une page contenant un octet non UTF-8.
 function scrub_utf8(string $html): string
 {
@@ -279,7 +279,7 @@ function calculate_inner(array $payload): array
         return $result + ['sfmn_debug' => $sfmnDebug];
     };
     // $debug étant fixé à true seulement par la config serveur, l'ordre des clés de
-    // sfmn_debug.parsing suit celui d'insertion de Node (utile pour comparer à l'identique).
+    // sfmn_debug.parsing suit l'ordre d'insertion.
     $fail = static fn (array $errors, array $error) => $finish([
         'ok' => false, 'calculation_mode' => 'sfmn', 'selected' => $selected,
         'errors' => $errors, 'error' => $error, 'recommendations_days' => empty_recommendations(),

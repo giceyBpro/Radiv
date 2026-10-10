@@ -1,11 +1,10 @@
-// Compare calculation.js (référence, Node) et calculation.php (port) sur une batterie de cas
-// fixes + un fuzz à graine fixe, dans les deux modes d'arrondi. Égalité exigée sur la
-// sérialisation JSON complète (valeurs, ordre des clés, formatage des nombres).
-// Usage: node api/tests/compare-node-php.js [nombre_de_cas_aleatoires]
-const { execFileSync } = require('child_process');
+// Génère golden-calcul.json (cas + résultats attendus) à partir de calculation.js, l'ancienne
+// implémentation Node de référence, récupérable dans l'historique git. Outil ponctuel, conservé
+// pour mémoire; le test courant est test-calcul.js.
+// Usage (depuis une copie de calculation.js à la racine): node api/tests/gen-golden.js [nb_cas]
 const path = require('path');
 const root = path.join(__dirname, '..', '..');
-const fuzzCount = Number(process.argv[2] || 3000);
+const fuzzCount = Number(process.argv[2] || 1500);
 
 const base = { dose_rate: 100, patient_size_cm: 150 };
 const fixed = [
@@ -74,32 +73,12 @@ for (let i = 0; i < fuzzCount; i += 1) {
 }
 const cases = [...fixed, ...fuzz];
 
-let failures = 0;
+const out = { cases: cases.map((c) => JSON.parse(JSON.stringify(c))), expected: {} };
 for (const mode of ['round', 'floor']) {
   process.env.RESTRICTION_ROUNDING_MODE = mode;
   delete require.cache[require.resolve(path.join(root, 'calculation.js'))];
   const { calculate } = require(path.join(root, 'calculation.js'));
-  // Passage par JSON: ce que reçoit réellement l'API (Infinity → null, undefined disparaît).
-  const wire = cases.map((c) => JSON.parse(JSON.stringify(c)));
-  const phpOut = execFileSync('php', [path.join(__dirname, 'calc-cli.php')], {
-    input: JSON.stringify(wire), env: { ...process.env }, maxBuffer: 1 << 28
-  }).toString();
-  const phpResults = JSON.parse(phpOut);
-  // Re-sérialisation pour comparer aussi l'ordre des clés; le texte brut PHP est vérifié ensuite.
-  const phpRaw = phpOut;
-  const nodeRaw = JSON.stringify(wire.map((w) => calculate(w)));
-  let modeFailures = 0;
-  wire.forEach((w, idx) => {
-    const a = JSON.stringify(calculate(w));
-    const b = JSON.stringify(phpResults[idx]);
-    if (a !== b) {
-      modeFailures += 1;
-      if (modeFailures <= 5) console.log(`ÉCART [${mode}] cas #${idx}: ${JSON.stringify(w)}\n  node: ${a.slice(0, 600)}\n  php : ${b.slice(0, 600)}`);
-    }
-  });
-  const rawEqual = nodeRaw === phpRaw;
-  if (!rawEqual && process.env.VERBOSE) { let i = 0; while (nodeRaw[i] === phpRaw[i]) i += 1; console.log(`  1er écart brut @${i}:\n  node: ${nodeRaw.slice(Math.max(0, i - 60), i + 60)}\n  php : ${phpRaw.slice(Math.max(0, i - 60), i + 60)}`); }
-  console.log(`[${mode}] ${wire.length} cas, ${modeFailures} écart(s) sémantique/ordre; sortie brute ${rawEqual ? 'identique octet pour octet' : 'équivalente (seul le formatage des exposants diffère: 1e+300 / 1.0e+300; VERBOSE=1 pour le détail)'}`);
-  failures += modeFailures;
+  out.expected[mode] = out.cases.map((w) => JSON.parse(JSON.stringify(calculate(w))));
 }
-process.exit(failures ? 1 : 0);
+require('fs').writeFileSync(path.join(__dirname, 'golden-calcul.json'), JSON.stringify(out));
+console.log(`${out.cases.length} cas écrits`);

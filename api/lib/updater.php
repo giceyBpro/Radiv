@@ -21,7 +21,7 @@ const MAX_ZIP_BYTES = 20971520;        // 20 Mo: l'archive réelle fait moins de
 const MAX_FILE_BYTES = 10485760;       // 10 Mo par fichier extrait
 const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les "bombes" ZIP)
 
-// Même liste blanche que deploy-php.sh. api/ et downloads/ sont traités par préfixe (voir allowed()).
+// Même liste blanche que deploy.sh. api/ et downloads/ sont traités par préfixe (voir allowed()).
 const FRONTEND_FILES = [
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',

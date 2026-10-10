@@ -730,7 +730,7 @@
       const url = `${API_BASE}/config`;
       const response = await fetchWithTimeout(url, {}, 12000);
       if (!response.ok) {
-        throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez le proxy /api vers Node.js.`);
+        throw new Error(`API indisponible (${response.status}) sur ${url}. Vérifiez que /api est joignable.`);
       }
       return response.json();
     }

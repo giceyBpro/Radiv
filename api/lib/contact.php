@@ -1,6 +1,6 @@
 <?php
 // Formulaire de contact: vérification reCAPTCHA et envoi par SMTP authentifié. Port de
-// smtpSendMail/sendContactEmail de server.js: mêmes variables (SMTP_*, CONTACT_DEST,
+// Envoi du formulaire de contact: variables (SMTP_*, CONTACT_DEST,
 // RECAPTCHA_SECRET_KEY), mêmes garde-fous (STARTTLS obligatoire, certificat vérifié, mode
 // fermé sans clé reCAPTCHA), sans dépendance externe.
 declare(strict_types=1);
@@ -98,7 +98,7 @@ function smtp_send(string $replyTo, string $subject, string $html): array
     $timeout = max(1, (int) ceil(Config\int_env('SMTP_TIMEOUT_MS', 15000) / 1000));
     $messageId = sprintf('<%d.%s@radioprotection-riv.local>', (int) (microtime(true) * 1000), bin2hex(random_bytes(6)));
 
-    // Certificat et nom d'hôte vérifiés (comme tls.connect de Node): sans cela, un intermédiaire
+    // Certificat et nom d'hôte vérifiés : sans cela, un intermédiaire
     // pourrait présenter un faux certificat et lire AUTH LOGIN.
     $context = stream_context_create(['ssl' => [
         'verify_peer' => true, 'verify_peer_name' => true, 'peer_name' => $host, 'SNI_enabled' => true,

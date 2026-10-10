@@ -1,6 +1,6 @@
 <?php
-// Point d'entrée unique de l'API PHP (équivalent de server.js). Toutes les URLs publiques
-// restent celles de la version Node (/api/calculate, /api/config, /health...): le
+// Point d'entrée unique de l'API PHP. Toutes les URLs publiques
+// sont /api/calculate, /api/config, /health...): le
 // .htaccess de ce dossier réécrit tout vers ce fichier, aucun ".php" n'apparaît côté client.
 declare(strict_types=1);
 
@@ -84,7 +84,7 @@ try {
         $payload = [];
         if ($body !== '') {
             $decoded = json_decode($body, true);
-            // null = JSON invalide, ou littéral "null" (que Node rejetait aussi: pas de champs).
+            // null = JSON invalide, ou littéral "null" (pas de champs).
             if ($decoded === null) {
                 Http\send_json(400, ['error' => 'JSON invalide']);
                 exit;

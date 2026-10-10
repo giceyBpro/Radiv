@@ -64,6 +64,6 @@ build("{$out}/9.zip", $root('9'), $broken);
 // 10: fichiers hors liste blanche (.env, .htaccess racine, config.js, api/logs, api/tests): ne doivent jamais être écrits
 $extra = $good;
 $extra['.env'] = 'ADMIN_TOKEN=pirate'; $extra['.htaccess'] = 'Deny from nobody'; $extra['config.js'] = 'alert(1)';
-$extra['api/.env'] = 'X=1'; $extra['api/logs/x.jsonl'] = 'x'; $extra['api/tests/x.php'] = '<?php'; $extra['deploy-php.sh'] = 'rm -rf /';
+$extra['api/.env'] = 'X=1'; $extra['api/logs/x.jsonl'] = 'x'; $extra['api/tests/x.php'] = '<?php'; $extra['deploy.sh'] = 'rm -rf /';
 build("{$out}/10.zip", $root('a'), $extra);
 echo "ok\n";
