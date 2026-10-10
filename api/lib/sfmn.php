@@ -138,13 +138,16 @@ function fail(array $selected, array $errors, array $error, bool $debug, array $
     return $debug ? $result + ['sfmn_debug' => $sfmnDebug] : $result;
 }
 
-function calculate(array $payload): array
+// $opts (réservé à l'administration, jamais issu d'une requête publique) :
+//   'force' => true  : calcule même si SFMN_MODE_ENABLED=false ;
+//   'debug' => true  : joint toujours sfmn_debug, sans tenir compte de SFMN_DEBUG.
+function calculate(array $payload, array $opts = []): array
 {
     try {
-        return calculate_inner($payload);
+        return calculate_inner($payload, $opts);
     } catch (\Throwable $e) {
         error_log('[SFMN] exception: ' . $e->getMessage());
-        $debug = strtolower(Config\env('SFMN_DEBUG', 'false')) === 'true';
+        $debug = !empty($opts['debug']) || strtolower(Config\env('SFMN_DEBUG', 'false')) === 'true';
         $result = [
             'ok' => false,
             'calculation_mode' => 'sfmn',
@@ -161,7 +164,7 @@ function calculate(array $payload): array
     }
 }
 
-function calculate_inner(array $payload): array
+function calculate_inner(array $payload, array $opts = []): array
 {
     $isotopeCode = $payload['isotope_code'] ?? null;
     $selected = Calculation\get_isotope($isotopeCode);
@@ -202,7 +205,7 @@ function calculate_inner(array $payload): array
             'recommendations_days' => empty_recommendations(),
         ];
     }
-    if (!Config\sfmn_mode_enabled()) {
+    if (!Config\sfmn_mode_enabled() && empty($opts['force'])) {
         return [
             'ok' => false,
             'calculation_mode' => 'sfmn',
@@ -214,7 +217,7 @@ function calculate_inner(array $payload): array
     }
     // Le mode debug expose le HTML distant complet et les champs cachés du formulaire SFMN
     // (jeton CSRF compris): il ne dépend que de la configuration serveur, jamais du payload.
-    $debug = strtolower(Config\env('SFMN_DEBUG', 'false')) === 'true';
+    $debug = !empty($opts['debug']) || strtolower(Config\env('SFMN_DEBUG', 'false')) === 'true';
     $sfmnDebug = ['enabled' => $debug, 'requests' => [], 'parsing' => (object) []];
     $parsing = [];
     $url = Config\env('SFMN_CALCULATOR_URL');

@@ -27,6 +27,11 @@ const ROUTES = [
     'GET /auth/callback' => 'callback',
     'GET /auth/mesures' => 'measurements',
     'GET /auth/mesures.csv' => 'measurements_csv',
+    'GET /auth/test-sfmn' => 'sfmn_page',
+    'GET /auth/test-sfmn/config.js' => 'sfmn_config_js',
+    'GET /auth/test-sfmn/api/config' => 'sfmn_api_config',
+    'GET /auth/test-sfmn/api/public-config' => 'sfmn_api_public',
+    'POST /auth/test-sfmn/api/calculate' => 'sfmn_api_calculate',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
     'POST /auth/logout' => 'logout',
@@ -254,6 +259,8 @@ function do_asset(string $name): bool
         'leaflet.js' => ['application/javascript; charset=utf-8', 'leaflet.js'],
         'leaflet.css' => ['text/css; charset=utf-8', 'leaflet.css'],
         'mesures.js' => ['application/javascript; charset=utf-8', 'mesures.js'],
+        'test-sfmn.js' => ['application/javascript; charset=utf-8', 'test-sfmn.js'],
+        'test-sfmn.css' => ['text/css; charset=utf-8', 'test-sfmn.css'],
     ];
     if (Session\admin() === null || !isset($files[$name])) return false;
     $path = Config\base_dir() . '/assets/' . $files[$name][1];
@@ -319,6 +326,16 @@ th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;verti
 @media(max-width:640px){.top{padding:10px 12px}.tab{padding:7px 11px}.who span{display:none}}
 CSS;
 
+// Onglets de l'administration (utilisés aussi par la page de test SFMN). $active : 'site', 'mesures' ou 'sfmn'.
+function tabs_html(string $active): string
+{
+    $tab = static fn(string $key, string $href, string $label): string =>
+        '<a class="tab' . ($active === $key ? ' on' : '') . '" href="' . $href . '"' . ($active === $key ? ' aria-current="page"' : '') . '>' . $label . '</a>';
+    $tabs = $tab('site', '/auth', 'Site');
+    if (Config\admin_measurements_enabled()) $tabs .= $tab('mesures', '/auth/mesures', 'Mesures');
+    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN');
+}
+
 // Page complète de l'administration : en-tête, onglets, contenu. $active : 'site' ou 'mesures'.
 // Options : 'wide' (page large), 'map' (charge Leaflet et mesures.js : seule page autorisée à exécuter du JavaScript).
 function page(string $active, string $title, string $body, array $opts = [], int $status = 200): void
@@ -329,10 +346,7 @@ function page(string $active, string $title, string $body, array $opts = [], int
     $map = !empty($opts['map']);
     $nav = '';
     if ($admin !== null) {
-        $tabs = '<a class="tab' . ($active === 'site' ? ' on' : '') . '" href="/auth"' . ($active === 'site' ? ' aria-current="page"' : '') . '>Site</a>';
-        if (Config\admin_measurements_enabled()) {
-            $tabs .= '<a class="tab' . ($active === 'mesures' ? ' on' : '') . '" href="/auth/mesures"' . ($active === 'mesures' ? ' aria-current="page"' : '') . '>Mesures</a>';
-        }
+        $tabs = tabs_html($active);
         $host = (string) parse_url(Config\site_public_url(), PHP_URL_HOST);
         $nav = '<header class="top"><div class="brand">Administration<small>' . h($host) . '</small></div><nav class="tabs" aria-label="Sections">' . $tabs . '</nav>'
             . '<div class="who"><span>' . h($admin['email']) . '</span><form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="' . h(Session\csrf_token()) . '">'

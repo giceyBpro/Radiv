@@ -17,6 +17,12 @@ class Client {
     raw.forEach((c) => { const [kv] = c.split(';'); const i = kv.indexOf('='); this.jar[kv.slice(0, i)] = kv.slice(i + 1); });
     return { status: res.status, loc: res.headers.get('location'), text: await res.text(), setCookie: raw, headers: res.headers };
   }
+  async reqJson(method, url, obj, headers = {}) {
+    const h = { 'Content-Type': 'application/json', ...headers };
+    if (Object.keys(this.jar).length) h.Cookie = Object.entries(this.jar).map(([k, v]) => `${k}=${v}`).join('; ');
+    const res = await fetch(url, { method, headers: h, redirect: 'manual', body: obj === undefined ? undefined : JSON.stringify(obj) });
+    return { status: res.status, text: await res.text(), headers: res.headers };
+  }
   async login() {
     const a = await this.req('GET', `${BASE}/auth`);
     const b = await this.req('GET', a.loc); // Google approuve et renvoie vers le callback
@@ -180,6 +186,52 @@ async function update(c, ref, token) {
   page = await c.req('GET', `${BASE}/auth`);
   const rb2 = await c.req('POST', `${BASE}/auth/rollback`, { form: { csrf: csrfOf(page.text) }, headers: { Origin: BASE } });
   t('…et il rétablit l\'état précédent', (await c.req('GET', rb2.loc)).text.includes('Version précédente rétablie') && treeHash() === afterGood);
+
+  console.log('\n— Onglet « Test SFMN » (SFMN toujours actif)');
+  const T = `${BASE}/auth/test-sfmn`; const anon = new Client(); resetLimits();
+  const anonStatuses = await Promise.all([`${T}`, `${T}/config.js`, `${T}/api/config`, `${T}/api/public-config`, `${BASE}/auth/assets/test-sfmn.js`, `${BASE}/auth/assets/test-sfmn.css`].map((u) => fetch(u).then((x) => x.status)));
+  t('sans session: page, config.js, API et fichiers → 404', anonStatuses.every((x) => x === 404), anonStatuses.join());
+  t('POST calculate sans session → 404', (await anon.reqJson('POST', `${T}/api/calculate`, { isotope_code: 'radium223' })).status === 404);
+  t('onglet proposé sur /auth', /href="\/auth\/test-sfmn"[^>]*>Test SFMN</.test((await c.req('GET', `${BASE}/auth`)).text));
+  t('SFMN désactivé sur le site: /api/config sans mode sfmn', !(await (await fetch(`${BASE}/api/config`)).json()).calculation_modes.includes('sfmn'));
+  const sc = await (await fetch(`${BASE}/api/config`)).json();
+  let pg = await c.req('GET', T);
+  t('page de test servie (200)', pg.status === 200 && /id="calculateBtn"/.test(pg.text));
+  t('même page que l\'accueil (index.html + app.js)', pg.text.includes('<script src="app.js">') && pg.text.includes('id="isotope"') && /id="resultsBody"/.test(pg.text));
+  t('bandeau de test + onglets + style distinct', /TEST SFMN/.test(pg.text) && /class="tab on"[^>]*>Test SFMN</.test(pg.text) && pg.text.includes('/auth/assets/test-sfmn.css') && pg.text.includes('/auth/assets/test-sfmn.js'));
+  t('config.js remplacé, aucune ressource tierce', pg.text.includes('/auth/test-sfmn/config.js') && !/googleapis|gstatic|cdn\./i.test(pg.text.replace(/https:\/\/doi\.org[^"<]*/g, '')));
+  t('noindex, base, titre', /name="robots" content="noindex, nofollow"/.test(pg.text) && pg.text.includes('<base href="/">') && /<title>\[Test SFMN\]/.test(pg.text));
+  const sfmnCsp = pg.headers.get('content-security-policy') || '';
+  t('CSP: scripts du site seulement, rien d\'externe', /script-src 'self'/.test(sfmnCsp) && /connect-src 'self'/.test(sfmnCsp) && !/https?:/.test(sfmnCsp), sfmnCsp);
+  t('pas de cache, pas d\'indexation', /no-store/.test(pg.headers.get('cache-control')) && /noindex/.test(pg.headers.get('x-robots-tag')));
+  const cj = await c.req('GET', `${T}/config.js`);
+  t('config.js: API de test, nom distinct', /RADIOPROTECTION_API_URL = "\/auth\/test-sfmn\/api"/.test(cj.text) && /TEST SFMN/.test(cj.text) && /javascript/.test(cj.headers.get('content-type')));
+  const tc = await (await c.req('GET', `${T}/api/config`)).text;
+  t('API de test: SFMN proposé et par défaut', JSON.parse(tc).calculation_modes.includes('sfmn') && JSON.parse(tc).default_calculation_mode === 'sfmn');
+  t('API de test: mêmes isotopes que le site', JSON.stringify(JSON.parse(tc).isotopes) === JSON.stringify(sc.isotopes));
+  const tp = JSON.parse((await c.req('GET', `${T}/api/public-config`)).text);
+  t('API de test: nom distinct', tp.site_name === 'TEST SFMN');
+  const logsCount = () => fs.readdirSync(path.join(WWW, 'api/logs')).filter((f) => f.startsWith('measurements-')).map((f) => fs.statSync(path.join(WWW, 'api/logs', f)).size).join();
+  const logsBefore = logsCount();
+  const body = { isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'sfmn' };
+  let cr = await c.reqJson('POST', `${T}/api/calculate`, body, { Origin: BASE }); let cd = JSON.parse(cr.text);
+  t('calcul SFMN tenté malgré SFMN_MODE_ENABLED=false', cr.status === 200 && cd.calculation_mode === 'sfmn' && !cd.errors?.some((e) => /désactivé/i.test(e)) && cd.error?.code !== 'SFMN_MODE_DISABLED', cr.text.slice(0, 200));
+  t('détails dans admin_details, pas à la racine', cd.admin_details && cd.admin_details.mode === 'sfmn' && !('sfmn_debug' in cd) && cd.admin_details.sfmn_debug && cd.admin_details.sfmn_debug.enabled === true);
+  t('comparaison locale jointe', cd.admin_details.local && cd.admin_details.local.ok === true && cd.admin_details.local.calculation_mode === 'local');
+  resetLimits(); cr = await c.reqJson('POST', `${T}/api/calculate`, { ...body, calculation_mode: 'local' }, { Origin: BASE }); cd = JSON.parse(cr.text);
+  t('mode local: pas d\'échange SFMN', cd.calculation_mode === 'local' && cd.admin_details.mode === 'local' && cd.admin_details.sfmn_debug === null);
+  t('aucune mesure enregistrée par ces essais', logsCount() === logsBefore);
+  const pubCalc = await (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
+  t('API publique inchangée: bascule sur le calcul local', pubCalc.calculation_mode === 'local' && !('admin_details' in pubCalc));
+  resetLimits();
+  t('autre site (Origin) → 403', (await c.reqJson('POST', `${T}/api/calculate`, body, { Origin: 'https://evil.example' })).status === 403);
+  t('Sec-Fetch-Site cross-site → 403', (await c.reqJson('POST', `${T}/api/calculate`, body, { 'Sec-Fetch-Site': 'cross-site' })).status === 403);
+  const noJson = await fetch(`${T}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'text/plain', Cookie: Object.entries(c.jar).map(([k, v]) => `${k}=${v}`).join('; ') }, body: JSON.stringify(body) });
+  t('type non JSON (formulaire d\'un autre site) → 403', noJson.status === 403);
+  t('JSON invalide → 400', (await c.reqJson('POST', `${T}/api/calculate`, undefined, { Origin: BASE })).status === 400);
+  let limited = 0; for (let i = 0; i < 25; i += 1) if ((await c.reqJson('POST', `${T}/api/calculate`, body, { Origin: BASE })).status === 429) limited += 1;
+  t('plafond de 20 essais par minute', limited >= 4, String(limited));
+  resetLimits();
 
   console.log('\n— Fichiers hors liste blanche (.env, .htaccess, config.js, tests...)');
   const cfgBefore = read('config.js'); const htBefore = read('.htaccess'); resetLimits();

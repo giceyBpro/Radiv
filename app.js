@@ -289,6 +289,7 @@
       $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
       $('resultsBody').innerHTML = '';
       updateResultsVisibility();
+      document.dispatchEvent(new CustomEvent('radiv:clear'));
       $('errorBox').style.display = 'none';
       $('errorBox').textContent = '';
       $('durationHead').innerHTML = 'Durée restriction<br>(jours)';
@@ -455,6 +456,8 @@
         </tr>
       `).join('');
       updateResultsVisibility();
+      // Point d'accroche pour des extensions de page (ex. volets de diagnostic de l'administration).
+      document.dispatchEvent(new CustomEvent('radiv:result', { detail: result }));
     }
 
     // Période effective et tableau ne s'affichent que s'il y a des lignes de résultat.
