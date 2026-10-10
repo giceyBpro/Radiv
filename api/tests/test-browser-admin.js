@@ -40,7 +40,7 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   console.log('— Connexion et mise à jour (formulaires cliqués)');
   await page.goto(`${BASE}/auth`);
   t('connexion Google (simulée) puis page d\'administration', (await page.title()) === 'Administration du site' && page.url() === `${BASE}/auth`);
-  t('en-tête: onglets et adresse connectée', (await page.locator('nav.tabs a').allTextContents()).join() === 'Site,Mesures' && /admin@example\.org/.test(await body()));
+  t('en-tête: onglets et adresse connectée', (await page.locator('nav.tabs a').allTextContents()).join() === 'Site,Mesures,Test SFMN' && /admin@example\.org/.test(await body()));
   await page.fill('input[name=ref]', 'v1.1'); if (await page.$('input[name=token]')) await page.fill('input[name=token]', TOKEN);
   await click('button:has-text("Installer")');
   let txt = await body();
@@ -84,6 +84,24 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('a.btn:has-text("Exporter en CSV")')]);
   const csvPath = await download.path(); const csv = fs.readFileSync(csvPath, 'utf8');
   t('export CSV par le bouton', /^mesures_tout\.csv$/.test(download.suggestedFilename()) && csv.startsWith('timestamp,ip,ip_geo') && csv.split('\n').length === 1 + 64);
+
+  console.log('\n— Onglet « Test SFMN » (page d\'accueil, SFMN toujours actif)');
+  const errBefore = consoleErrors.length; const cspBefore = (await page.evaluate(() => window.__csp || [])).length;
+  await page.goto(`${BASE}/auth`); await click('nav.tabs a:has-text("Test SFMN")');
+  t('onglet ouvert: page d\'accueil du site avec bandeau de test', page.url() === `${BASE}/auth/test-sfmn` && (await page.locator('.test-banner').isVisible()) && (await page.locator('#calculateBtn').isVisible()));
+  t('style distinct de l\'accueil (fond orangé)', (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())) === '#d97706');
+  t('bloc des résultats masqué tant qu\'il n\'y a pas de calcul', !(await page.locator('#resultsSection').isVisible()) && !(await page.locator('.admin-details').isVisible()));
+  t('sélecteur de mode: SFMN proposé et choisi par défaut (désactivé sur le site)', (await page.locator('#calculationModeSelector button[data-mode="sfmn"]').count()) === 1 && /on|active|selected/i.test(await page.locator('#calculationModeSelector button[data-mode="sfmn"]').getAttribute('class') || ''));
+  await page.selectOption('#isotope', 'radium223'); await page.fill('#doseRate', '100'); await page.fill('#patientSize', '150');
+  await page.click('#calculateBtn'); await page.waitForSelector('.admin-details:not([hidden])', { timeout: 15000 });
+  t('volets de diagnostic affichés, repliés', (await page.locator('.admin-details details').count()) === 2 && (await page.locator('.admin-details details[open]').count()) === 0);
+  await page.click('.admin-details details:nth-of-type(2) summary');
+  t('détails techniques dépliables (échanges SFMN)', /"enabled": true/.test(await page.textContent('.admin-details details:nth-of-type(2) pre')));
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT, fullPage: true });
+  await page.click('#calculationModeSelector button[data-mode="local"]'); await page.click('#calculateBtn');
+  await page.waitForFunction(() => /rien à comparer/.test(document.querySelector('.admin-details')?.textContent || ''), null, { timeout: 15000 });
+  t('mode local: tableau affiché + rien à comparer', await page.locator('#resultsSection').isVisible() && (await page.locator('#resultsBody tr').count()) >= 3);
+  t('aucune ressource tierce, ni violation CSP, ni erreur JavaScript sur la page de test', requests.filter((u) => !u.startsWith(BASE) && !/tile\.openstreetmap\.org/.test(u) && !u.startsWith('http://127.0.0.1:9201')).length === 0 && (await page.evaluate(() => window.__csp || [])).length === cspBefore && consoleErrors.length === errBefore, consoleErrors.slice(errBefore).join(' | '));
 
   console.log('\n— Déconnexion');
   await page.goto(`${BASE}/auth`); await click('button:has-text("Se déconnecter")');

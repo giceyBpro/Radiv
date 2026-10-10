@@ -107,6 +107,13 @@ function csrf_valid(): bool
     start();
     $given = $_POST['csrf'] ?? '';
     if (!is_string($given) || empty($_SESSION['csrf']) || !hash_equals((string) $_SESSION['csrf'], $given)) return false;
+    return same_origin_request();
+}
+
+// Contrôle d'origine seul (sans jeton), pour les appels JSON de la page de test SFMN : Sec-Fetch-Site et
+// Origin/Referer doivent désigner ce site quand le navigateur les envoie.
+function same_origin_request(): bool
+{
     $fetchSite = (string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '');
     if ($fetchSite !== '' && !in_array($fetchSite, ['same-origin', 'none'], true)) return false;
     $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');

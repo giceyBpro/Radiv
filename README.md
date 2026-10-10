@@ -274,6 +274,10 @@ Pour mettre le site à jour sans passer par `/auth` (connexion Google indisponib
 
 Même effet qu'une mise à jour depuis `/auth` (le script appelle le même code d'`api/`) : archive validée avant toute écriture, sauvegarde, contrôle de fonctionnement, retour arrière automatique en cas d'échec, entrée dans le journal ; le retour arrière manuel reste possible depuis `/auth`. Après une mise à jour réussie le fichier **se supprime** ; en cas d'échec il est conservé pour une nouvelle tentative (supprimez-le par FTP si vous y renoncez). Il n'est jamais publié par `deploy.sh` ni par les mises à jour. Il s'appuie sur le code déjà installé : une correction de l'outil de mise à jour lui-même ne s'applique qu'à la mise à jour suivante. Vérifié par `api/tests/test-admin-site.js`.
 
+#### Onglet « Test SFMN »
+
+Même si le calcul SFMN est désactivé sur le site (`SFMN_MODE_ENABLED=false`), `https://<votre-domaine>/auth/test-sfmn` permet de l'essayer : c'est la **page d'accueil du site elle-même** (`index.html` + `app.js`, donc toujours à jour avec elle), servie avec une autre feuille de style (fond orangé, bandeau « TEST SFMN », `api/assets/test-sfmn.css`) pour ne pas la confondre avec le site. Le calcul SFMN y est toujours proposé et choisi par défaut ; les appels passent par `/auth/test-sfmn/api/*` (réservés à une session d'administration, même origine exigée, 20 essais par minute), jamais par l'API publique. **Rien n'est enregistré dans les mesures.** Sous le tableau, deux volets repliés (`api/assets/test-sfmn.js`) : la **comparaison avec le calcul local** (écart par scénario) et les **détails techniques SFMN** (échanges avec le site distant, même si `SFMN_DEBUG=false`). La page n'ajoute aucun script tiers : la CSP n'autorise que les scripts du site. Vérifié par `test-admin-site.js` et `test-browser-admin.js`.
+
 ### Tests
 
 Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et navigateur de test) :
