@@ -34,6 +34,7 @@ use Radiv\Contact;
 use Radiv\Frontend;
 use Radiv\Geo;
 use Radiv\Http;
+use Radiv\Json;
 use Radiv\Measurements;
 use Radiv\Sfmn;
 use Radiv\Store;
@@ -91,7 +92,22 @@ try {
         // calcul local (formalismes alignés) plutôt que d'imposer à chaque client (RIS, scripts
         // externes) de gérer lui-même ce repli.
         if ($mode === 'sfmn' && !$sfmnEnabled) $mode = 'local';
-        $result = $mode === 'sfmn' ? Sfmn\calculate($payload) : Calculation\calculate($payload);
+        if ($mode === 'sfmn') {
+            // Chaque calcul SFMN interroge un site tiers : résultats identiques réutilisés 10 min, et plafond
+            // global (tous visiteurs) pour ne pas devenir un relais d'abus vers ce site.
+            $cacheKey = hash('sha256', Json\encode($payload));
+            $result = Store\result_get($cacheKey);
+            if ($result === null) {
+                if (!Store\rate_limit_hit('sfmnglobal', 'all', Config\int_env('SFMN_GLOBAL_RATE_LIMIT', 120))) {
+                    Http\send_json(429, ['ok' => false, 'error' => 'Service SFMN momentanément saturé. Réessayez dans une minute.']);
+                    exit;
+                }
+                $result = Sfmn\calculate($payload);
+                if (($result['ok'] ?? false) === true) Store\result_set($cacheKey, $result);
+            }
+        } else {
+            $result = Calculation\calculate($payload);
+        }
         $timestamp = Measurements\now_iso();
         Http\send_json(200, $result);
 

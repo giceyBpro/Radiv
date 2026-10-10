@@ -233,10 +233,21 @@ async function update(c, ref, token) {
   t('plafond de 20 essais par minute', limited >= 4, String(limited));
   resetLimits();
 
+  console.log('\n— Plafond global des interrogations SFMN (API publique)');
+  const envSnapshot = runtimeEnv(); setEnv('SFMN_MODE_ENABLED', 'true'); setEnv('SFMN_GLOBAL_RATE_LIMIT', '2'); resetLimits();
+  const sfmnCall = (n) => fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100 + n, patient_size_cm: 150, calculation_mode: 'sfmn' }) });
+  const capStatuses = []; for (let i = 0; i < 4; i += 1) capStatuses.push((await sfmnCall(i)).status);
+  t('2 premières interrogations passent, les suivantes → 429 (tous visiteurs confondus)', capStatuses.join() === '200,200,429,429', capStatuses.join());
+  const capBody = await (await sfmnCall(9)).json(); t('message clair', /saturé/.test(capBody.error || ''));
+  fs.writeFileSync(path.join(WWW, 'api/.runtime.env'), envSnapshot); resetLimits();
+  t('SFMN de nouveau désactivé: bascule sur le calcul local', (await (await sfmnCall(1)).json()).calculation_mode === 'local');
+  resetLimits();
+
   console.log('\n— Fichiers hors liste blanche (.env, .htaccess, config.js, tests...)');
   const cfgBefore = read('config.js'); const htBefore = read('.htaccess'); resetLimits();
   r = await update(c, 't10', TOKEN);
   t('installée', /aaaaaaa/.test(r.msg), r.msg);
+  t('vendor/: fichiers statiques installés, jamais de PHP ni de dossier trop profond', exists('vendor/ok.css') && exists('vendor/fonts/ok.woff2') && !exists('vendor/evil.php') && !exists('vendor/a/b/c.js') && !exists('vendor/.htaccess') && !exists('vendor/fonts/evil.phtml'));
   t('config.js et .htaccess racine inchangés', read('config.js') === cfgBefore && read('.htaccess') === htBefore);
   t('.env / api/.env / deploy.sh / api/logs/x / api/tests absents', !exists('.env') && !exists('api/.env') && !exists('deploy.sh') && !exists('api/logs/x.jsonl') && !exists('api/tests/x.php'));
   t('.runtime.env intact', runtimeEnv() === envBefore);

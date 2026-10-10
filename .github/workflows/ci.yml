@@ -21,5 +21,11 @@ jobs:
         run: find api install.php update.php -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Non-régression du calcul
         run: node api/tests/test-calcul.js
+      - name: Adresse IP derrière un proxy, réglages par défaut et cache
+        run: |
+          php api/tests/test-client-ip.php
+          php api/tests/test-config-store.php
+      - name: Contrôles reCAPTCHA côté serveur
+        run: node api/tests/test-recaptcha.js
       - name: Cohérence de la mise en forme de .runtime.env
         run: node api/tests/check-runtime-layout.js

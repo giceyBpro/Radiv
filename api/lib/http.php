@@ -35,14 +35,23 @@ function client_ip(): string
     $trusted = Config\trusted_proxies();
     if (!$trusted || !in_array(normalize_ip($remote), $trusted, true)) return $remote;
     $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
-    if (is_string($forwarded) && $forwarded !== '') return trim(explode(',', $forwarded)[0]);
+    if (!is_string($forwarded) || $forwarded === '') return $remote;
+    // De droite à gauche : chaque proxy de confiance ajoute l'adresse de son interlocuteur à droite ; la première
+    // adresse qui n'est pas un proxy déclaré est donc le vrai client. Ce qui est à sa gauche est écrit par le
+    // client lui-même (falsifiable) et n'est jamais utilisé.
+    $hops = array_map('trim', explode(',', $forwarded));
+    for ($i = count($hops) - 1; $i >= 0; $i--) {
+        $hop = normalize_ip($hops[$i]);
+        if ($hop === '' || filter_var($hop, FILTER_VALIDATE_IP) === false) return $remote; // valeur illisible : on ne la croit pas
+        if (!in_array($hop, $trusted, true)) return $hop;
+    }
     return $remote;
 }
 
 function set_cors_headers(): void
 {
     header('Access-Control-Allow-Origin: ' . Config\cors_origin());
-    header('Access-Control-Allow-Headers: Content-Type, X-Admin-Token');
+    header('Access-Control-Allow-Headers: Content-Type');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
