@@ -118,7 +118,13 @@
 
     (function bootstrap() {
       const now = new Date();
-      document.getElementById('copyrightText').textContent = `© ${now.getFullYear()} ${COPYRIGHT_OWNER}`;
+      const showCopyright = (owner) => { document.getElementById('copyrightText').textContent = `© ${now.getFullYear()} ${owner}`; };
+      showCopyright(COPYRIGHT_OWNER);
+      // Propriétaire lu à chaud côté serveur (api/.runtime.env); config.js sert de repli.
+      fetch(`${(window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '')}/public-config`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.copyright_owner === 'string' && d.copyright_owner) showCopyright(d.copyright_owner); })
+        .catch(() => {});
       const raw = localStorage.getItem('radioprotection_print_payload') || sessionStorage.getItem('radioprotection_print_payload');
       if (!raw) {
         document.getElementById('inputGrid').innerHTML = '<div>Aucune donnée disponible.</div>';

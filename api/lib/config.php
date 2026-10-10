@@ -152,6 +152,24 @@ function site_public_url(): string
     return rtrim(env('SITE_PUBLIC_URL'), '/');
 }
 
+// Nom affiché dans le bandeau du site: SITE_NAME, sinon le nom de domaine de SITE_PUBLIC_URL sans « www. ».
+function site_name(): string
+{
+    $name = trim(env('SITE_NAME'));
+    if ($name !== '') {
+        return $name;
+    }
+    $host = parse_url(site_public_url(), PHP_URL_HOST);
+    return is_string($host) ? (string)preg_replace('/^www\./i', '', $host) : '';
+}
+
+// Propriétaire affiché dans le copyright en bas de page: COPYRIGHT_OWNER, sinon le nom du site.
+function copyright_owner(): string
+{
+    $owner = trim(env('COPYRIGHT_OWNER'));
+    return $owner !== '' ? $owner : site_name();
+}
+
 // URL publique de l'API (ex. https://www.example.org/api), sans slash final.
 function api_public_url(): string
 {

@@ -58,6 +58,17 @@ async function update(c, ref, token) {
   for (const f of ['tox.html', '.tox-complet.html']) { fs.writeFileSync(path.join(WWW, f), `ancienne page ${f}`); fs.chmodSync(path.join(WWW, f), 0o644); }
   const base = treeHash(); const envBefore = runtimeEnv();
 
+  console.log('\n— Nom du site et copyright (lus à chaud)');
+  const pub = async () => (await fetch(`${BASE}/api/public-config`)).json();
+  setEnv('SITE_NAME', null); setEnv('COPYRIGHT_OWNER', null);
+  let pc = await pub();
+  t('par défaut: nom = domaine de SITE_PUBLIC_URL, propriétaire = nom', pc.site_name === '127.0.0.1' && pc.copyright_owner === '127.0.0.1');
+  setEnv('SITE_NAME', 'Mon Site'); pc = await pub();
+  t('SITE_NAME pris en compte sans redéploiement, propriétaire suit', pc.site_name === 'Mon Site' && pc.copyright_owner === 'Mon Site');
+  setEnv('COPYRIGHT_OWNER', 'Association X'); pc = await pub();
+  t('COPYRIGHT_OWNER distinct pris en compte', pc.site_name === 'Mon Site' && pc.copyright_owner === 'Association X');
+  setEnv('SITE_NAME', null); setEnv('COPYRIGHT_OWNER', null);
+
   console.log('\n— Accès sans connexion');
   let c = new Client();
   const entry = await c.req('GET', `${BASE}/auth`);

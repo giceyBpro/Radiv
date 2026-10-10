@@ -66,6 +66,9 @@ try {
             // reste correcte sans édition manuelle à chaque changement de .env.
             'measurement_logging_level' => Config\logging_level(),
             'logs_retention_months' => Config\logs_retention_months(),
+            // Affichés par le navigateur (bandeau, copyright): modifiables à chaud dans .runtime.env.
+            'site_name' => Config\site_name(),
+            'copyright_owner' => Config\copyright_owner(),
         ]);
         exit;
     }

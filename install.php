@@ -43,7 +43,7 @@ $REQUIRED_FILES = array(
 $TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à api/.runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS');
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER');
 // Description de api/.runtime.env : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Strictement identique à celle de deploy.sh (api/tests/check-runtime-layout.js le vérifie).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -51,6 +51,8 @@ $RUNTIME_LAYOUT = <<<'LAYOUT'
 SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
 |Sert à l'URL de retour Google (/auth/callback) et au contrôle d'origine des formulaires.
 API_PUBLIC_URL|URL publique de l'API. Facultatif : par défaut SITE_PUBLIC_URL suivi de /api.
+SITE_NAME|Nom affiché dans le bandeau du site. Facultatif : par défaut le nom de domaine de SITE_PUBLIC_URL (sans www).
+COPYRIGHT_OWNER|Propriétaire affiché en bas de page (© année propriétaire). Facultatif : par défaut SITE_NAME.
 API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en général l'adresse du site).
 |« * » l'ouvre à tous les sites : à éviter.
 TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),

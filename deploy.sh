@@ -379,6 +379,8 @@ RUNTIME_LAYOUT="$(cat <<'LAYOUT'
 SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
 |Sert à l'URL de retour Google (/auth/callback) et au contrôle d'origine des formulaires.
 API_PUBLIC_URL|URL publique de l'API. Facultatif : par défaut SITE_PUBLIC_URL suivi de /api.
+SITE_NAME|Nom affiché dans le bandeau du site. Facultatif : par défaut le nom de domaine de SITE_PUBLIC_URL (sans www).
+COPYRIGHT_OWNER|Propriétaire affiché en bas de page (© année propriétaire). Facultatif : par défaut SITE_NAME.
 API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en général l'adresse du site).
 |« * » l'ouvre à tous les sites : à éviter.
 TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
