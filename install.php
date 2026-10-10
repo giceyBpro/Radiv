@@ -29,23 +29,25 @@ const GITHUB_API = 'https://api.github.com';   // modifié uniquement par les te
 const DEFAULT_REPO = 'giceyBpro/Radiv';
 const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142&lang=fr';
 
-// Même liste blanche que api/lib/updater.php et deploy.sh (api/tests/test-install.js vérifie
-// qu'elles restent identiques). api/, downloads/ et vendor/ sont traités par préfixe dans allowed().
+// Même liste blanche que backend/src/lib/updater.php et deploy.sh (tests/test-install.js vérifie
+// qu'elles restent identiques). Chemins du DÉPÔT : « public/... » va dans la racine web, « backend/... » dans le
+// dossier du backend. downloads/, vendor/ et backend/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'robots.txt',
 );
 $REQUIRED_FILES = array(
-    'index.html', 'api/.htaccess', 'api/index.php', 'api/calculation.php', 'api/lib/config.php',
-    'api/lib/updater.php', 'api/lib/admin_site.php', 'api/lib/google.php', 'api/lib/session.php',
+    'public/index.html', 'public/api/.htaccess', 'public/api/index.php',
+    'backend/src/app.php', 'backend/src/calculation.php', 'backend/src/lib/config.php',
+    'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 );
-$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url');
+$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
-// Variables du .env transmises telles quelles à api/.runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT');
-// Description de api/.runtime.env : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
-// commentaire). Strictement identique à celle de deploy.sh (api/tests/check-runtime-layout.js le vérifie).
+// Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT');
+// Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
+// commentaire). Strictement identique à celle de deploy.sh (tests/check-runtime-layout.js le vérifie).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
 == Site et API
 SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
@@ -57,6 +59,9 @@ API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en gé
 |« * » l'ouvre à tous les sites : à éviter.
 TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
 |séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
+== Emplacement des données
+DATA_DIR|Dossier des journaux et de l'état du site (sessions, version installée, sauvegarde). Facultatif :
+|par défaut le dossier data/ du backend. Chemin absolu, ou relatif au backend ; jamais lisible depuis le web.
 == Administration du site (/auth, connexion Google)
 GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
 GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
@@ -142,7 +147,7 @@ if (strlen(INSTALL_KEY) < 24 || INSTALL_KEY === 'CHANGEZ-MOI') {
     page('Installation non autorisée', '<p class="msg">Aucune clé d\'installation n\'est définie. Ouvrez <code>install.php</code> dans un éditeur, remplacez la valeur de <code>INSTALL_KEY</code> par une clé secrète d\'au moins 24 caractères, puis renvoyez le fichier par FTP.</p>', 403);
 }
 $docroot = rtrim(str_replace('\\', '/', __DIR__), '/');
-if (is_file($docroot . '/api/var/install.done')) {
+if (is_file($docroot . '/api/.install-done')) {
     page('Introuvable', '<p>Cette page n\'existe pas.</p>', 404); // déjà installé: aucune information donnée
 }
 $isLocal = in_array(isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : '', array('localhost', '127.0.0.1'), true);
@@ -294,7 +299,7 @@ function download_to($url, $file, $maxBytes)
     return $ok !== false && $status === 200;
 }
 
-// Seuls ces chemins (relatifs à la racine web) peuvent être écrits par l'installation.
+// Seuls ces chemins (relatifs à la racine du dépôt) peuvent être écrits par l'installation.
 function allowed($rel)
 {
     global $FRONTEND_FILES;
@@ -303,26 +308,43 @@ function allowed($rel)
     foreach ($parts as $part) {
         if ($part === '' || $part === '.' || $part === '..') return false;
     }
-    if (in_array($rel, $FRONTEND_FILES, true)) return true;
-    if ($parts[0] === 'downloads') {
-        return count($parts) === 2 && preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $parts[1]) === 1;
-    }
-    if ($parts[0] === 'vendor') { // polices et bibliothèques hébergées sur le site (vendor/ ou vendor/fonts/)
-        if (count($parts) < 2 || count($parts) > 3) return false;
-        // Jamais de script serveur ici : seuls les fichiers statiques d'extension connue sont acceptés.
-        if (count($parts) === 3 && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $parts[1]) !== 1) return false;
-        return preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:css|js|woff2?|txt|map)$/', $parts[count($parts) - 1]) === 1;
-    }
-    if ($parts[0] === 'api' && count($parts) >= 2) {
-        if (in_array($parts[1], array('tests', 'logs', 'var'), true)) return false;
-        if ($rel === 'api/.env' || $rel === 'api/.runtime.env') return false;
-        foreach (array_slice($parts, 1) as $part) {
-            if ($part[0] === '.' && $rel !== 'api/.htaccess') return false;
-            if (preg_match('/^[A-Za-z0-9._-]+$/', $part) !== 1) return false;
+    $count = count($parts);
+    if ($parts[0] === 'public') {
+        $sub = implode('/', array_slice($parts, 1));
+        if (in_array($sub, $FRONTEND_FILES, true)) return true;
+        if ($sub === 'api/index.php' || $sub === 'api/.htaccess') return true; // la façade, et rien d'autre dans api/
+        if ($count === 3 && $parts[1] === 'downloads') {
+            return preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $parts[2]) === 1;
         }
-        return true;
+        if ($parts[1] === 'vendor') { // polices et bibliothèques hébergées sur le site (vendor/ ou vendor/fonts/)
+            if ($count < 3 || $count > 4) return false;
+            // Jamais de script serveur ici : seuls les fichiers statiques d'extension connue sont acceptés.
+            if ($count === 4 && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $parts[2]) !== 1) return false;
+            return preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:css|js|woff2?|txt|map)$/', $parts[$count - 1]) === 1;
+        }
+        return false;
+    }
+    if ($parts[0] === 'backend') {
+        if ($rel === 'backend/.htaccess') return true;
+        // Code : src/*.php et src/lib/*.php. Ressources de l'administration : assets/<fichier statique>.
+        // Jamais config/ ni data/ (réglages et données du site).
+        if ($parts[1] === 'src' && ($count === 3 || ($count === 4 && $parts[2] === 'lib'))) {
+            return preg_match('/^[A-Za-z0-9_-]+\.php$/', $parts[$count - 1]) === 1;
+        }
+        if ($parts[1] === 'assets' && $count === 3) {
+            return preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)*\.(?:css|js|txt|png|svg|woff2?)$/', $parts[2]) === 1;
+        }
+        return false;
     }
     return false;
+}
+
+// Destination d'un chemin du dépôt : public/ → racine web, backend/ → dossier du backend.
+function dest_of($rel, $docroot, $backendDir)
+{
+    if (strpos($rel, 'public/') === 0) return $docroot . '/' . substr($rel, 7);
+    if (strpos($rel, 'backend/') === 0) return $backendDir . '/' . substr($rel, 8);
+    throw new RuntimeException('Chemin hors liste blanche : ' . $rel);
 }
 
 function extract_archive($zipFile, $staging, $sha)
@@ -439,7 +461,9 @@ function render_form($key, $values, $errors)
         . '<label>Version à installer (tag, branche ou commit)</label><input type="text" name="ref" value="' . $v('ref', 'main') . '" required>'
         . '<label>Jeton d\'accès</label><input type="password" name="token" required>';
     $out .= '<h2>Site</h2>'
-        . '<label>Adresse du site (sans chemin)</label><input type="text" name="site_url" value="' . $v('site_url', $guess) . '" required>';
+        . '<label>Adresse du site (sans chemin)</label><input type="text" name="site_url" value="' . $v('site_url', $guess) . '" required>'
+        . '<label>Dossier du backend (code, configuration et données ; vide = <code>backend</code> dans la racine du site)</label><input type="text" name="backend_dir" value="' . $v('backend_dir') . '">'
+        . '<p class="small">Il peut aussi se trouver hors de la racine web (chemin absolu, <code>~/…</code> ou <code>../…</code>), ce qui est préférable quand l\'hébergement le permet. Dans tous les cas il est protégé par un fichier .htaccess.</p>';
     $out .= '<h2>Administration (connexion Google)</h2>'
         . '<p class="small">URI de redirection à déclarer dans Google Cloud : <code>&lt;adresse du site&gt;/auth/callback</code></p>'
         . '<label>Identifiant client Google</label><input type="text" name="google_id" value="' . $v('google_id') . '">'
@@ -477,32 +501,95 @@ function mask($value)
     return $value === '' ? '— (non renseigné)' : '●●● (renseigné)';
 }
 
-// Résumé de la configuration lue dans le .env (secrets masqués, jamais renvoyés dans le HTML).
+// Regroupe les erreurs de validation par ensemble de champs à (re)saisir. 'other' = non corrigeable depuis la page.
+function error_groups($errors)
+{
+    $g = array();
+    foreach ($errors as $m) {
+        if (strpos($m, 'Dépôt') === 0) $g['repo'] = true;
+        elseif (strpos($m, 'Version') === 0 || strpos($m, 'Jeton') === 0 || strpos($m, 'Un jeton') === 0 || strpos($m, 'Dossier du backend') === 0) $g['always'] = true; // toujours demandés
+        elseif (strpos($m, 'Adresse du site') === 0) $g['site'] = true;
+        elseif (strpos($m, 'Connexion Google') === 0 || strpos($m, 'Identifiant client Google') === 0 || strpos($m, 'Secret client Google') === 0 || strpos($m, 'Adresse administrateur') === 0) $g['google'] = true;
+        elseif (strpos($m, 'reCAPTCHA') === 0) $g['recaptcha'] = true;
+        elseif (strpos($m, 'SMTP') === 0 || strpos($m, 'Port SMTP') === 0 || strpos($m, 'Adresse destinataire') === 0) $g['smtp'] = true;
+        elseif (strpos($m, 'Arrondi') === 0 || strpos($m, 'Niveau de journalisation') === 0 || strpos($m, 'Conservation') === 0 || strpos($m, 'Taille de journal') === 0) $g['options'] = true;
+        elseif (strpos($m, 'Adresse SFMN') === 0) $g['sfmn'] = true;
+        else $g['other'] = true;
+    }
+    return $g;
+}
+
+// Champs à (re)saisir pour les groupes en erreur. Les secrets ne sont jamais préremplis (laissés vides = valeur du fichier conservée).
+function render_missing_fields($groups, $d)
+{
+    $v = function ($n) use ($d) { return h(isset($d[$n]) ? $d[$n] : ''); };
+    $out = '';
+    if (isset($groups['repo'])) $out .= '<label>Dépôt GitHub</label><input type="text" name="repo" value="' . $v('repo') . '" required>';
+    if (isset($groups['site'])) $out .= '<label>Adresse du site (sans chemin)</label><input type="text" name="site_url" value="' . $v('site_url') . '" required>';
+    if (isset($groups['google'])) {
+        $out .= '<h2>Administration (connexion Google)</h2><p class="small">Renseignez les trois champs ; ceux déjà présents dans le fichier sont conservés s\'ils sont laissés vides.</p>'
+            . '<label>Identifiant client Google</label><input type="text" name="google_id" value="' . $v('google_id') . '">'
+            . '<label>Secret client Google</label><input type="password" name="google_secret">'
+            . '<label>Adresses autorisées (séparées par des virgules)</label><input type="text" name="admin_emails" value="' . $v('admin_emails') . '">';
+    }
+    if (isset($groups['recaptcha'])) {
+        $out .= '<h2>reCAPTCHA</h2><label>Clé du site reCAPTCHA</label><input type="text" name="recaptcha_site" value="' . $v('recaptcha_site') . '">'
+            . '<label>Clé secrète reCAPTCHA</label><input type="password" name="recaptcha_secret">';
+    }
+    if (isset($groups['smtp'])) {
+        $out .= '<h2>Envoi des messages du formulaire de contact</h2>'
+            . '<label>Serveur SMTP</label><input type="text" name="smtp_host" value="' . $v('smtp_host') . '">'
+            . '<label>Port SMTP</label><input type="text" name="smtp_port" value="' . $v('smtp_port') . '">'
+            . '<label>Identifiant SMTP</label><input type="text" name="smtp_user" value="' . $v('smtp_user') . '">'
+            . '<label>Mot de passe SMTP</label><input type="password" name="smtp_pass">'
+            . '<label>Expéditeur affiché</label><input type="text" name="smtp_from" value="' . $v('smtp_from') . '">'
+            . '<label>Adresse qui reçoit les messages</label><input type="text" name="contact_dest" value="' . $v('contact_dest') . '">';
+    }
+    if (isset($groups['options'])) {
+        $out .= '<h2>Options</h2><label>Arrondi (round ou floor)</label><input type="text" name="rounding" value="' . $v('rounding') . '">'
+            . '<label>Journalisation (full, user ou none)</label><input type="text" name="logging" value="' . $v('logging') . '">'
+            . '<label>Conservation des journaux (mois ; 0 = illimitée)</label><input type="text" name="retention" value="' . $v('retention') . '">'
+            . '<label>Taille maximale d\'un journal mensuel (Mo)</label><input type="text" name="logs_mb" value="' . $v('logs_mb') . '">';
+    }
+    if (isset($groups['sfmn'])) $out .= '<label>Adresse du calculateur SFMN (https://…)</label><input type="text" name="sfmn_url" value="' . $v('sfmn_url') . '">';
+    return $out;
+}
+
+// Résumé de la configuration lue dans le fichier de configuration (secrets masqués, jamais renvoyés dans le HTML) et
+// formulaire qui ne demande que ce qui manque (version, dossier du backend, jeton si nécessaire, et les champs invalides).
 function render_env_summary($key, $d, $extras, $errors, $needToken, $inside)
 {
     $rows = array(
         array('Dépôt', $d['repo']), array('Version (GIT_BRANCH)', $d['ref']), array('Adresse du site', $d['site_url']),
+        array('Dossier du backend', isset($d['backend_path']) && $d['backend_path'] !== null ? $d['backend_path'] : '—'),
         array('Connexion Google', $d['google_id'] !== '' ? 'identifiant ' . $d['google_id'] . ', secret ' . mask($d['google_secret']) : '— (non configurée : /auth répondra 404)'),
         array('Adresses administrateur', $d['admin_emails'] !== '' ? $d['admin_emails'] : '—'),
         array('Mises à jour depuis /auth', $d['update_enabled'] ? 'autorisées' : 'désactivées'),
-        array('Contact (SMTP)', $d['smtp_host'] !== '' ? $d['smtp_host'] . ':' . $d['smtp_port'] . ($d['smtp_secure'] ? ' (TLS direct)' : ' (STARTTLS)') . ', utilisateur ' . $d['smtp_user'] . ', mot de passe ' . mask($d['smtp_pass']) . ', vers ' . $d['contact_dest'] : '— (non configuré)'),
+        array('Contact (SMTP)', $d['smtp_host'] !== '' ? $d['smtp_host'] . ':' . $d['smtp_port'] . ($d['smtp_secure'] ? ' (TLS direct)' : ' (STARTTLS)') . ', utilisateur ' . $d['smtp_user'] . ', mot de passe ' . mask($d['smtp_pass']) . ', vers ' . $d['contact_dest'] : '—'),
         array('reCAPTCHA', $d['recaptcha_site'] !== '' ? 'clé du site ' . $d['recaptcha_site'] . ', clé secrète ' . mask($d['recaptcha_secret']) : '—'),
         array('Mode SFMN', $d['sfmn'] ? 'activé' : 'désactivé'),
         array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] === '' ? '12 mois (défaut)' : ($d['retention'] === '0' ? 'illimitée' : $d['retention'] . ' mois')) . ', journal ' . $d['logs_mb'] . ' Mo'),
         array('Autres variables transmises', $extras ? implode(', ', array_keys($extras)) : '—'),
     );
-    $out = '<h2>Configuration lue dans le fichier .env</h2><table>';
+    $out = '<h2>Configuration lue dans le fichier de configuration</h2><table>';
     foreach ($rows as $r) $out .= '<tr><td>' . h($r[0]) . '</td><td>' . h($r[1]) . '</td></tr>';
     $out .= '</table>';
     if ($inside) {
         $out .= '<p class="msg">Ce fichier est dans le dossier public du site : il peut être lu par n\'importe qui tant qu\'il y reste. Il sera supprimé à la fin de l\'installation. Placez-le de préférence dans le dossier parent.</p>';
     }
+    $groups = error_groups($errors);
     if ($errors) {
-        return $out . '<p class="msg">' . implode('<br>', array_map('h', $errors)) . '</p><p>Corrigez le fichier .env puis rechargez cette page (relancez la vérification).</p>'
-            . '<form method="post"><input type="hidden" name="step" value="check"><input type="hidden" name="key" value="' . h($key) . '"><button type="submit">Relire le fichier .env</button></form>';
+        $out .= '<p class="msg">' . implode('<br>', array_map('h', $errors)) . '</p>';
+        if (isset($groups['other'])) {
+            return $out . '<p>Corrigez le fichier de configuration puis relancez la vérification.</p>'
+                . '<form method="post"><input type="hidden" name="step" value="check"><input type="hidden" name="key" value="' . h($key) . '"><button type="submit">Relire le fichier</button></form>';
+        }
+        $out .= '<p>Complétez les informations ci-dessous (le reste est lu dans le fichier).</p>';
     }
     $out .= '<form method="post" autocomplete="off"><input type="hidden" name="step" value="install"><input type="hidden" name="key" value="' . h($key) . '"><input type="hidden" name="use_env" value="1">'
-        . '<label>Version à installer (tag, branche ou commit)</label><input type="text" name="ref" value="' . h($d['ref']) . '" required>';
+        . '<label>Version à installer (tag, branche ou commit)</label><input type="text" name="ref" value="' . h($d['ref']) . '" required>'
+        . '<label>Dossier du backend (vide = valeur du fichier, sinon <code>backend</code> dans la racine du site)</label><input type="text" name="backend_dir" value="">'
+        . render_missing_fields($groups, $d);
     if ($needToken) $out .= '<label>Jeton d\'accès</label><input type="password" name="token" required>';
     return $out . '<button type="submit">Installer</button></form>';
 }
@@ -523,7 +610,7 @@ if ($step === 'check') {
     }
     $envPath = find_env_file($docroot);
     if ($envPath === null) {
-        $note = ENV_FILE === '' ? '' : '<p class="small">Aucun fichier .env lisible à l\'emplacement prévu (<code>' . h(ENV_FILE) . '</code>) : saisie manuelle de la configuration.</p>';
+        $note = ENV_FILE === '' ? '' : '<p class="small">Aucun fichier de configuration lisible (<code>' . h(ENV_FILE) . '</code>, ni <code>.env</code> / <code>.runtime.env</code> dans la racine du site) : saisie manuelle de la configuration.</p>';
         page('Installation du site', $out . $note . render_form($key, array(), array()));
     }
     // Un .env de déploiement a été trouvé: la configuration vient de lui, la page ne demande que la version
@@ -558,7 +645,7 @@ function post_fields()
     return $src;
 }
 
-// Lecture d'un fichier .env (mêmes règles que api/lib/config.php: guillemets, commentaires " #").
+// Lecture d'un fichier .env (mêmes règles que backend/src/lib/config.php: guillemets, commentaires " #").
 function parse_env_file($path)
 {
     $content = @file_get_contents($path);
@@ -600,17 +687,70 @@ function home_dir()
 
 function find_env_file($docroot)
 {
-    if (ENV_FILE === '') return null;
-    $path = ENV_FILE;
-    if ($path === '~' || strpos($path, '~/') === 0) {
-        $home = home_dir();
-        if ($home === null) return null; // '~' non résoluble ici: utiliser un chemin absolu
-        $path = $home . substr($path, 1);
-    } elseif ($path[0] !== '/') {
-        $path = $docroot . '/' . $path;
+    $candidates = array();
+    if (ENV_FILE !== '') {
+        $path = ENV_FILE;
+        if ($path === '~' || strpos($path, '~/') === 0) {
+            $home = home_dir();
+            $path = $home === null ? '' : $home . substr($path, 1); // '~' non résoluble ici : candidat ignoré
+        } elseif ($path[0] !== '/') {
+            $path = $docroot . '/' . $path;
+        }
+        if ($path !== '') $candidates[] = $path;
     }
-    $real = @realpath($path);
-    return ($real !== false && is_file($real) && is_readable($real)) ? $real : null;
+    // Un fichier copié dans la racine du site convient aussi : un .env, ou le config/runtime.env (ancien .runtime.env)
+    // d'une installation précédente, au même format.
+    $candidates[] = $docroot . '/.env';
+    $candidates[] = $docroot . '/.runtime.env';
+    foreach ($candidates as $path) {
+        $real = @realpath($path);
+        if ($real !== false && is_file($real) && is_readable($real)) return $real;
+    }
+    return null;
+}
+
+// Résout . et .. sans exiger que le chemin existe.
+function normalize_path($path)
+{
+    $out = array();
+    foreach (explode('/', str_replace('\\', '/', $path)) as $seg) {
+        if ($seg === '' || $seg === '.') continue;
+        if ($seg === '..') { array_pop($out); continue; }
+        $out[] = $seg;
+    }
+    return '/' . implode('/', $out);
+}
+
+// Dossier du backend demandé (vide = <racine>/backend ; relatif à la racine, absolu ou ~/...). Retourne array(chemin, erreur).
+function resolve_backend_dir($raw, $docroot)
+{
+    $raw = trim($raw);
+    if ($raw === '') return array($docroot . '/backend', null);
+    if ($raw === '~' || strpos($raw, '~/') === 0) {
+        $home = home_dir();
+        if ($home === null) return array(null, 'Dossier du backend : « ~ » n\'est pas résoluble ici, indiquez un chemin absolu.');
+        $raw = $home . substr($raw, 1);
+    } elseif ($raw[0] !== '/') {
+        $raw = $docroot . '/' . $raw;
+    }
+    $path = normalize_path($raw);
+    if ($path === '/' || $path === $docroot || strpos($docroot . '/', $path . '/') === 0) {
+        return array(null, 'Dossier du backend invalide : il ne peut être ni la racine du site ni un dossier qui la contient.');
+    }
+    if ($path === $docroot . '/api' || strpos($path, $docroot . '/api/') === 0 || $path === $docroot . '/vendor' || $path === $docroot . '/downloads') {
+        return array(null, 'Dossier du backend invalide : réservé au site.');
+    }
+    if (is_file($path)) return array(null, 'Dossier du backend invalide : c\'est un fichier.');
+    if (is_dir($path) && array_diff(scandir($path), array('.', '..')) !== array() && !is_file($path . '/src/app.php')) {
+        return array(null, 'Dossier du backend non vide et sans installation précédente : choisissez un dossier vide ou inexistant.');
+    }
+    return array($path, null);
+}
+
+// Chemin du backend relatif à la racine web (pour l'adresse HTTP à contrôler), ou null s'il est hors de la racine web.
+function backend_url_path($backendDir, $docroot)
+{
+    return strpos($backendDir, $docroot . '/') === 0 ? substr($backendDir, strlen($docroot) + 1) : null;
 }
 
 // Traduit un .env en valeurs d'installation. Retourne array($src, $extras, $tokens) où $tokens liste les
@@ -637,6 +777,7 @@ function env_to_source($env)
         // Absent du .env: valeur par défaut de l'application (activé).
         'sfmn' => strtolower($get('SFMN_MODE_ENABLED', 'true')) !== 'false',
         'sfmn_url' => $get('SFMN_CALCULATOR_URL'),
+        'backend_dir' => $get('BACKEND_DIR'),
     );
     $extras = array();
     foreach ($PASSTHROUGH_VARS as $name) {
@@ -685,6 +826,9 @@ function validate_inputs($src)
     if (!$local && !preg_match('#^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:\d+)?$#', $d['site_url'])) $e[] = 'Adresse du site invalide (https://exemple.fr, sans chemin).';
     $d['local'] = $local;
     $d['site_url'] = rtrim($d['site_url'], '/');
+    global $docroot;
+    list($d['backend_path'], $backendError) = resolve_backend_dir($d['backend_dir'], $docroot);
+    if ($backendError !== null) $e[] = $backendError;
     if ($d['google_id'] !== '' || $d['google_secret'] !== '' || $d['admin_emails'] !== '') {
         if ($d['google_id'] === '' || $d['google_secret'] === '' || $d['admin_emails'] === '') $e[] = 'Connexion Google : renseignez l\'identifiant, le secret et au moins une adresse (ou laissez les trois vides).';
         if (!preg_match('/^[A-Za-z0-9._\-]+$/', $d['google_id']) && $d['google_id'] !== '') $e[] = 'Identifiant client Google invalide.';
@@ -709,7 +853,7 @@ function validate_inputs($src)
     return array($d, $e);
 }
 
-function htaccess_blocks($siteUrl)
+function htaccess_blocks($siteUrl, $backendUrlPath)
 {
     $routes = array(
         'legal' => 'mentions-legales.html', 'contact' => 'contact.html', 'print' => 'print.html',
@@ -721,6 +865,8 @@ function htaccess_blocks($siteUrl)
     }
     $blocks['# /health (API PHP)'] = "# /health (API PHP)\nRewriteEngine On\nRewriteRule ^health/?$ api/index.php [L]\n";
     $blocks['# /auth (API PHP)'] = "# /auth (API PHP)\nRewriteEngine On\nRewriteRule ^auth(/.*)?$ api/index.php [L]\n";
+    // Fichiers de configuration éventuellement copiés dans la racine (.env, .runtime.env) : jamais servis.
+    $blocks['# Fichiers de configuration refusés v1'] = "# Fichiers de configuration refusés v1\n<FilesMatch \"^\\.(env|runtime\\.env)$\">\nRequire all denied\n</FilesMatch>\n";
     // Pas de redirection www/HTTPS pour un essai local (http://127.0.0.1) : seulement si le site est en https.
     $isHttps = strpos($siteUrl, 'https://') === 0;
     $headers = "<IfModule mod_headers.c>\nHeader setifempty X-Content-Type-Options \"nosniff\"\nHeader setifempty X-Frame-Options \"DENY\"\n"
@@ -739,14 +885,23 @@ function htaccess_blocks($siteUrl)
     return $blocks;
 }
 
-// Contenu de api/.runtime.env : mêmes sections et mêmes commentaires que celui de deploy.sh. Une variable non définie
+// Règle de tête de .htaccess qui interdit l'adresse du backend quand il se trouve dans la racine web (en plus de son
+// propre .htaccess). Vide si le backend est hors de la racine web.
+function backend_deny_block($backendUrlPath)
+{
+    if ($backendUrlPath === null || $backendUrlPath === '') return '';
+    $re = preg_quote($backendUrlPath, '#');
+    return '# /' . $backendUrlPath . " (backend : accès refusé) v1\nRewriteEngine On\nRewriteRule ^" . $re . "(/|$) - [F,L]\n\n";
+}
+
+// Contenu de config/runtime.env : mêmes sections et mêmes commentaires que celui de deploy.sh. Une variable non définie
 // est écrite « #NOM= » (valeur par défaut du site) ; TRUSTED_PROXIES défini mais vide reste une valeur (jamais de X-Forwarded-For).
 function render_runtime_env($vars)
 {
     global $RUNTIME_LAYOUT;
     $out = "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement.\n"
         . "# Généré par install.php le " . date('Y-m-d H:i') . " — les mises à jour de /auth ne modifient jamais ce fichier.\n"
-        . "# Pour réinstaller ou régénérer, voir le README ; api/.env reste pour les réglages purement locaux.\n"
+        . "# Pour réinstaller ou régénérer, voir le README ; config/local.env reste pour les réglages purement locaux.\n"
         . "#\n"
         . "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site\n"
         . "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets.\n";
@@ -807,12 +962,26 @@ $envPath = null;
 $extras = array();
 $envTokens = array();
 if (isset($_POST['use_env']) && $_POST['use_env'] === '1') {
-    // Configuration lue dans le .env (jamais dans le navigateur): seuls la version et le jeton peuvent être saisis.
+    // Configuration lue dans le fichier de configuration (jamais dans le navigateur) ; le formulaire ne sert qu'à la version,
+    // au dossier du backend, au jeton, et aux informations manquantes ou invalides (une valeur saisie remplace celle du fichier,
+    // un champ laissé vide la conserve).
     $envPath = find_env_file($docroot);
     $env = $envPath === null ? null : parse_env_file($envPath);
-    if ($env === null) page('Installation du site', '<p class="msg">Le fichier .env est introuvable ou illisible.</p><form method="post"><input type="hidden" name="step" value="check"><input type="hidden" name="key" value="' . h($key) . '"><button type="submit">Reprendre</button></form>', 400);
+    if ($env === null) page('Installation du site', '<p class="msg">Le fichier de configuration est introuvable ou illisible.</p><form method="post"><input type="hidden" name="step" value="check"><input type="hidden" name="key" value="' . h($key) . '"><button type="submit">Relire</button></form>', 400);
     list($src, $extras, $envTokens) = env_to_source($env);
-    if (field('ref') !== '') $src['ref'] = field('ref');
+    // Seuls peuvent être saisis : la version, le dossier du backend, et les champs que le fichier ne renseigne pas correctement
+    // (groupes en erreur). Tout le reste vient du fichier et ne peut pas être remplacé depuis le navigateur.
+    list($d0, $errors0) = validate_inputs($src);
+    $groupFields = array('repo' => array('repo'), 'site' => array('site_url'), 'google' => array('google_id', 'google_secret', 'admin_emails'),
+        'recaptcha' => array('recaptcha_site', 'recaptcha_secret'), 'smtp' => array('smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest'),
+        'options' => array('rounding', 'logging', 'retention', 'logs_mb'), 'sfmn' => array('sfmn_url'));
+    $overridable = array('ref', 'backend_dir');
+    foreach (array_keys(error_groups($errors0)) as $g) {
+        if (isset($groupFields[$g])) $overridable = array_merge($overridable, $groupFields[$g]);
+    }
+    foreach ($overridable as $name) {
+        if (field($name) !== '') $src[$name] = field($name);
+    }
     list($d, $errors) = validate_inputs($src);
     $errors = array_merge($errors, validate_extras($extras));
     if ($errors) page('Installation du site', render_env_summary($key, $d, $extras, $errors, true, isInsideDocroot($envPath, $docroot)), 400);
@@ -833,10 +1002,29 @@ if (!$candidates) {
 }
 if (!class_exists('ZipArchive') || !function_exists('curl_init')) page('Installation du site', render_form($key, $d, array('Extensions zip et cURL requises.')), 400);
 
+$backendDir = $d['backend_path'];
+$backendUrl = backend_url_path($backendDir, $docroot);            // null = backend hors de la racine web
+$backendExisted = is_dir($backendDir);
+$dataDir = $backendDir . '/data';
+if (isset($extras['DATA_DIR']) && $extras['DATA_DIR'] !== '') {
+    $dd = $extras['DATA_DIR'];
+    $dataDir = $dd[0] === '/' ? normalize_path($dd) : normalize_path($backendDir . '/' . $dd);
+}
+$dataExisted = is_dir($dataDir);
+
 $tmp = $docroot . '/.install-tmp-' . bin2hex(random_bytes(4));
-$written = array();    // fichiers créés ou remplacés (pour retour arrière en cas d'échec)
-$backups = array();    // rel => chemin de la copie de ce qui existait avant
+$written = array();    // fichiers créés ou remplacés, chemins absolus (pour retour arrière en cas d'échec)
+$backups = array();    // chemin absolu => copie de ce qui existait avant
 $fatal = null;
+$probe = null;         // résultat du contrôle de protection du backend : true protégé, false lisible, null non vérifiable
+$saveBackup = function ($dest) use (&$backups, $tmp) {
+    if (is_file($dest)) {
+        $bk = $tmp . '/backup/' . sha1($dest);
+        make_dir(dirname($bk));
+        if (!@copy($dest, $bk)) throw new RuntimeException('Sauvegarde impossible.');
+        $backups[$dest] = $bk;
+    }
+};
 try {
     // 1) Jeton valide + commit exact
     $good = first_valid_token($d['repo'], $candidates);
@@ -867,22 +1055,25 @@ try {
     @unlink($zipFile);
 
     // 4) Installation des fichiers (ce qui existait déjà, ex. une page d'attente de l'hébergeur, est sauvegardé)
-    if (is_file($docroot . '/api/.runtime.env') && is_file($docroot . '/api/index.php') && !is_file($docroot . '/api/var/install.done')) {
-        // installation précédente restée incomplète: reprise autorisée, les fichiers sont remplacés
-    }
+    //    Le backend d'abord (son .htaccess en premier), la façade publique ensuite.
+    usort($files, function ($a, $b) {
+        $rank = function ($rel) { return $rel === 'backend/.htaccess' ? 0 : (strpos($rel, 'backend/') === 0 ? 1 : ($rel === 'public/api/index.php' ? 3 : 2)); };
+        $ra = $rank($a); $rb = $rank($b);
+        return $ra === $rb ? strcmp($a, $b) : $ra - $rb;
+    });
     foreach ($files as $rel) {
-        $dest = $docroot . '/' . $rel;
-        if (is_file($dest)) {
-            $bk = $tmp . '/backup/' . $rel;
-            make_dir(dirname($bk));
-            if (!@copy($dest, $bk)) throw new RuntimeException('Sauvegarde impossible.');
-            $backups[$rel] = $bk;
-        }
+        $dest = dest_of($rel, $docroot, $backendDir);
+        $saveBackup($dest);
         copy_atomic($staging . '/' . $rel, $dest);
-        $written[] = $rel;
+        $written[] = $dest;
     }
+    // Façade publique : emplacement du backend (toujours écrit, explicite)
+    $pointer = $docroot . '/api/backend.php';
+    $saveBackup($pointer);
+    if (@file_put_contents($pointer, "<?php\n// Généré par install.php : emplacement du backend.\nreturn " . var_export($backendDir, true) . ";\n") === false) throw new RuntimeException('Écriture impossible : api/backend.php');
+    $written[] = $pointer;
 
-    // 5) Fichiers générés
+    // 5) Fichiers générés (racine web)
     $site = $d['site_url'];
     $siteHost = preg_replace('#^https?://#', '', $site);
     $gen = array(
@@ -896,9 +1087,9 @@ try {
     );
     foreach ($gen as $rel => $content) {
         $dest = $docroot . '/' . $rel;
-        if (is_file($dest)) { $bk = $tmp . '/backup/' . $rel; make_dir(dirname($bk)); @copy($dest, $bk); $backups[$rel] = $bk; }
+        $saveBackup($dest);
         if (@file_put_contents($dest, $content) === false) throw new RuntimeException('Écriture impossible : ' . $rel);
-        $written[] = $rel;
+        $written[] = $dest;
     }
     $robots = $docroot . '/robots.txt';
     if (is_file($robots) && !preg_match('/^Sitemap:/mi', (string) file_get_contents($robots))) {
@@ -907,23 +1098,39 @@ try {
     // .htaccess: ajout des seuls blocs manquants (le contenu existant de l'hébergeur est conservé)
     $ht = $docroot . '/.htaccess';
     $existing = is_file($ht) ? (string) file_get_contents($ht) : '';
-    if (is_file($ht)) { $bk = $tmp . '/backup/.htaccess'; make_dir(dirname($bk)); @copy($ht, $bk); $backups['.htaccess'] = $bk; }
+    $saveBackup($ht);
     $add = $existing === '' ? "Options -Indexes\nRewriteEngine On\n" : '';
-    foreach (htaccess_blocks($site) as $marker => $block) {
+    foreach (htaccess_blocks($site, $backendUrl) as $marker => $block) {
         if (strpos($existing, $marker) === false) $add .= "\n" . $block;
     }
-    // Redirection HTTP -> HTTPS (308 : un POST garde sa méthode et son corps), placée en TÊTE pour passer avant les autres règles.
-    $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
+    // En TÊTE (pour passer avant les autres règles) : interdiction du dossier du backend quand il est dans la racine web, et
+    // redirection HTTP -> HTTPS (308 : un POST garde sa méthode et son corps).
     $head = '';
+    $denyBlock = backend_deny_block($backendUrl);
+    if ($denyBlock !== '' && strpos($existing, strtok($denyBlock, "\n")) === false) $head .= $denyBlock;
+    $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
     if (strpos($site, 'https://') === 0 && strpos($existing, $httpsMarker) === false) {
-        $head = $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
+        $head .= $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
     }
     if (@file_put_contents($ht, $head . $existing . $add) === false) throw new RuntimeException('Écriture impossible : .htaccess');
-    $written[] = '.htaccess';
+    $written[] = $ht;
 
-    // 6) Configuration de l'API (jamais écrasée par les mises à jour) et dossiers de données protégés
-    $apiDir = $docroot . '/api';
-    if (!guard_dir($apiDir . '/logs') || !guard_dir($apiDir . '/var')) throw new RuntimeException('Dossiers de données inaccessibles.');
+    // 6) Dossiers du backend protégés, contrôle que le backend n'est PAS lisible par HTTP (avant d'y écrire des secrets),
+    //    puis configuration (jamais écrasée par les mises à jour)
+    if (!guard_dir($backendDir) || !guard_dir($backendDir . '/config') || !guard_dir($dataDir) || !guard_dir($dataDir . '/logs') || !guard_dir($dataDir . '/var')) {
+        throw new RuntimeException('Dossiers du backend inaccessibles.');
+    }
+    if ($backendUrl !== null) {
+        $probeName = 'probe-' . bin2hex(random_bytes(4)) . '.txt';
+        $probeFile = $backendDir . '/config/' . $probeName;
+        if (@file_put_contents($probeFile, 'x') !== false) {
+            $pr = health_get($site . '/' . $backendUrl . '/config/' . $probeName);
+            @unlink($probeFile);
+            if ($pr === null) $probe = null;
+            elseif ($pr[0] === 200 && trim($pr[1]) === 'x') throw new RuntimeException('Le dossier du backend est lisible depuis le web (les fichiers .htaccess ne sont pas appliqués par cet hébergement). Indiquez un dossier du backend situé HORS de la racine web (ex. ../backend) et recommencez.');
+            else $probe = true;
+        }
+    }
     $vars = array(
         'SITE_PUBLIC_URL' => $site, 'API_PUBLIC_URL' => $site . '/api', 'API_CORS_ORIGIN' => $site,
         'GOOGLE_CLIENT_ID' => $d['google_id'], 'GOOGLE_CLIENT_SECRET' => $d['google_secret'], 'ADMIN_GOOGLE_EMAILS' => $d['admin_emails'],
@@ -940,20 +1147,20 @@ try {
     foreach ($extras as $name => $value) $vars[$name] = $value; // réglages du .env sans champ de formulaire
     if ($persistToken) $vars['UPDATE_GITHUB_TOKEN'] = $good[0];
     $env = render_runtime_env($vars);
-    $envFile = $apiDir . '/.runtime.env';
-    if (is_file($envFile)) { $bk = $tmp . '/backup/api/.runtime.env'; make_dir(dirname($bk)); @copy($envFile, $bk); $backups['api/.runtime.env'] = $bk; }
-    if (@file_put_contents($envFile, $env) === false) throw new RuntimeException('Écriture impossible : api/.runtime.env');
+    $envFile = $backendDir . '/config/runtime.env';
+    $saveBackup($envFile);
+    if (@file_put_contents($envFile, $env) === false) throw new RuntimeException('Écriture impossible : config/runtime.env');
     @chmod($envFile, 0600);
-    $written[] = 'api/.runtime.env';
+    $written[] = $envFile;
     $good = null; // le jeton n'est plus nécessaire
     $candidates = array();
-    if (!is_readable($envFile)) throw new RuntimeException('api/.runtime.env illisible par le serveur web.');
+    if (!is_readable($envFile)) throw new RuntimeException('config/runtime.env illisible par le serveur web.');
 
     // 7) État de référence pour les mises à jour de /auth
     $now = gmdate('Y-m-d\TH:i:s.000\Z');
-    file_put_contents($apiDir . '/var/version.json', json_encode(array('sha' => $sha, 'ref' => $d['ref'], 'at' => $now, 'by' => 'install.php')));
-    file_put_contents($apiDir . '/var/manifest.json', json_encode(array('files' => $files)));
-    file_put_contents($apiDir . '/logs/updates.jsonl', json_encode(array('at' => $now, 'action' => 'install', 'by' => 'install.php', 'ref' => $d['ref'], 'to' => $sha, 'ok' => true)) . "\n", FILE_APPEND);
+    file_put_contents($dataDir . '/var/version.json', json_encode(array('sha' => $sha, 'ref' => $d['ref'], 'at' => $now, 'by' => 'install.php')));
+    file_put_contents($dataDir . '/var/manifest.json', json_encode(array('files' => $files)));
+    file_put_contents($dataDir . '/logs/updates.jsonl', json_encode(array('at' => $now, 'action' => 'install', 'by' => 'install.php', 'ref' => $d['ref'], 'to' => $sha, 'ok' => true)) . "\n", FILE_APPEND);
 } catch (Exception $e) {
     $fatal = $e->getMessage();
 } catch (Throwable $e) {
@@ -963,17 +1170,15 @@ try {
 
 if ($fatal !== null) {
     // Retour arrière: ce qui a été écrit est retiré, ce qui existait avant est rétabli.
-    foreach (array_reverse($written) as $rel) {
-        $dest = $docroot . '/' . $rel;
-        if (isset($backups[$rel])) @copy($backups[$rel], $dest); else @unlink($dest);
+    foreach (array_reverse($written) as $dest) {
+        if (isset($backups[$dest])) @copy($backups[$dest], $dest); else @unlink($dest);
     }
-    foreach (array('api/var/version.json', 'api/var/manifest.json', 'api/logs/updates.jsonl') as $rel) @unlink($docroot . '/' . $rel);
-    // Dossiers créés par cette tentative: retirés s'ils sont vides (les dossiers de données ne contiennent plus que leur .htaccess).
-    foreach (array('api/logs', 'api/var') as $dataDir) {
-        if (is_dir($docroot . '/' . $dataDir) && array_diff(scandir($docroot . '/' . $dataDir), array('.', '..', '.htaccess')) === array()) rrmdir($docroot . '/' . $dataDir);
-    }
-    foreach (array_reverse($written) as $rel) {
-        for ($dir = dirname($docroot . '/' . $rel); $dir !== $docroot && strlen($dir) > strlen($docroot); $dir = dirname($dir)) {
+    foreach (array($dataDir . '/var/version.json', $dataDir . '/var/manifest.json', $dataDir . '/logs/updates.jsonl') as $f) @unlink($f);
+    // Dossiers créés par cette tentative : retirés (le backend et les données seulement s'ils n'existaient pas avant).
+    if (!$dataExisted) rrmdir($dataDir);
+    if (!$backendExisted) rrmdir($backendDir);
+    foreach (array_reverse($written) as $dest) {
+        for ($dir = dirname($dest); strpos($dir, $docroot . '/') === 0; $dir = dirname($dir)) {
             if (!@rmdir($dir)) break; // non vide (ou préexistant et utilisé): conservé
         }
     }
@@ -991,6 +1196,7 @@ $cfgData = $cfg !== null ? json_decode($cfg[1], true) : null;
 $checks[] = array('API (GET /api/config)', $cfg === null ? null : ($cfg[0] === 200 && is_array($cfgData) && isset($cfgData['isotopes'])), $cfg === null ? 'appel impossible depuis le serveur' : 'HTTP ' . $cfg[0]);
 $hl = health_get($site . '/health');
 $checks[] = array('Contrôle de santé (GET /health)', $hl === null ? null : $hl[0] === 200, $hl === null ? 'appel impossible depuis le serveur' : 'HTTP ' . $hl[0]);
+$checks[] = array('Backend protégé (illisible depuis le web)', $backendUrl === null ? true : $probe, $backendUrl === null ? 'hors de la racine web' : ($probe === true ? 'refus HTTP confirmé' : 'non vérifiable depuis le serveur'));
 if ($d['google_id'] !== '') {
     $au = health_get($site . '/auth');
     $okAuth = $au !== null && ($au[0] === 302 || $au[0] === 301);
@@ -1003,22 +1209,22 @@ $out = '<p class="ok"><strong>Site installé</strong> — version <code>' . h(su
 foreach ($checks as $c) {
     $out .= '<tr><td>' . h($c[0]) . '</td><td class="' . ($c[1] === true ? 'ok' : ($c[1] === false ? 'ko' : '')) . '">' . ($c[1] === true ? 'OK' : ($c[1] === false ? 'Échec' : 'Non vérifié')) . '</td><td>' . h($c[2]) . '</td></tr>';
 }
-$out .= '</table>';
+$out .= '</table><p class="small">Backend : <code>' . h($backendDir) . '</code></p>';
 if ($bad) {
     // Pas de verrou ni de suppression: l'installation peut être relancée après correction.
     $out .= '<p class="msg">Un contrôle a échoué. Vérifiez la réécriture d\'URL (.htaccess autorisé) et la version PHP du site, puis relancez cette page. Le fichier <code>install.php</code> a été conservé.</p>';
     page('Installation terminée avec un avertissement', $out);
 }
-file_put_contents($docroot . '/api/var/install.done', gmdate('c'));
+file_put_contents($docroot . '/api/.install-done', gmdate('c'));
 $removed = @unlink(__FILE__);
 $envNote = '';
 if ($envPath !== null) {
     if (isInsideDocroot($envPath, $docroot)) {
         $envNote = @unlink($envPath)
-            ? '<p class="ok">Le fichier .env, qui se trouvait dans le dossier public, a été supprimé.</p>'
-            : '<p class="msg"><strong>Supprimez le fichier .env du dossier public par FTP</strong> (suppression automatique impossible) : il contient des secrets.</p>';
+            ? '<p class="ok">Le fichier de configuration, qui se trouvait dans le dossier public, a été supprimé (son contenu est dans le backend).</p>'
+            : '<p class="msg"><strong>Supprimez le fichier de configuration du dossier public par FTP</strong> (suppression automatique impossible) : il contient des secrets.</p>';
     } else {
-        $envNote = '<p class="small">Le fichier .env lu pour l\'installation (hors du dossier public) n\'a pas été modifié.</p>';
+        $envNote = '<p class="small">Le fichier de configuration lu pour l\'installation (hors du dossier public) n\'a pas été modifié.</p>';
     }
 }
 foreach (glob($docroot . '/.install-attempts-*') ?: array() as $f) @unlink($f);
@@ -1027,7 +1233,7 @@ $out .= $removed
     ? '<p class="ok"><code>install.php</code> a été supprimé.</p>'
     : '<p class="msg"><strong>Supprimez maintenant <code>install.php</code> par FTP</strong> (suppression automatique impossible). Il est déjà inactif.</p>';
 $out .= '<h2>Prochaines étapes</h2><ul>'
-    . ($d['google_id'] !== '' ? '<li>Dans Google Cloud, vérifiez l\'URI de redirection : <code>' . h($site) . '/auth/callback</code>, puis connectez-vous sur <code>' . h($site) . '/auth</code>.</li>' : '<li>La connexion Google n\'est pas configurée : <code>/auth</code> répond 404. Ajoutez les réglages Google dans <code>api/.runtime.env</code> (voir le README).</li>')
+    . ($d['google_id'] !== '' ? '<li>Dans Google Cloud, vérifiez l\'URI de redirection : <code>' . h($site) . '/auth/callback</code>, puis connectez-vous sur <code>' . h($site) . '/auth</code>.</li>' : '<li>La connexion Google n\'est pas configurée : <code>/auth</code> répond 404. Ajoutez les réglages Google dans <code>config/runtime.env</code> du backend (voir le README).</li>')
     . '<li>Les mises à jour se font désormais depuis <code>/auth</code> (un jeton d\'accès GitHub sera demandé si nécessaire).</li>'
     . '<li>Contrôlez le site : <a href="' . h($site) . '/">' . h($site) . '/</a></li></ul>';
 page('Installation terminée', $out);

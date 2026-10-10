@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Version imprimable - Dosimétrie RIV</title>
+  <style>
+    :root { --ink:#111; --line:#333; --paper:#fff; }
+    body { margin:0; background:#f5f5f5; font-family:Arial, Helvetica, sans-serif; color:var(--ink); }
+    .sheet {
+      box-sizing:border-box;
+      width:210mm;
+      min-height:297mm;
+      margin:10mm auto;
+      background:var(--paper);
+      padding:12mm;
+      border:1px solid #ddd;
+    }
+    h1 { margin:0 0 6mm 0; font-size:20px; }
+    .topline { display:flex; justify-content:space-between; gap:12px; margin-bottom:6mm; }
+    .label-box { border:1px solid var(--line); min-height:20mm; padding:4mm; margin-bottom:6mm; }
+    .block { margin-bottom:6mm; }
+    .block h2 { margin:0 0 3mm 0; font-size:14px; border-bottom:1px solid var(--line); padding-bottom:2mm; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:2mm 8mm; font-size:13px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { border:1px solid var(--line); padding:6px; text-align:left; vertical-align:top; }
+    th { background:#eee; }
+    #resultRows td:first-child { white-space: pre-line; }
+    .actions { margin:8px auto 18px; width:210mm; display:flex; gap:12px; }
+    .actions a, .actions button { border:1px solid #111; background:#fff; padding:8px 12px; text-decoration:none; color:#111; cursor:pointer; }
+    .muted { color:#111; font-size:12px; }
+    .warning-block {
+      margin-top: 3mm;
+      padding: 10px;
+      background: #fff;
+      color: #111;
+      border: 1px solid #111;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .copyright {
+      margin-top: 4mm;
+      font-size: 11px;
+      color: #666;
+      text-align: right;
+    }
+    @media print {
+      body { background:#fff; }
+      .sheet { margin:0; border:none; width:auto; min-height:auto; }
+      .actions { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions">
+    <a href="/">← Retour à la racine du site</a>
+    <button type="button" id="printNowBtn">Imprimer</button>
+    <button type="button" id="downloadPdfBtn">Télécharger PDF</button>
+    <button type="button" id="downloadImageBtn">Télécharger image</button>
+    <button type="button" id="copyImageBtn">Copier image</button>
+  </div>
+  <div class="actions" style="margin-top:-10px;">
+    <div id="exportStatus" class="muted"></div>
+  </div>
+
+  <main class="sheet">
+    <h1>Durées de restriction des contacts — RIV</h1>
+    <div class="topline">
+      <div><strong>Date :</strong> <span id="printDate">-</span></div>
+    </div>
+
+    <div class="label-box">
+      <strong>Identité patient / étiquette :</strong>
+    </div>
+
+    <section class="block">
+      <h2>Données saisies</h2>
+      <div class="grid" id="inputGrid"></div>
+    </section>
+
+    <section class="block">
+      <h2>Résultat du calcul</h2>
+      <div id="methodText" style="margin-bottom:2mm;">-</div>
+      <div id="referenceText" style="margin-bottom:4mm;">-</div>
+      <div id="effectiveText" style="margin-bottom:4mm;">-</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Scénario</th>
+            <th>Durée (jours)</th>
+          </tr>
+        </thead>
+        <tbody id="resultRows"></tbody>
+      </table>
+      <div class="warning-block">
+        Attention: ce tableur ne tient compte que de l'exposition externe aux rayonnements ionisants. les risques de contamination (externe et interne) doivent être gérés conformément aux recommandations.
+      </div>
+    </section>
+    <div class="copyright" id="copyrightText">© -</div>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="vendor/html2canvas.min.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script>
+    const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
+    const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_URL;
+
+    function safe(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function row(label, value) {
+      return `<div><strong>${label}</strong></div><div>${safe(value)}</div>`;
+    }
+
+    (function bootstrap() {
+      const now = new Date();
+      const showCopyright = (owner) => { document.getElementById('copyrightText').textContent = `© ${now.getFullYear()} ${owner}`; };
+      showCopyright(COPYRIGHT_OWNER);
+      // Propriétaire lu à chaud côté serveur (backend/config/runtime.env); config.js sert de repli.
+      fetch(`${(window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '')}/public-config`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.copyright_owner === 'string' && d.copyright_owner) showCopyright(d.copyright_owner); })
+        .catch(() => {});
+      const raw = localStorage.getItem('radioprotection_print_payload') || sessionStorage.getItem('radioprotection_print_payload');
+      if (!raw) {
+        document.getElementById('inputGrid').innerHTML = '<div>Aucune donnée disponible.</div>';
+        return;
+      }
+
+      const payload = JSON.parse(raw);
+      const date = new Date(payload.generated_at || Date.now());
+      document.getElementById('printDate').textContent = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR');
+
+      const form = payload.form || {};
+      const selectedApiCode = payload.result?.selected?.api_code || '';
+      const cureIsotopeSet = new Set(['psma_177lu', 'lutetium177_net']);
+      const shouldShowCureCount = cureIsotopeSet.has(selectedApiCode);
+      const inputEntries = [
+        ['Type d\'exposition', form.isotope_label],
+        ['Débit de dose à 1 m (µSv/h)', form.dose_rate],
+        ['Taille patient (cm)', form.patient_size_cm],
+        ['Activité bénin (MBq)', form.benign_activity_mbq],
+        ['Fixation bénin (%)', form.benign_fixation_pct],
+        ['Période effective utilisateur (j)', form.user_period_days],
+        ['Durée distance X (h)', form.user_hours_1],
+        ['Distance X (m)', form.user_distance_1],
+        ['Durée à 1 m (h)', form.user_hours_2],
+        ['Limite dosimétrique (mSv)', form.user_limit],
+        ['Nombre de cures', shouldShowCureCount ? form.cure_count : null],
+      ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+
+      document.getElementById('inputGrid').innerHTML = inputEntries.length
+        ? inputEntries.map(([label, value]) => row(label, value)).join('')
+        : '<div class="muted">Aucune donnée de saisie à afficher.</div>';
+
+      const result = payload.result || {};
+      const calculationMode = result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local';
+      const sourceRef = result.calculation_mode === 'sfmn'
+        ? (result.sfmn_source?.url || 'https://www.sfmn.org/')
+        : 'Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002';
+      document.getElementById('methodText').innerHTML = `<strong>Méthode de calcul :</strong> ${safe(calculationMode)}`;
+      document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
+      const effDays = result.effective_days ?? '-';
+      const effHours = result.effective_hours ?? '-';
+      document.getElementById('effectiveText').innerHTML = `<strong>Période effective retenue :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
+
+      const audienceMeta = {
+        conjoint_plus_60: 'Contact avec le (la) conjoint(e) > 60 ans',
+        conjoint_moins_60: 'Contact avec le (la) conjoint(e) < 60 ans',
+        conjointe_enceinte: 'Contact avec la conjointe enceinte',
+        transport_commun: 'Transport en commun',
+        enfant_moins_3_ans: 'Contact avec un enfant (<3 ans)\nau retour à la maison',
+        enfant_3_11_ans: 'Contact avec un enfant (entre 3 et 11 ans)\nau retour à la maison',
+        collegues_travail: 'Contact avec des collègues de travail',
+        scenario_utilisateur: 'Scénario utilisateur'
+      };
+      const rows = Array.isArray(result.rows) && result.rows.length
+        ? result.rows
+        : Object.entries(result.recommendations_days || {}).map(([audienceCode, value]) => ({
+            audience_code: audienceCode,
+            label: audienceMeta[audienceCode] || audienceCode,
+            value
+          }));
+      document.getElementById('resultRows').innerHTML = rows.map((r) => `
+        <tr>
+          <td>${safe(r.label)}</td>
+          <td>${safe(r.value)}</td>
+        </tr>
+      `).join('');
+    })();
+
+    document.getElementById('printNowBtn').addEventListener('click', () => window.print());
+
+    function setStatus(message, isError = false) {
+      const el = document.getElementById('exportStatus');
+      el.textContent = message || '';
+      el.style.color = isError ? '#b00020' : '#111';
+    }
+
+    async function renderSheetCanvas() {
+      setStatus('Préparation de l’export…');
+      if (typeof window.html2canvas !== 'function') {
+        throw new Error('Bibliothèque html2canvas indisponible');
+      }
+      const sheet = document.querySelector('.sheet');
+      return window.html2canvas(sheet, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true
+      });
+    }
+
+    function cropBottomWhitespace(canvas) {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return canvas;
+      const { width, height } = canvas;
+      const data = ctx.getImageData(0, 0, width, height).data;
+      let lastContentRow = height - 1;
+
+      const isWhiteRow = (row) => {
+        const start = row * width * 4;
+        const end = start + width * 4;
+        for (let i = start; i < end; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (a > 0 && (r < 250 || g < 250 || b < 250)) return false;
+        }
+        return true;
+      };
+
+      while (lastContentRow > 0 && isWhiteRow(lastContentRow)) {
+        lastContentRow -= 1;
+      }
+
+      const croppedHeight = Math.max(1, lastContentRow + 1);
+      if (croppedHeight >= height) return canvas;
+
+      const cropped = document.createElement('canvas');
+      cropped.width = width;
+      cropped.height = croppedHeight;
+      const croppedCtx = cropped.getContext('2d');
+      if (!croppedCtx) return canvas;
+      croppedCtx.drawImage(canvas, 0, 0, width, croppedHeight, 0, 0, width, croppedHeight);
+      return cropped;
+    }
+
+    async function handleDownloadPdf() {
+      try {
+        const canvas = await renderSheetCanvas();
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
+        const { jsPDF } = window.jspdf || {};
+        if (!jsPDF) throw new Error('Bibliothèque jsPDF indisponible');
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const imgRatio = canvas.width / canvas.height;
+        const pageRatio = pageWidth / pageHeight;
+        let pdfWidth = pageWidth;
+        let pdfHeight = pageHeight;
+        if (imgRatio > pageRatio) {
+          pdfHeight = pageWidth / imgRatio;
+        } else {
+          pdfWidth = pageHeight * imgRatio;
+        }
+        const x = (pageWidth - pdfWidth) / 2;
+        const y = (pageHeight - pdfHeight) / 2;
+        pdf.addImage(imageData, 'JPEG', x, y, pdfWidth, pdfHeight, undefined, 'FAST');
+        pdf.save(`radioprotection-${new Date().toISOString().slice(0, 10)}.pdf`);
+        setStatus('PDF téléchargé.');
+      } catch (error) {
+        setStatus(`Erreur export PDF : ${error.message}`, true);
+      }
+    }
+
+    async function handleDownloadImage() {
+      try {
+        const canvas = await renderSheetCanvas();
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `radioprotection-${new Date().toISOString().slice(0, 10)}.png`;
+        link.click();
+        setStatus('Image téléchargée.');
+      } catch (error) {
+        setStatus(`Erreur export image : ${error.message}`, true);
+      }
+    }
+
+    async function handleCopyImage() {
+      try {
+        if (!window.ClipboardItem || !navigator.clipboard?.write) {
+          throw new Error('Copie image non supportée par ce navigateur');
+        }
+        const canvas = await renderSheetCanvas();
+        const croppedCanvas = cropBottomWhitespace(canvas);
+        const blob = await new Promise((resolve) => croppedCanvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('Impossible de générer l’image');
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        setStatus('Image copiée dans le presse-papiers.');
+      } catch (error) {
+        setStatus(`Erreur copie image : ${error.message}`, true);
+      }
+    }
+
+    document.getElementById('downloadPdfBtn').addEventListener('click', handleDownloadPdf);
+    document.getElementById('downloadImageBtn').addEventListener('click', handleDownloadImage);
+    document.getElementById('copyImageBtn').addEventListener('click', handleCopyImage);
+  </script>
+</body>
+</html>

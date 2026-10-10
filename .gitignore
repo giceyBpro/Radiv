@@ -7,3 +7,7 @@ node_modules/
 *.log
 *.pid
 var/
+
+# Backend en développement local (php -S) : configuration et données du site
+/backend/config/
+/backend/data/

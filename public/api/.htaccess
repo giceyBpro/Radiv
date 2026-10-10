@@ -1,0 +1,15 @@
+# Déployé dans <racine web>/api/ : façade publique du backend. Toutes les requêtes sous /api/ passent par index.php
+# (les URLs restent /api/calculate, /api/config... sans .php visible) ; le code, la configuration et les données
+# ne sont PAS ici mais dans le backend (voir index.php).
+Options -Indexes
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^index\.php$ - [L]
+RewriteRule ^ index.php [L]
+</IfModule>
+# Défense en profondeur si mod_rewrite était indisponible: refuse les fichiers de configuration
+# et de données. À NE PAS élargir à "tout sauf index.php": ce contrôle d'accès passe avant la
+# réécriture ci-dessus et refuserait alors /api/config, /api/calculate...
+<FilesMatch "^\.|\.(env|jsonl|log|md|sh)(\.1)?$">
+Require all denied
+</FilesMatch>
