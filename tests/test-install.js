@@ -252,15 +252,6 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   r = await post({ step: 'check', key: KEY }); t('ENV_FILE vide: lecture du .env désactivée', /name="smtp_host"/.test(r.text) && !/Configuration lue/.test(r.text));
   dropEnv();
 
-  console.log('\n— Cohérence des listes blanches (install.php ↔ updater.php)');
-  const list = (text, re) => [...(text.match(re) || [''])[0].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort().join(',');
-  const upd = fs.readFileSync(path.join(REPO_DIR, 'backend/src/lib/updater.php'), 'utf8');
-  t('FRONTEND_FILES identiques', list(src, /\$FRONTEND_FILES = array\(([\s\S]*?)\);/) === list(upd, /const FRONTEND_FILES = \[([\s\S]*?)\];/) && list(src, /\$FRONTEND_FILES = array\(([\s\S]*?)\);/) !== '');
-  t('REQUIRED_FILES identiques', list(src, /\$REQUIRED_FILES = array\(([\s\S]*?)\);/) === list(upd, /const REQUIRED_FILES = \[([\s\S]*?)\];/) && list(src, /\$REQUIRED_FILES = array\(([\s\S]*?)\);/) !== '');
-  const dep = fs.readFileSync(path.join(REPO_DIR, 'deploy.sh'), 'utf8');
-  const deployFiles = [...dep.matchAll(/--include='([^'/]+\.(?:html|js|ico|txt))'/g)].map((m) => m[1]).filter((f) => f !== 'config.js').sort().join(',');
-  t('liste du site identique à deploy.sh', deployFiles === list(src, /\$FRONTEND_FILES = array\(([\s\S]*?)\);/), `${deployFiles}`);
-
   console.log('\n— Limitation des essais de clé');
   deployInstaller(); let last = 0; for (let i = 0; i < 11; i += 1) last = (await post({ step: 'check', key: `mauvaise-${i}` })).status;
   t('au-delà de 10 clés fausses → 429, même avec la bonne clé', last === 429 && (await post({ step: 'check', key: KEY })).status === 429);

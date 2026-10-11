@@ -24,7 +24,7 @@ const MAX_FILE_BYTES = 10485760;       // 10 Mo par fichier extrait
 const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les "bombes" ZIP)
 
 // Les chemins de ce fichier sont ceux du DÉPÔT : « public/... » est copié dans la racine web, « backend/... » dans le
-// dossier du backend (voir dest()). Même liste blanche que deploy.sh et install.php.
+// dossier du backend (voir dest()). Même liste blanche que install.php et update.php.
 const FRONTEND_FILES = [
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',

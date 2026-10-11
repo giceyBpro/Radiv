@@ -31,3 +31,5 @@ jobs:
         run: node tests/check-runtime-layout.js
       - name: Aucun fichier PHP du backend ne s'exécute seul
         run: node tests/test-backend-guard.js
+      - name: Listes blanches et fonctions communes (install.php, update.php, updater.php)
+        run: node tests/check-shared-code.js
