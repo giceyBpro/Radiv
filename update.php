@@ -459,7 +459,11 @@ function read_json($file)
 
 $backend = locate_backend($docroot);
 $configFile = $backend . '/config/runtime.env';
-if (!is_dir($backend) || !is_file($configFile)) {
+// Ancienne structure (tout dans api/ : .runtime.env, lib/, logs/, var/) : migrée vers public/ + backend/ par ce script.
+$oldApi = $docroot . '/api';
+$legacy = !is_file($configFile) && is_file($oldApi . '/.runtime.env') && is_file($oldApi . '/lib/config.php');
+if ($legacy) $configFile = $oldApi . '/.runtime.env';
+if (!$legacy && (!is_dir($backend) || !is_file($configFile))) {
     page('Site non installé', '<p class="msg">Le backend ou sa configuration est introuvable (<code>' . h($backend) . '</code>). Si le site n\'a pas encore été installé, utilisez <code>install.php</code>.</p>', 500);
 }
 $cfg = parse_env_file($configFile);
@@ -472,7 +476,7 @@ if (isset($cfg['DATA_DIR']) && $cfg['DATA_DIR'] !== '' && strpos($cfg['DATA_DIR'
     $dd = $cfg['DATA_DIR'];
     $dataDir = $dd[0] === '/' ? normalize_path($dd) : normalize_path($backend . '/' . $dd);
 }
-$current = read_json($dataDir . '/var/version.json');
+$current = read_json(($legacy ? $oldApi : $dataDir) . '/var/version.json');
 $cfgToken = isset($cfg['UPDATE_GITHUB_TOKEN']) ? $cfg['UPDATE_GITHUB_TOKEN'] : '';
 
 function field($name)
@@ -496,7 +500,8 @@ $defaultRef = $current && !empty($current['ref']) && preg_match('#^[A-Za-z0-9][A
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $needToken = true;
     if ($cfgToken !== '' && function_exists('curl_init')) $needToken = first_valid_token($repo, array(array($cfgToken, 'config'))) === null;
-    $state = '<table><tr><td>Backend</td><td>' . h($backend) . '</td></tr><tr><td>Dépôt</td><td>' . h($repo) . '</td></tr>'
+    $state = ($legacy ? '<p class="msg">Ancienne structure détectée (code et données dans <code>api/</code>). Ce script la migre vers <code>public/</code> + <code>backend/</code> : configuration, journaux et sessions sont conservés (déplacés vers <code>backend/</code>), l\'ancien code de <code>api/</code> est supprimé après succès, et tout est rétabli en cas d\'échec.</p>' : '')
+        . '<table><tr><td>Backend</td><td>' . h($backend) . '</td></tr><tr><td>Dépôt</td><td>' . h($repo) . '</td></tr>'
         . '<tr><td>Version installée</td><td>' . ($current ? h(substr((string) (isset($current['sha']) ? $current['sha'] : ''), 0, 7) . ' (' . (isset($current['ref']) ? $current['ref'] : '?') . ')') : 'inconnue') . '</td></tr></table>'
         . '<p class="small">Relancer avec la version déjà installée réinstalle les mêmes fichiers : c\'est une réparation.</p>';
     page('Mise à jour de secours', $state . update_form($needToken, $defaultRef, array()));
@@ -543,12 +548,17 @@ $lock = null;
 $health = 'unreachable';
 $notes = array();
 $generated = array();                   // fichiers générés ou complétés (chemin absolu => sauvegarde ou null)
+$moved = array();                       // migration : éléments déplacés [origine, destination]
+$createdBackend = false;
+$oldState = $tmp . '/oldstate';         // migration : état de l'ancienne structure, rétabli en cas d'échec
 try {
     if (!make_dir($tmp) || !guard_dir($tmp)) throw new RuntimeException('Dossier temporaire inaccessible.');
-    foreach (array($backend . '/config', $dataDir, $dataDir . '/logs', $varDir) as $dir) {
+    // Ancienne structure : le verrou reste dans api/var (partagé avec l'ancien /auth) jusqu'à la migration
+    $lockDir = $legacy ? $oldApi . '/var' : $varDir;
+    foreach ($legacy ? array($lockDir) : array($backend . '/config', $dataDir, $dataDir . '/logs', $varDir) as $dir) {
         if (!guard_dir($dir)) throw new RuntimeException('Dossier inaccessible : ' . $dir);
     }
-    $lock = @fopen($varDir . '/update.lock', 'c');
+    $lock = @fopen($lockDir . '/update.lock', 'c');
     if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) throw new RuntimeException('Une opération est déjà en cours.');
 
     // 1) Jeton valide + commit exact
@@ -581,6 +591,36 @@ try {
     if ($missing) throw new RuntimeException('Version incomplète ou trop ancienne (' . implode(', ', array_slice($missing, 0, 3)) . ').');
     lint_php($staging, $files);
     @unlink($zipFile);
+
+    // 3 bis) Migration de l'ancienne structure : la configuration et les données sont DÉPLACÉES (renommées, donc conservées)
+    if ($legacy) {
+        $createdBackend = !is_dir($backend);
+        foreach (array($backend, $backend . '/config', $dataDir) as $dir) {
+            if (!make_dir($dir)) throw new RuntimeException('Dossier inaccessible : ' . $dir);
+        }
+        make_dir($oldState);
+        foreach (array('version.json', 'manifest.json') as $f) {
+            if (is_file($oldApi . '/var/' . $f)) @copy($oldApi . '/var/' . $f, $oldState . '/' . $f);
+        }
+        // La sauvegarde de l'ancien format ne sert plus (chemins différents) : mise de côté, rétablie si la migration échoue
+        if (is_dir($oldApi . '/var/backup/prev') && !@rename($oldApi . '/var/backup/prev', $oldState . '/prev')) throw new RuntimeException('Migration impossible : sauvegarde précédente.');
+        $moves = array(
+            array($oldApi . '/.runtime.env', $backend . '/config/runtime.env'),
+            array($oldApi . '/.env', $backend . '/config/local.env'),
+            array($oldApi . '/logs', $dataDir . '/logs'),
+            array($oldApi . '/var', $dataDir . '/var'),
+        );
+        foreach ($moves as $m) {
+            if (!file_exists($m[0])) continue;
+            if (file_exists($m[1])) throw new RuntimeException('Migration impossible : ' . $m[1] . ' existe déjà.');
+            if (!@rename($m[0], $m[1])) throw new RuntimeException('Migration impossible : déplacement de ' . basename($m[0]) . '.');
+            $moved[] = $m;
+        }
+        foreach (array($backend . '/config', $dataDir, $dataDir . '/logs', $varDir) as $dir) {
+            if (!guard_dir($dir)) throw new RuntimeException('Dossier inaccessible : ' . $dir);
+        }
+        $notes[] = 'Ancienne structure migrée : configuration, journaux et sessions déplacés vers ' . $backend . '.';
+    }
 
     // 4) Sauvegarde (même format que la mise à jour de /auth : le retour arrière manuel y reste possible)
     $oldManifest = array();
@@ -698,6 +738,12 @@ try {
         }
     }
     if ($health === 'bad') throw new RuntimeException('La nouvelle version ne répond pas correctement : l\'ancienne a été rétablie automatiquement.');
+    if ($legacy) {
+        // Ancien code d'api/ devenu inutile (la façade api/index.php n'en utilise plus rien)
+        rrmdir($oldApi . '/lib');
+        rrmdir($oldApi . '/assets');
+        @unlink($oldApi . '/calculation.php');
+    }
     @file_put_contents($dataDir . '/logs/updates.jsonl', json_encode(array('at' => $now, 'action' => 'update', 'by' => 'update.php', 'ref' => $ref, 'from' => $current && isset($current['sha']) ? $current['sha'] : null, 'to' => $sha, 'ok' => true, 'health' => $health)) . "\n", FILE_APPEND);
 } catch (Exception $e) {
     $fatal = $e->getMessage();
@@ -726,6 +772,23 @@ if ($fatal !== null) {
         }
     }
     if ($backupStarted) rrmdir($backupDir); // une sauvegarde partielle ou déjà rétablie ne doit jamais rester proposée par /auth
+    if ($legacy) {
+        // Migration : éléments remis à leur place d'origine, dans l'ordre inverse
+        $reverted = true;
+        foreach (array_reverse($moved) as $m) {
+            if (!@rename($m[1], $m[0])) $reverted = false;
+        }
+        if ($reverted) {
+            $dataDir = $oldApi;
+            foreach (array('version.json', 'manifest.json') as $f) {
+                if (is_file($oldState . '/' . $f)) @copy($oldState . '/' . $f, $oldApi . '/var/' . $f);
+            }
+            if (is_dir($oldState . '/prev') && is_dir($oldApi . '/var')) @rename($oldState . '/prev', $oldApi . '/var/backup/prev');
+            if ($createdBackend) rrmdir($backend);
+        } else {
+            $fatal .= ' ATTENTION : la configuration ou les données n\'ont pas pu être remises à leur place d\'origine, vérifiez ' . $backend . '.';
+        }
+    }
     @file_put_contents($dataDir . '/logs/updates.jsonl', json_encode(array('at' => gmdate('Y-m-d\TH:i:s.000\Z'), 'action' => 'update', 'by' => 'update.php', 'ref' => $ref, 'ok' => false, 'error' => $fatal)) . "\n", FILE_APPEND);
     if ($lock) { flock($lock, LOCK_UN); fclose($lock); }
     rrmdir($tmp);
