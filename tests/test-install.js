@@ -111,6 +111,11 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   t('POST /api/calculate fonctionne (valeur de référence 38 j)', calc.ok === true && calc.recommendations_days.collegues_travail === 38);
   t('GET /health → 200', (await fetch(`${BASE}/health`)).status === 200);
   const au = await fetch(`${BASE}/auth`, { redirect: 'manual' }); t('/auth redirige vers Google', au.status === 302 && /accounts\.google\.com/.test(au.headers.get('location')), `${au.status} ${au.headers.get('location')}`);
+  const tox = async (u) => { const x = await fetch(`${BASE}${u}`, { redirect: 'manual' }); return [x.status, x.headers.get('location')]; };
+  t('/tox → redirection permanente vers tox.radiv.fr', JSON.stringify(await tox('/tox')) === JSON.stringify([301, 'https://tox.radiv.fr/']) && JSON.stringify(await tox('/tox/')) === JSON.stringify([301, 'https://tox.radiv.fr/']) && JSON.stringify(await tox('/tox.html')) === JSON.stringify([301, 'https://tox.radiv.fr/']));
+  t('/tox/chemin?x=1 → même chemin et paramètres sur tox.radiv.fr', JSON.stringify(await tox('/tox/page/2?x=1')) === JSON.stringify([301, 'https://tox.radiv.fr/page/2?x=1']));
+  t('autres adresses voisines non redirigées (/toxic, /tox-autre)', (await tox('/toxic'))[0] === 404 && (await tox('/tox-autre'))[0] === 404);
+  t('règle /tox en tête de .htaccess, une seule fois', ht.indexOf('# /tox (redirection vers tox.radiv.fr) v1') >= 0 && ht.split('# /tox (redirection').length === 2 && ht.indexOf('# /tox (redirection') < ht.indexOf('# /legal') || ht.indexOf('# /tox (redirection') < ht.indexOf('mentions-legales.html'));
   t('/install.php inexistant après installation', (await fetch(`${BASE}/install.php`)).status === 404);
 
   console.log('\n— Configuration lue dans un .env (hors du dossier public)');

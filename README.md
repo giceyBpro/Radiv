@@ -48,7 +48,7 @@ install.php, update.php   installation web (seule méthode) et mise à jour de s
 `/test-api`, `/xplore`. La consultation des mesures n'a plus de page statique : elle fait partie
 de l'administration du site, derrière la connexion Google (voir [Administration](#administration-du-site-auth--connexion-google-mesures-mises-à-jour)).
 
-Les pages `tox.html` et `.tox-complet.html` ont été retirées du dépôt (`tox` devient un site indépendant). Les scripts de déploiement et les mises à jour de `/auth` les suppriment des sites déjà installés (sauvegardées d'abord par `/auth`) et retirent l'ancienne règle `/tox` du `.htaccess`.
+`/tox` (et `/tox.html`, `/tox/<chemin>`) est **redirigé de façon permanente (301) vers `https://tox.radiv.fr/`**, le site `tox` étant devenu indépendant : `install.php` (et `update.php` pour un site déjà installé) place la règle en tête du `.htaccess`, avant toute ancienne règle `/tox`. Les pages `tox.html` et `.tox-complet.html` ne font plus partie du dépôt.
 
 ## Référencement
 

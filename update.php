@@ -361,6 +361,22 @@ function backend_deny_block($backendUrlPath)
     return '# /' . $backendUrlPath . " (backend : accès refusé) v1\nRewriteEngine On\nRewriteRule ^" . $re . "(/|$) - [F,L]\n\n";
 }
 
+function htaccess_head($existing, $siteUrl, $backendUrlPath)
+{
+    $head = '';
+    $deny = backend_deny_block($backendUrlPath);
+    if ($deny !== '' && strpos($existing, strtok($deny, "\n")) === false) $head .= $deny;
+    $toxMarker = '# /tox (redirection vers tox.radiv.fr) v1';
+    if (strpos($existing, $toxMarker) === false) {
+        $head .= $toxMarker . "\nRewriteEngine On\nRewriteRule ^tox(?:\\.html)?/?$ https://tox.radiv.fr/ [R=301,L]\nRewriteRule ^tox/(.+)$ https://tox.radiv.fr/$1 [R=301,L]\n\n";
+    }
+    $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
+    if (strpos($siteUrl, 'https://') === 0 && strpos($existing, $httpsMarker) === false) {
+        $head .= $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
+    }
+    return $head;
+}
+
 function copy_atomic($src, $dest)
 {
     make_dir(dirname($dest));
@@ -657,13 +673,7 @@ try {
         foreach (htaccess_blocks($site, $backendUrl) as $marker => $block) {
             if (strpos($existingHt, $marker) === false) $add .= "\n" . $block;
         }
-        $head = '';
-        $denyBlock = backend_deny_block($backendUrl);
-        if ($denyBlock !== '' && strpos($existingHt, strtok($denyBlock, "\n")) === false) $head .= $denyBlock;
-        $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
-        if (strpos($site, 'https://') === 0 && strpos($existingHt, $httpsMarker) === false) {
-            $head .= $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
-        }
+        $head = htaccess_head($existingHt, $site, $backendUrl);
         if ($head !== '' || $add !== '') {
             $save($ht);
             if (@file_put_contents($ht, $head . $existingHt . $add) === false) throw new RuntimeException('Écriture impossible : .htaccess');
