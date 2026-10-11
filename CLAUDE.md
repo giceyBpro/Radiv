@@ -1,6 +1,23 @@
 # Instructions pour Claude
 
-Répondre en français. Les règles de travail Git sont dans `agent.md` (à suivre).
+Répondre en français.
+
+## Façon de travailler (plusieurs changements en parallèle : éviter les conflits Git)
+
+- Modifier uniquement les fichiers strictement nécessaires ; diff minimal et atomique ; aucun refactor hors sujet ; aucun formatage global ;
+  aucun renommage ou déplacement sauf nécessité absolue ; éviter les fichiers récemment touchés si possible.
+- Resynchroniser avec la branche de base avant d'écrire ; si un conflit est probable, s'arrêter et proposer un patch plus petit.
+- Priorité absolue : minimiser le risque de conflit et garder la fusion triviale.
+
+## Workflow Git obligatoire (à la fin de chaque tâche, dans cet ordre)
+
+1. `git add <fichiers modifiés>` (cibler les fichiers, pas `git add -A`).
+2. `git commit -m "..."` sur la branche de travail (celle désignée pour la session).
+3. `git push -u origin <branche>`.
+4. `git checkout main && git merge --no-ff <branche> -m "Merge <branche> into main" && git push origin main`.
+5. Revenir sur la branche de travail : `git checkout <branche>`.
+
+Ne jamais laisser des changements commités uniquement sur la branche de travail sans fusionner dans `main`. Ne pas créer de pull request sans demande explicite.
 
 ## Architecture (voir le README, section « Architecture du dépôt et du site »)
 
