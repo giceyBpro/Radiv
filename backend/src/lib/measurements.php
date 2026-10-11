@@ -120,12 +120,33 @@ function append(array $entry): void
         $file = log_file_for_period((int) $date->format('Y'), (int) $date->format('n'));
         if (!Config\ensure_private_dir(Config\logs_dir())) throw new \RuntimeException('logs/ inaccessible');
         rotate_if_needed($file);
-        if (file_put_contents($file, Json\encode($entry) . "\n", FILE_APPEND | LOCK_EX) === false) {
+        if (file_put_contents($file, Json\encode(compact_entry($entry)) . "\n", FILE_APPEND | LOCK_EX) === false) {
             throw new \RuntimeException('écriture impossible');
         }
     } catch (\Throwable $e) {
         error_log('Erreur log mesures: ' . $e->getMessage());
     }
+}
+
+// Suppression, à l'écriture, de ce qui est exactement dupliqué dans une ligne : l'adresse de ip_geo quand elle est
+// identique à « ip ». Rien d'autre n'est modifié ; expand_row() la rétablit à la lecture, donc les lectures (onglet
+// Mesures, export CSV) voient les mêmes données qu'avant, et les anciennes lignes (avec le doublon) restent lisibles.
+function compact_entry(array $entry): array
+{
+    if (isset($entry['ip_geo']) && is_array($entry['ip_geo']) && isset($entry['ip_geo']['ip'], $entry['ip']) && $entry['ip_geo']['ip'] === $entry['ip']) {
+        unset($entry['ip_geo']['ip']);
+    }
+    return $entry;
+}
+
+function expand_row(object $row): object
+{
+    $geo = $row->ip_geo ?? null;
+    if (is_object($geo) && !property_exists($geo, 'ip') && isset($row->ip) && is_string($row->ip)) {
+        // « ip » en tête de l'objet, comme à l'origine (ordre des clés conservé pour l'export)
+        $row->ip_geo = (object) (['ip' => $row->ip] + get_object_vars($geo));
+    }
+    return $row;
 }
 
 // Migration ponctuelle: avant le découpage mensuel, tout était dans un seul measurements.jsonl.
@@ -160,7 +181,7 @@ function read_file(string $file): array
         $line = trim($line);
         if ($line === '') continue;
         $row = json_decode($line);
-        if (is_object($row)) $rows[] = $row; // ligne corrompue ignorée
+        if (is_object($row)) $rows[] = expand_row($row); // ligne corrompue ignorée
     }
     fclose($handle);
     return $rows;
