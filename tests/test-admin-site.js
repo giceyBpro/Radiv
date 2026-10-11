@@ -36,10 +36,11 @@ const resetLimits = () => { for (const f of fs.readdirSync(path.join(WWW, 'backe
 const csrfOf = (html) => (html.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
 const flash = (html) => ((html.match(/<p class="msg (?:ok|ko)">([^<]*)</) || [])[1] || '').replace(/&#39;/g, "'");
 
-function treeHash() { // tout ce que la mise à jour a le droit de modifier
+function treeHash(skipRootHt = false) { // tout ce que la mise à jour a le droit de modifier
   const h = crypto.createHash('sha256'); const files = [];
   const walk = (d) => { for (const n of fs.readdirSync(d, { withFileTypes: true }).sort((x, y) => x.name.localeCompare(y.name))) {
     const p = path.join(d, n.name); const rel = path.relative(WWW, p);
+    if (skipRootHt && rel === '.htaccess') continue; // l'ordre des blocs de tête peut varier sans conséquence
     if (n.name.startsWith('.update-attempts')) continue; // compteur d'essais de clé d'update.php
     if (rel === 'backend/data/var' || rel === 'backend/data/logs' || rel === 'backend/config/runtime.env') continue;
     n.isDirectory() ? walk(p) : files.push(rel);
@@ -221,11 +222,11 @@ async function update(c, ref, token) {
   t('update.php supprimé', !exists('update.php')); t('version enregistrée par update.php', JSON.parse(read('backend/data/var/version.json')).by === 'update.php');
   t('jeton jamais écrit sur le disque', !fs.readdirSync(path.join(WWW, 'backend/data/var')).some((f) => !fs.statSync(path.join(WWW, 'backend/data/var', f)).isDirectory() && read(`backend/data/var/${f}`).includes(TOKEN)) && noTmp());
   t('opération journalisée', /"by":"update.php".*"ok":true/.test(fs.readFileSync(path.join(WWW, 'backend/data/logs/updates.jsonl'), 'utf8')));
-  const afterRescue = treeHash();
+  const afterRescue = treeHash(true);
   // Idempotence : même version relancée = même état, et le retour arrière de /auth vers la version d'avant est conservé
   dropUpdate(); resetLimits(); u = await up({ key: UKEY, ref: 'main', token: TOKEN });
   t('relance avec la même version : succès, signalée comme réparation', u.status === 200 && /déjà installée/.test(u.text) && !exists('update.php'));
-  t('état identique après la relance (idempotent)', treeHash() === afterRescue);
+  t('état identique après la relance (idempotent)', treeHash(true) === afterRescue);
   t('retour arrière de /auth toujours possible vers la version précédente', /Rétablir la version précédente/.test((await c.req('GET', `${BASE}/auth`)).text));
   // Secours : code du site endommagé, éléments de protection manquants
   fs.writeFileSync(path.join(WWW, 'backend/src/lib/updater.php'), '<?php this is not php {{{');
@@ -235,7 +236,9 @@ async function update(c, ref, token) {
   t('secours : le site endommagé est réparé (le script ne dépend pas du code installé)', u.status === 200 && /2222222/.test(u.text) && !exists('update.php'), u.text.replace(/<[^>]+>/g, ' ').slice(0, 300));
   t('…fichiers de la version, .htaccess du backend et des données restaurés', read('app.js').includes('fixture v1.2') && /Require all denied/.test(read('backend/.htaccess')) && !read('backend/src/lib/updater.php').includes('this is not php') && /Require all denied/.test(read('backend/data/.htaccess')));
   t('…règle d\'interdiction du backend rétablie dans le .htaccess racine, une seule fois', (read('.htaccess').match(/backend : accès refusé/g) || []).length === 1);
-  t('…état identique à avant l\'incident', treeHash() === afterRescue);
+  const toxRes = await fetch(`${BASE}/tox`, { redirect: 'manual' });
+  t('…/tox redirigé vers tox.radiv.fr (la règle est passée avant l\'ancienne règle /tox du site)', toxRes.status === 301 && toxRes.headers.get('location') === 'https://tox.radiv.fr/' && (read('.htaccess').match(/# \/tox \(redirection vers tox\.radiv\.fr\) v1/g) || []).length === 1);
+  t('…état identique à avant l\'incident (hors ordre des blocs de tête du .htaccess)', treeHash(true) === afterRescue);
   t('…et le site fonctionne', (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
   // Jeton conservé sur le serveur : jamais redemandé
   const envKeep = runtimeEnv(); setEnv('UPDATE_GITHUB_TOKEN', TOKEN); dropUpdate(); resetLimits();

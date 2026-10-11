@@ -907,6 +907,25 @@ function backend_deny_block($backendUrlPath)
     return '# /' . $backendUrlPath . " (backend : accès refusé) v1\nRewriteEngine On\nRewriteRule ^" . $re . "(/|$) - [F,L]\n\n";
 }
 
+// Blocs à placer en TÊTE du .htaccess (pour passer avant toutes les autres règles, y compris d'anciennes règles /tox) et absents de $existing :
+// interdiction du dossier du backend quand il est dans la racine web ; redirection de /tox vers le site tox.radiv.fr (devenu indépendant) ;
+// redirection HTTP -> HTTPS (308 : un POST garde sa méthode et son corps). Chaque bloc est écrit une seule fois (marqueur).
+function htaccess_head($existing, $siteUrl, $backendUrlPath)
+{
+    $head = '';
+    $deny = backend_deny_block($backendUrlPath);
+    if ($deny !== '' && strpos($existing, strtok($deny, "\n")) === false) $head .= $deny;
+    $toxMarker = '# /tox (redirection vers tox.radiv.fr) v1';
+    if (strpos($existing, $toxMarker) === false) {
+        $head .= $toxMarker . "\nRewriteEngine On\nRewriteRule ^tox(?:\\.html)?/?$ https://tox.radiv.fr/ [R=301,L]\nRewriteRule ^tox/(.+)$ https://tox.radiv.fr/$1 [R=301,L]\n\n";
+    }
+    $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
+    if (strpos($siteUrl, 'https://') === 0 && strpos($existing, $httpsMarker) === false) {
+        $head .= $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
+    }
+    return $head;
+}
+
 // Contenu de config/runtime.env : sections et commentaires lisibles. Une variable non définie
 // est écrite « #NOM= » (valeur par défaut du site) ; TRUSTED_PROXIES défini mais vide reste une valeur (jamais de X-Forwarded-For).
 function render_runtime_env($vars)
@@ -1116,15 +1135,8 @@ try {
     foreach (htaccess_blocks($site, $backendUrl) as $marker => $block) {
         if (strpos($existing, $marker) === false) $add .= "\n" . $block;
     }
-    // En TÊTE (pour passer avant les autres règles) : interdiction du dossier du backend quand il est dans la racine web, et
-    // redirection HTTP -> HTTPS (308 : un POST garde sa méthode et son corps).
-    $head = '';
-    $denyBlock = backend_deny_block($backendUrl);
-    if ($denyBlock !== '' && strpos($existing, strtok($denyBlock, "\n")) === false) $head .= $denyBlock;
-    $httpsMarker = '# /https (redirection HTTP vers HTTPS) v1';
-    if (strpos($site, 'https://') === 0 && strpos($existing, $httpsMarker) === false) {
-        $head .= $httpsMarker . "\nRewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=308]\n\n";
-    }
+    // En TÊTE du fichier : interdiction du backend, redirection /tox, redirection HTTPS (voir htaccess_head)
+    $head = htaccess_head($existing, $site, $backendUrl);
     if (@file_put_contents($ht, $head . $existing . $add) === false) throw new RuntimeException('Écriture impossible : .htaccess');
     $written[] = $ht;
 
