@@ -109,6 +109,7 @@ function maintenance(): void
     $dir = Config\logs_dir();
     if (!Config\ensure_private_dir($dir)) return;
     migrate_legacy_file();
+    \Radiv\Disk\guard(); // espace disque : purge des journaux les plus anciens au-delà du seuil (au plus toutes les 10 minutes)
     $marker = "{$dir}/.last-purge";
     if (is_file($marker) && time() - (int) filemtime($marker) < 86400) return;
     @touch($marker);

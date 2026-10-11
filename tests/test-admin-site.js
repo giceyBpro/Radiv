@@ -176,6 +176,26 @@ async function update(c, ref, token) {
   t('état exactement identique à la v1.1', treeHash() === afterGood); t('version = v1.1', JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40));
   page = await c.req('GET', `${BASE}/auth`); t('plus de retour arrière possible', !/Rétablir la version précédente/.test(page.text));
 
+  console.log('\n— Espace disque : purge des journaux les plus anciens au-delà de 85 %');
+  const envDisk = runtimeEnv(); const logsDir = path.join(WWW, 'backend/data/logs');
+  const treeBytes = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? treeBytes(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
+  for (const f of ['measurements-2025-01.jsonl', 'measurements-2025-02.jsonl']) fs.writeFileSync(path.join(logsDir, f), 'x'.repeat(250 * 1024));
+  const quotaMb = Math.ceil(treeBytes(WWW) / 1048576 / 0.9); // le site occupe ≈ 90 % du quota
+  setEnv('DISK_QUOTA_MB', String(quotaMb)); resetLimits(); try { fs.unlinkSync(path.join(logsDir, '.last-disk-check')); } catch (e) { /* absent */ }
+  const diskPage = await c.req('GET', `${BASE}/auth`);
+  t('page Site : occupation du quota affichée', /Espace disque/.test(diskPage.text) && /quota de l'hébergement/.test(diskPage.text) && /\d+(,\d)? %/.test(diskPage.text) && /85 %/.test(diskPage.text));
+  const before = fs.readdirSync(logsDir).filter((f) => f.startsWith('measurements-')).sort();
+  const diskCalc = await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) });
+  await new Promise((ok) => setTimeout(ok, 800)); // la purge s'exécute après l'envoi de la réponse
+  const after = fs.readdirSync(logsDir).filter((f) => f.startsWith('measurements-')).sort();
+  t('calcul normal malgré l\'espace saturé', diskCalc.status === 200);
+  t('les journaux les plus anciens sont supprimés en premier', before.includes('measurements-2025-01.jsonl') && !after.includes('measurements-2025-01.jsonl'), `${before.join()} → ${after.join()}`);
+  t('le mois en cours est conservé', after.some((f) => f === `measurements-${new Date().toISOString().slice(0, 7)}.jsonl`));
+  t('opération journalisée (disk_purge)', /"action":"disk_purge"/.test(fs.readFileSync(path.join(logsDir, 'updates.jsonl'), 'utf8')));
+  fs.writeFileSync(path.join(WWW, 'backend/config/runtime.env'), envDisk);
+  for (const f of fs.readdirSync(logsDir)) if (/^measurements-2025-/.test(f)) fs.unlinkSync(path.join(logsDir, f));
+  resetLimits();
+
   console.log('\n— update.php (mise à jour de secours autonome, idempotente, qui se supprime)');
   const UKEY = 'cle-de-test-update-0123456789abcdef';
   const dropUpdate = (key = UKEY) => { fs.writeFileSync(path.join(WWW, 'update.php'), fs.readFileSync(path.join(__dirname, '..', 'update.php'), 'utf8').replace("'CHANGEZ-MOI'", `'${key}'`).replace("const GITHUB_API = 'https://api.github.com';", "const GITHUB_API = 'http://127.0.0.1:9202';")); fs.chmodSync(path.join(WWW, 'update.php'), 0o644); };

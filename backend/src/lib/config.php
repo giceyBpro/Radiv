@@ -138,6 +138,24 @@ function cors_origin(): string
     return env('API_CORS_ORIGIN', env('CORS_ORIGIN', '*'));
 }
 
+// Quota d'espace disque de l'hébergement, en octets (DISK_QUOTA_MB), ou null s'il n'est pas défini (le disque du serveur est alors mesuré).
+function disk_quota_bytes(): ?int
+{
+    $raw = trim(env('DISK_QUOTA_MB'));
+    return preg_match('/^\d{1,6}$/', $raw) === 1 && (int) $raw > 0 ? (int) $raw * 1048576 : null;
+}
+
+// Seuil d'occupation (en %) à partir duquel les journaux les plus anciens sont supprimés (DISK_PURGE_PERCENT, 85 par défaut) ;
+// null = désactivé (valeur 0).
+function disk_purge_percent(): ?int
+{
+    $raw = trim(env('DISK_PURGE_PERCENT'));
+    if ($raw === '') return 85;
+    if (preg_match('/^\d{1,2}$/', $raw) !== 1) return 85;
+    $v = (int) $raw;
+    return $v === 0 ? null : max(50, min(99, $v));
+}
+
 function sfmn_mode_enabled(): bool
 {
     return flag('SFMN_MODE_ENABLED');

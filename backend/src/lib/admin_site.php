@@ -12,6 +12,7 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 
 use Radiv\AdminMeasures;
 use Radiv\Config;
+use Radiv\Disk;
 use Radiv\Contact;
 use Radiv\Google;
 use Radiv\Http;
@@ -120,6 +121,20 @@ function do_site(): bool
             . '<p class="small">Installée le ' . h($v['at'] ?? '') . ' par ' . h($v['by'] ?? '') . '</p>'
         : '<p>Inconnue (installation initiale, antérieure à ce système de mise à jour).</p>';
     $out .= '<p class="small">Dépôt : ' . h($status['repo']) . ' · PHP ' . h($status['php']) . ' · extension zip : ' . ($status['zip'] ? 'oui' : 'non') . '</p></section>';
+
+    $disk = Disk\usage();
+    $threshold = Config\disk_purge_percent();
+    $mo = static fn (int|float $bytes): string => rtrim(rtrim(number_format($bytes / 1048576, 1, ',', ' '), '0'), ',') . ' Mo';
+    $out .= '<section class="card"><h2>Espace disque</h2>';
+    if ($disk['limit'] > 0) {
+        $pct = round($disk['pct'], 1);
+        $over = $threshold !== null && $disk['pct'] >= $threshold;
+        $out .= '<p class="big' . ($over ? ' err' : '') . '">' . h(str_replace('.', ',', (string) $pct)) . ' %</p><p class="small">' . h($mo($disk['used'])) . ' utilisés sur ' . h($mo($disk['limit']))
+            . ($disk['source'] === 'quota' ? ' (quota de l\'hébergement)' : ' (disque du serveur : réglez DISK_QUOTA_MB pour mesurer le quota réel)') . '</p>';
+    } else {
+        $out .= '<p>Occupation indéterminée.</p>';
+    }
+    $out .= '<p class="small">' . ($threshold !== null ? 'À partir de ' . h((string) $threshold) . ' %, les journaux de mesures les plus anciens sont supprimés automatiquement.' : 'Suppression automatique des journaux désactivée.') . '</p></section>';
 
     $out .= '<section class="card"><h2>Mise à jour</h2>';
     if (!$status['update_enabled']) {

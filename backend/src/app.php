@@ -18,6 +18,7 @@ require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/store.php';
 require __DIR__ . '/lib/http.php';
 require __DIR__ . '/lib/geo.php';
+require __DIR__ . '/lib/disk.php';
 require __DIR__ . '/lib/measurements.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
