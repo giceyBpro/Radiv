@@ -258,6 +258,37 @@ async function update(c, ref, token) {
   const rbText = (await c.req('GET', rb2.loc)).text;
   t('…et il rétablit l\'état précédent', rbText.includes('Version précédente rétablie'), flash(rbText));
 
+  // Migration de l'ancienne structure (tout dans api/) vers public/ + backend/
+  console.log('\n— update.php : migration de l\'ancienne structure (api/ → backend/)');
+  const legacyMake = () => {
+    const w = (rel, c) => { fs.mkdirSync(path.dirname(path.join(WWW, rel)), { recursive: true }); fs.writeFileSync(path.join(WWW, rel), c); };
+    const mv = (a, b) => { fs.mkdirSync(path.dirname(path.join(WWW, b)), { recursive: true }); fs.renameSync(path.join(WWW, a), path.join(WWW, b)); };
+    mv('backend/config/runtime.env', 'api/.runtime.env'); mv('backend/data/logs', 'api/logs'); mv('backend/data/var', 'api/var');
+    fs.rmSync(path.join(WWW, 'backend'), { recursive: true, force: true });
+    w('api/.env', 'LOCAL_ONLY=1\n'); w('api/lib/config.php', '<?php // ancien code\n'); w('api/lib/old.php', '<?php // ancien code\n'); w('api/assets/old.js', '//\n'); w('api/calculation.php', '<?php // ancien\n');
+    w('api/logs/measurements-2026-01.jsonl', '{"x":1}\n'); w('api/var/sessions-marker', 'garder'); w('api/var/backup/prev/backup.json', '{"ancien":true}');
+    fs.writeFileSync(path.join(WWW, 'api/var/manifest.json'), JSON.stringify({ files: ['index.html', 'api/lib/old.php'] }));
+    fs.chmodSync(path.join(WWW, 'api/.runtime.env'), 0o640);
+    require('child_process').spawnSync('chown', ['-R', 'www-data:www-data', WWW]);
+  };
+  legacyMake(); dropUpdate();
+  for (const f of fs.readdirSync(WWW)) if (f.startsWith('.update-attempts')) fs.unlinkSync(path.join(WWW, f));
+  u = await fetch(`${BASE}/update.php`); const lgForm = await u.text();
+  t('ancienne structure détectée et annoncée', u.status === 200 && /Ancienne structure détectée/.test(lgForm), lgForm.replace(/<[^>]+>/g, ' ').slice(0, 200));
+  const lgBefore = fs.readFileSync(path.join(WWW, 'api/.runtime.env'), 'utf8');
+  u = await up({ key: UKEY, ref: 't5', token: TOKEN });
+  t('migration : échec de validation → rien n\'est déplacé', u.status === 500 && exists('api/.runtime.env') && exists('api/lib/old.php') && exists('api/logs/measurements-2026-01.jsonl') && !exists('backend') && exists('update.php') && noTmp());
+  u = await up({ key: UKEY, ref: 't9', token: TOKEN });
+  t('migration : nouvelle version défaillante → tout est rétabli (configuration, journaux, sessions, ancien code)', u.status === 500 && /rétablie automatiquement/.test(u.text) && exists('api/.runtime.env') && exists('api/.env') && exists('api/var/sessions-marker') && exists('api/logs/measurements-2026-01.jsonl') && exists('api/lib/old.php') && !exists('backend') && !exists('api/backend.php') && /ancien code/.test(read('api/lib/config.php')) && read('api/var/backup/prev/backup.json').includes('ancien') && read('api/var/manifest.json').includes('api/lib/old.php') && exists('update.php') && noTmp(), u.text.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').slice(0, 300));
+  u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('migration réussie', u.status === 200 && /2222222/.test(u.text) && /migrée/.test(u.text) && !exists('update.php'), u.text.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').slice(0, 300));
+  t('…configuration, variables locales, journaux et sessions conservés (déplacés)', read('backend/config/runtime.env') === lgBefore && read('backend/config/local.env') === 'LOCAL_ONLY=1\n' && read('backend/data/logs/measurements-2026-01.jsonl') === '{"x":1}\n' && read('backend/data/var/sessions-marker') === 'garder' && !exists('api/.runtime.env') && !exists('api/logs') && !exists('api/var'));
+  t('…ancien code d\'api/ supprimé, façade et pointeur en place', !exists('api/lib') && !exists('api/assets') && !exists('api/calculation.php') && exists('api/index.php') && exists('api/backend.php') && fs.statSync(path.join(WWW, 'api/index.php')).size < 4000);
+  t('…ancienne sauvegarde (autre format) écartée, état de référence au nouveau format', (!exists('backend/data/var/backup/prev/backup.json') || !read('backend/data/var/backup/prev/backup.json').includes('ancien')) && JSON.parse(read('backend/data/var/version.json')).sha === '2'.repeat(40) && !read('backend/data/var/manifest.json').includes('api/lib/old.php'));
+  t('…protections du backend en place et site opérationnel', /Require all denied/.test(read('backend/.htaccess')) && (await fetch(`${BASE}/backend/config/runtime.env`)).status !== 200 && (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
+  fs.unlinkSync(path.join(WWW, 'backend/data/var/sessions-marker')); fs.unlinkSync(path.join(WWW, 'backend/data/logs/measurements-2026-01.jsonl'));
+  fs.unlinkSync(path.join(WWW, 'backend/config/local.env'));
+
   console.log('\n— Fichiers hors liste blanche (.env, .htaccess, config.js, tests...)');
   const cfgBefore = read('config.js'); const htBefore = read('.htaccess'); resetLimits();
   r = await update(c, 't10', TOKEN);
