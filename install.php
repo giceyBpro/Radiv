@@ -431,13 +431,15 @@ function diagnostics($docroot)
         $add('Extension ' . $label, extension_loaded($ext), extension_loaded($ext) ? 'présente' : 'absente');
     }
     $add('Extension zip (installation et mises à jour)', class_exists('ZipArchive'), class_exists('ZipArchive') ? 'présente' : 'absente : installation par FTP nécessaire');
+    // Espace disque tel que PHP le voit : sur un hébergement mutualisé c'est souvent tout le serveur, pas le quota du compte.
+    $dTotal = @disk_total_space($docroot);
+    $dFree = @disk_free_space($docroot);
+    $add('Espace disque rapporté par PHP', $dFree === false || $dFree > 30 * 1048576, ($dTotal === false || $dFree === false) ? 'indisponible : renseignez le quota de l\'hébergement à l\'étape suivante' : round($dFree / 1048576) . ' Mo libres sur ' . round($dTotal / 1048576) . ' Mo' . ($dTotal > 2 * 1024 * 1048576 ? ' (disque du serveur, probablement pas votre quota : renseignez-le à l\'étape suivante)' : ' (peut correspondre à votre quota)'), false);
     $add('Extension zlib (compression, facultative)', extension_loaded('zlib'), extension_loaded('zlib') ? 'présente' : 'absente : sans conséquence pour l\'instant', false);
     $probe = $docroot . '/.install-probe-' . bin2hex(random_bytes(3));
     $writable = @file_put_contents($probe, 'x') !== false;
     @unlink($probe);
     $add('Écriture dans le dossier du site', $writable, $writable ? 'oui' : 'non : vérifiez les droits du dossier');
-    $free = @disk_free_space($docroot);
-    $add('Espace disque disponible', $free === false || $free > 30 * 1048576, $free === false ? 'inconnu' : round($free / 1048576) . ' Mo', false);
     if (function_exists('apache_get_modules')) {
         $has = in_array('mod_rewrite', apache_get_modules(), true);
         $add('Réécriture d\'URL (mod_rewrite)', $has, $has ? 'active' : 'absente : les adresses /api/... ne fonctionneront pas');
