@@ -427,6 +427,7 @@ function diagnostics($docroot)
         $add('Extension ' . $label, extension_loaded($ext), extension_loaded($ext) ? 'présente' : 'absente');
     }
     $add('Extension zip (installation et mises à jour)', class_exists('ZipArchive'), class_exists('ZipArchive') ? 'présente' : 'absente : installation par FTP nécessaire');
+    $add('Extension zlib (compression, facultative)', extension_loaded('zlib'), extension_loaded('zlib') ? 'présente' : 'absente : sans conséquence pour l\'instant', false);
     $probe = $docroot . '/.install-probe-' . bin2hex(random_bytes(3));
     $writable = @file_put_contents($probe, 'x') !== false;
     @unlink($probe);
