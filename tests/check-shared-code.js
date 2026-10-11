@@ -20,9 +20,12 @@ for (const name of ['FRONTEND_FILES', 'REQUIRED_FILES']) {
 // Fonctions communes copiées à l'identique
 const fn = (text, name) => (text.match(new RegExp(`^function ${name}\\(.*?^\\}\\n`, 'ms')) || [''])[0];
 const shared = ['h', 'page', 'starts_with', 'ends_with', 'has_text', 'rrmdir', 'make_dir', 'guard_dir', 'gh_headers', 'http_get', 'download_to', 'allowed', 'dest_of',
-  'extract_archive', 'lint_php', 'parse_env_file', 'normalize_path', 'first_valid_token', 'htaccess_blocks', 'backend_deny_block', 'htaccess_head', 'copy_atomic', 'health_get', 'backend_url_path'];
+  'extract_archive', 'lint_php', 'parse_env_file', 'normalize_path', 'first_valid_token', 'htaccess_blocks', 'backend_deny_block', 'htaccess_head', 'copy_atomic', 'health_get', 'backend_url_path', 'home_dir', 'resolve_backend_dir', 'env_line', 'render_runtime_env'];
 const drift = shared.filter((n) => fn(inst, n) === '' || fn(inst, n) !== fn(upd, n));
 t(`${shared.length} fonctions communes identiques dans install.php et update.php`, drift.length === 0, drift.join(', '));
+
+const layout = (text) => (text.match(/^\$RUNTIME_LAYOUT = <<<'LAYOUT'\n[\s\S]*?^LAYOUT;\n/m) || [''])[0];
+t('description de runtime.env ($RUNTIME_LAYOUT) identique dans install.php et update.php', layout(inst) !== '' && layout(inst) === layout(upd));
 
 // Comportement de allowed() : la version de l'installeur / du secours et celle de l'application donnent les mêmes réponses
 const paths = ['public/index.html', 'public/v1.html', 'public/app.js', 'public/robots.txt', 'public/favicon.ico', 'public/config.js', 'public/.htaccess', 'public/.env', 'public/sitemap.xml',
