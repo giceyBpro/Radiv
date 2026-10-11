@@ -46,7 +46,7 @@ $REQUIRED_FILES = array(
 $TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir', 'disk_mb');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT', 'DISK_PURGE_PERCENT');
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT', 'DISK_MIN_FREE_MB');
 // Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Seul install.php la produit (tests/check-runtime-layout.js vérifie qu'elle est lisible par le backend).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -102,7 +102,7 @@ LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 524288
 == Espace disque
 DISK_QUOTA_MB|Espace disque de l'hébergement, en Mo (ex. 100). Sert à mesurer l'occupation du site. Vide = mesure du disque du serveur
 |(peu utile en hébergement mutualisé, où ce disque est partagé).
-DISK_PURGE_PERCENT|Seuil d'occupation (en %) à partir duquel les journaux de mesures les plus anciens sont supprimés. Défaut : 85. 0 = jamais.
+DISK_MIN_FREE_MB|Espace libre minimal, en Mo : en dessous, les journaux de mesures les plus anciens sont supprimés. Défaut : 30. 0 = jamais.
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
 SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.

@@ -145,15 +145,13 @@ function disk_quota_bytes(): ?int
     return preg_match('/^\d{1,6}$/', $raw) === 1 && (int) $raw > 0 ? (int) $raw * 1048576 : null;
 }
 
-// Seuil d'occupation (en %) à partir duquel les journaux les plus anciens sont supprimés (DISK_PURGE_PERCENT, 85 par défaut) ;
+// Espace libre minimal, en octets (DISK_MIN_FREE_MB, 30 Mo par défaut) : en dessous, les journaux les plus anciens sont supprimés ;
 // null = désactivé (valeur 0).
-function disk_purge_percent(): ?int
+function disk_min_free_bytes(): ?int
 {
-    $raw = trim(env('DISK_PURGE_PERCENT'));
-    if ($raw === '') return 85;
-    if (preg_match('/^\d{1,2}$/', $raw) !== 1) return 85;
-    $v = (int) $raw;
-    return $v === 0 ? null : max(50, min(99, $v));
+    $raw = trim(env('DISK_MIN_FREE_MB'));
+    if ($raw === '' || preg_match('/^\d{1,6}$/', $raw) !== 1) return 30 * 1048576;
+    return (int) $raw === 0 ? null : (int) $raw * 1048576;
 }
 
 function sfmn_mode_enabled(): bool
