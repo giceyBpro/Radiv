@@ -3,10 +3,11 @@
 // INSTALLATION INITIALE DU SITE (à envoyer seul par FTP, à la racine web, puis ouvrir dans un
 // navigateur : https://<votre-domaine>/install.php).
 //
-// Ce fichier n'est JAMAIS publié par deploy.sh ni par la page /auth : il ne sert
+// Ce fichier n'est JAMAIS publié par une mise à jour ni par la page /auth : il ne sert
 // qu'une fois. Il télécharge le dépôt GitHub privé (archive ZIP du commit demandé), valide tout
 // dans un dossier de préparation, installe le site et l'API, génère la configuration puis SE
-// SUPPRIME. Les mises à jour suivantes se font depuis https://<votre-domaine>/auth.
+// SUPPRIME. Les mises à jour suivantes se font depuis https://<votre-domaine>/auth ; en secours (page /auth
+// inutilisable, code du site endommagé), envoyez update.php et ouvrez-le de la même façon.
 //
 // AVANT DE L'ENVOYER : remplacez la clé ci-dessous par une valeur secrète d'au moins 24 caractères
 // (par exemple le résultat de `openssl rand -hex 24`). Sans cette clé, la page refuse tout. La clé
@@ -29,7 +30,7 @@ const GITHUB_API = 'https://api.github.com';   // modifié uniquement par les te
 const DEFAULT_REPO = 'giceyBpro/Radiv';
 const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142&lang=fr';
 
-// Même liste blanche que backend/src/lib/updater.php et deploy.sh (tests/test-install.js vérifie
+// Même liste blanche que backend/src/lib/updater.php et update.php (tests/check-shared-code.js vérifie
 // qu'elles restent identiques). Chemins du DÉPÔT : « public/... » va dans la racine web, « backend/... » dans le
 // dossier du backend. downloads/, vendor/ et backend/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
@@ -47,7 +48,7 @@ $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
 $PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT');
 // Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
-// commentaire). Strictement identique à celle de deploy.sh (tests/check-runtime-layout.js le vérifie).
+// commentaire). Seul install.php la produit (tests/check-runtime-layout.js vérifie qu'elle est lisible par le backend).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
 == Site et API
 SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
@@ -894,7 +895,7 @@ function backend_deny_block($backendUrlPath)
     return '# /' . $backendUrlPath . " (backend : accès refusé) v1\nRewriteEngine On\nRewriteRule ^" . $re . "(/|$) - [F,L]\n\n";
 }
 
-// Contenu de config/runtime.env : mêmes sections et mêmes commentaires que celui de deploy.sh. Une variable non définie
+// Contenu de config/runtime.env : sections et commentaires lisibles. Une variable non définie
 // est écrite « #NOM= » (valeur par défaut du site) ; TRUSTED_PROXIES défini mais vide reste une valeur (jamais de X-Forwarded-For).
 function render_runtime_env($vars)
 {
@@ -1234,6 +1235,6 @@ $out .= $removed
     : '<p class="msg"><strong>Supprimez maintenant <code>install.php</code> par FTP</strong> (suppression automatique impossible). Il est déjà inactif.</p>';
 $out .= '<h2>Prochaines étapes</h2><ul>'
     . ($d['google_id'] !== '' ? '<li>Dans Google Cloud, vérifiez l\'URI de redirection : <code>' . h($site) . '/auth/callback</code>, puis connectez-vous sur <code>' . h($site) . '/auth</code>.</li>' : '<li>La connexion Google n\'est pas configurée : <code>/auth</code> répond 404. Ajoutez les réglages Google dans <code>config/runtime.env</code> du backend (voir le README).</li>')
-    . '<li>Les mises à jour se font désormais depuis <code>/auth</code> (un jeton d\'accès GitHub sera demandé si nécessaire).</li>'
+    . '<li>Les mises à jour se font désormais depuis <code>/auth</code> (un jeton d\'accès GitHub sera demandé si nécessaire). En secours : <code>update.php</code> (voir le README).</li>'
     . '<li>Contrôlez le site : <a href="' . h($site) . '/">' . h($site) . '/</a></li></ul>';
 page('Installation terminée', $out);

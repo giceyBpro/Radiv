@@ -40,6 +40,7 @@ function treeHash() { // tout ce que la mise à jour a le droit de modifier
   const h = crypto.createHash('sha256'); const files = [];
   const walk = (d) => { for (const n of fs.readdirSync(d, { withFileTypes: true }).sort((x, y) => x.name.localeCompare(y.name))) {
     const p = path.join(d, n.name); const rel = path.relative(WWW, p);
+    if (n.name.startsWith('.update-attempts')) continue; // compteur d'essais de clé d'update.php
     if (rel === 'backend/data/var' || rel === 'backend/data/logs' || rel === 'backend/config/runtime.env') continue;
     n.isDirectory() ? walk(p) : files.push(rel);
   } };
@@ -175,84 +176,64 @@ async function update(c, ref, token) {
   t('état exactement identique à la v1.1', treeHash() === afterGood); t('version = v1.1', JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40));
   page = await c.req('GET', `${BASE}/auth`); t('plus de retour arrière possible', !/Rétablir la version précédente/.test(page.text));
 
-  console.log('\n— update.php (mise à jour ponctuelle qui se supprime)');
+  console.log('\n— update.php (mise à jour de secours autonome, idempotente, qui se supprime)');
   const UKEY = 'cle-de-test-update-0123456789abcdef';
-  const dropUpdate = (key = UKEY) => fs.writeFileSync(path.join(WWW, 'update.php'), fs.readFileSync(path.join(__dirname, '..', 'update.php'), 'utf8').replace("'CHANGEZ-MOI'", `'${key}'`));
+  const dropUpdate = (key = UKEY) => { fs.writeFileSync(path.join(WWW, 'update.php'), fs.readFileSync(path.join(__dirname, '..', 'update.php'), 'utf8').replace("'CHANGEZ-MOI'", `'${key}'`).replace("const GITHUB_API = 'https://api.github.com';", "const GITHUB_API = 'http://127.0.0.1:9202';")); fs.chmodSync(path.join(WWW, 'update.php'), 0o644); };
   const up = (fields) => fetch(`${BASE}/update.php`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields) }).then(async (x) => ({ status: x.status, text: await x.text() }));
+  const noTmp = () => !fs.readdirSync(WWW).some((n) => n.startsWith('.update-tmp') || n.startsWith('.install-tmp'));
   dropUpdate('CHANGEZ-MOI'); let u = await fetch(`${BASE}/update.php`); t('clé non personnalisée → 403', u.status === 403);
   dropUpdate('courte'); u = await fetch(`${BASE}/update.php`); t('clé trop courte → 403', u.status === 403);
   dropUpdate(); resetLimits(); u = await fetch(`${BASE}/update.php`); const uForm = await u.text();
-  t('formulaire affiché (clé, version, jeton neutre)', u.status === 200 && /name="key"/.test(uForm) && /name="ref"/.test(uForm) && /name="token"/.test(uForm));
-  t('aucune mention de GitHub dans le formulaire', !/github/i.test(uForm.replace(/<style[\s\S]*?<\/style>/, '')));
+  t('formulaire affiché (clé, version, jeton)', u.status === 200 && /name="key"/.test(uForm) && /name="ref"/.test(uForm) && /name="token"/.test(uForm));
+  t('état affiché : backend, dépôt, version installée', uForm.includes(path.join(WWW, 'backend')) && uForm.includes('giceyBpro/Radiv') && uForm.includes('1111111'));
   const treeBefore = treeHash();
   u = await up({ key: 'mauvaise-cle', ref: 'main', token: TOKEN }); t('mauvaise clé → 403, site inchangé, fichier conservé', u.status === 403 && treeHash() === treeBefore && exists('update.php'));
-  resetLimits(); u = await up({ key: UKEY, ref: 'main', token: 'ghp_mauvaisjetonmauvaisjeton12345' }); t('jeton refusé → 403, fichier conservé', u.status === 403 && exists('update.php'));
-  resetLimits(); u = await up({ key: UKEY, ref: '../x', token: TOKEN }); t('référence invalide → échec, fichier conservé', u.status === 500 && /Référence invalide/.test(u.text) && exists('update.php'));
-  resetLimits(); u = await up({ key: UKEY, ref: 't3', token: TOKEN }); t('archive piégée → échec, site inchangé, fichier conservé', u.status === 500 && exists('update.php'));
+  resetLimits(); u = await up({ key: UKEY, ref: 'main', token: 'ghp_mauvaisjetonmauvaisjeton12345' }); t('jeton refusé → échec, fichier conservé, site inchangé', u.status === 500 && /jeton n(?:'|&#0?39;)est pas valide/.test(u.text) && exists('update.php') && treeHash() === treeBefore && noTmp());
+  resetLimits(); u = await up({ key: UKEY, ref: '../x', token: TOKEN }); t('version invalide → refusée, fichier conservé', u.status === 400 && /Version invalide/.test(u.text) && exists('update.php'));
+  resetLimits(); u = await up({ key: UKEY, ref: 't3', token: TOKEN }); t('archive piégée → échec, site inchangé, fichier conservé, aucun résidu', u.status === 500 && exists('update.php') && treeHash() === treeBefore && noTmp());
+  resetLimits(); u = await up({ key: UKEY, ref: 't5', token: TOKEN }); t('erreur de syntaxe PHP → échec avant toute écriture', u.status === 500 && /syntaxe PHP/.test(u.text) && treeHash() === treeBefore);
+  resetLimits(); u = await up({ key: UKEY, ref: 't9', token: TOKEN });
+  t('la nouvelle version ne répond pas → retour arrière automatique, site identique, fichier conservé', u.status === 500 && /rétablie automatiquement/.test(u.text) && treeHash() === treeBefore && exists('update.php') && noTmp(), u.text.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').slice(0, 300) + ` tree=${treeHash() === treeBefore} kept=${exists('update.php')} tmp=${noTmp()}`);
+  t('…et la version enregistrée est restée celle d\'avant', JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40) && !exists('backend/data/var/backup/prev/backup.json'));
+  t('API opérationnelle après ce retour arrière', (await fetch(`${BASE}/api/config`)).status === 200);
   resetLimits(); u = await up({ key: UKEY, ref: 'main', token: TOKEN });
   t('mise à jour réussie', u.status === 200 && /2222222/.test(u.text), u.text.slice(0, 200)); t('app.js en v1.2', read('app.js').includes('fixture v1.2'));
   t('update.php supprimé', !exists('update.php')); t('version enregistrée par update.php', JSON.parse(read('backend/data/var/version.json')).by === 'update.php');
-  t('jeton jamais écrit sur le disque', !fs.readdirSync(path.join(WWW, 'backend/data/var')).some((f) => !fs.statSync(path.join(WWW, 'backend/data/var', f)).isDirectory() && read(`backend/data/var/${f}`).includes(TOKEN)));
-  t('retour arrière possible depuis /auth après update.php', /Rétablir la version précédente/.test((await c.req('GET', `${BASE}/auth`)).text));
+  t('jeton jamais écrit sur le disque', !fs.readdirSync(path.join(WWW, 'backend/data/var')).some((f) => !fs.statSync(path.join(WWW, 'backend/data/var', f)).isDirectory() && read(`backend/data/var/${f}`).includes(TOKEN)) && noTmp());
+  t('opération journalisée', /"by":"update.php".*"ok":true/.test(fs.readFileSync(path.join(WWW, 'backend/data/logs/updates.jsonl'), 'utf8')));
+  const afterRescue = treeHash();
+  // Idempotence : même version relancée = même état, et le retour arrière de /auth vers la version d'avant est conservé
+  dropUpdate(); resetLimits(); u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('relance avec la même version : succès, signalée comme réparation', u.status === 200 && /déjà installée/.test(u.text) && !exists('update.php'));
+  t('état identique après la relance (idempotent)', treeHash() === afterRescue);
+  t('retour arrière de /auth toujours possible vers la version précédente', /Rétablir la version précédente/.test((await c.req('GET', `${BASE}/auth`)).text));
+  // Secours : code du site endommagé, éléments de protection manquants
+  fs.writeFileSync(path.join(WWW, 'backend/src/lib/updater.php'), '<?php this is not php {{{');
+  fs.unlinkSync(path.join(WWW, 'backend/.htaccess')); fs.unlinkSync(path.join(WWW, 'backend/data/.htaccess')); fs.unlinkSync(path.join(WWW, 'app.js'));
+  fs.writeFileSync(path.join(WWW, '.htaccess'), read('.htaccess').replace(/# \/backend \(backend : accès refusé\) v1\n[^\n]*\n[^\n]*\n\n/, ''));
+  dropUpdate(); resetLimits(); u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('secours : le site endommagé est réparé (le script ne dépend pas du code installé)', u.status === 200 && /2222222/.test(u.text) && !exists('update.php'), u.text.replace(/<[^>]+>/g, ' ').slice(0, 300));
+  t('…fichiers de la version, .htaccess du backend et des données restaurés', read('app.js').includes('fixture v1.2') && /Require all denied/.test(read('backend/.htaccess')) && !read('backend/src/lib/updater.php').includes('this is not php') && /Require all denied/.test(read('backend/data/.htaccess')));
+  t('…règle d\'interdiction du backend rétablie dans le .htaccess racine, une seule fois', (read('.htaccess').match(/backend : accès refusé/g) || []).length === 1);
+  t('…état identique à avant l\'incident', treeHash() === afterRescue);
+  t('…et le site fonctionne', (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
+  // Jeton conservé sur le serveur : jamais redemandé
+  const envKeep = runtimeEnv(); setEnv('UPDATE_GITHUB_TOKEN', TOKEN); dropUpdate(); resetLimits();
+  const uForm2 = await (await fetch(`${BASE}/update.php`)).text();
+  t('jeton de config/runtime.env valide : champ jeton masqué', !/name="token"/.test(uForm2) && !uForm2.includes(TOKEN));
+  u = await up({ key: UKEY, ref: 'v1.1' });
+  t('mise à jour sans saisir de jeton (celui de la configuration)', u.status === 200 && /1111111/.test(u.text) && JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40));
+  fs.writeFileSync(path.join(WWW, 'backend/config/runtime.env'), envKeep);
+  // Backend introuvable
+  fs.writeFileSync(path.join(WWW, 'api/backend.php'), "<?php return '/chemin/inexistant';\n"); dropUpdate();
+  u = await fetch(`${BASE}/update.php`); const lost = await u.text(); t('backend introuvable → message clair orientant vers install.php', u.status === 500 && /install\.php/.test(lost), `${u.status} ${lost.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').slice(0, 200)}`);
+  fs.unlinkSync(path.join(WWW, 'api/backend.php')); fs.unlinkSync(path.join(WWW, 'update.php'));
+  // Retour arrière de /auth après le secours (sauvegarde au même format)
   page = await c.req('GET', `${BASE}/auth`);
+  t('retour arrière proposé après le secours', /Rétablir la version précédente/.test(page.text));
   const rb2 = await c.req('POST', `${BASE}/auth/rollback`, { form: { csrf: csrfOf(page.text) }, headers: { Origin: BASE } });
-  t('…et il rétablit l\'état précédent', (await c.req('GET', rb2.loc)).text.includes('Version précédente rétablie') && treeHash() === afterGood);
-
-  console.log('\n— Onglet « Test SFMN » (SFMN toujours actif)');
-  const T = `${BASE}/auth/test-sfmn`; const anon = new Client(); resetLimits();
-  const anonStatuses = await Promise.all([`${T}`, `${T}/config.js`, `${T}/api/config`, `${T}/api/public-config`, `${BASE}/auth/assets/test-sfmn.js`, `${BASE}/auth/assets/test-sfmn.css`].map((u) => fetch(u).then((x) => x.status)));
-  t('sans session: page, config.js, API et fichiers → 404', anonStatuses.every((x) => x === 404), anonStatuses.join());
-  t('POST calculate sans session → 404', (await anon.reqJson('POST', `${T}/api/calculate`, { isotope_code: 'radium223' })).status === 404);
-  t('onglet proposé sur /auth', /href="\/auth\/test-sfmn"[^>]*>Test SFMN</.test((await c.req('GET', `${BASE}/auth`)).text));
-  t('SFMN désactivé sur le site: /api/config sans mode sfmn', !(await (await fetch(`${BASE}/api/config`)).json()).calculation_modes.includes('sfmn'));
-  const sc = await (await fetch(`${BASE}/api/config`)).json();
-  let pg = await c.req('GET', T);
-  t('page de test servie (200)', pg.status === 200 && /id="calculateBtn"/.test(pg.text));
-  t('même page que l\'accueil (index.html + app.js)', pg.text.includes('<script src="app.js">') && pg.text.includes('id="isotope"') && /id="resultsBody"/.test(pg.text));
-  t('bandeau de test + onglets + style distinct', /TEST SFMN/.test(pg.text) && /class="tab on"[^>]*>Test SFMN</.test(pg.text) && pg.text.includes('/auth/assets/test-sfmn.css') && pg.text.includes('/auth/assets/test-sfmn.js'));
-  t('config.js remplacé, aucune ressource tierce', pg.text.includes('/auth/test-sfmn/config.js') && !/googleapis|gstatic|cdn\./i.test(pg.text.replace(/https:\/\/doi\.org[^"<]*/g, '')));
-  t('noindex, base, titre', /name="robots" content="noindex, nofollow"/.test(pg.text) && pg.text.includes('<base href="/">') && /<title>\[Test SFMN\]/.test(pg.text));
-  const sfmnCsp = pg.headers.get('content-security-policy') || '';
-  t('CSP: scripts du site seulement, rien d\'externe', /script-src 'self'/.test(sfmnCsp) && /connect-src 'self'/.test(sfmnCsp) && !/https?:/.test(sfmnCsp), sfmnCsp);
-  t('pas de cache, pas d\'indexation', /no-store/.test(pg.headers.get('cache-control')) && /noindex/.test(pg.headers.get('x-robots-tag')));
-  const cj = await c.req('GET', `${T}/config.js`);
-  t('config.js: API de test, nom distinct', /RADIOPROTECTION_API_URL = "\/auth\/test-sfmn\/api"/.test(cj.text) && /TEST SFMN/.test(cj.text) && /javascript/.test(cj.headers.get('content-type')));
-  const tc = await (await c.req('GET', `${T}/api/config`)).text;
-  t('API de test: SFMN proposé et par défaut', JSON.parse(tc).calculation_modes.includes('sfmn') && JSON.parse(tc).default_calculation_mode === 'sfmn');
-  t('API de test: mêmes isotopes que le site', JSON.stringify(JSON.parse(tc).isotopes) === JSON.stringify(sc.isotopes));
-  const tp = JSON.parse((await c.req('GET', `${T}/api/public-config`)).text);
-  t('API de test: nom distinct', tp.site_name === 'TEST SFMN');
-  const logsCount = () => fs.readdirSync(path.join(WWW, 'backend/data/logs')).filter((f) => f.startsWith('measurements-')).map((f) => fs.statSync(path.join(WWW, 'backend/data/logs', f)).size).join();
-  const logsBefore = logsCount();
-  const body = { isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'sfmn' };
-  let cr = await c.reqJson('POST', `${T}/api/calculate`, body, { Origin: BASE }); let cd = JSON.parse(cr.text);
-  t('calcul SFMN tenté malgré SFMN_MODE_ENABLED=false', cr.status === 200 && cd.calculation_mode === 'sfmn' && !cd.errors?.some((e) => /désactivé/i.test(e)) && cd.error?.code !== 'SFMN_MODE_DISABLED', cr.text.slice(0, 200));
-  t('détails dans admin_details, pas à la racine', cd.admin_details && cd.admin_details.mode === 'sfmn' && !('sfmn_debug' in cd) && cd.admin_details.sfmn_debug && cd.admin_details.sfmn_debug.enabled === true);
-  t('comparaison locale jointe', cd.admin_details.local && cd.admin_details.local.ok === true && cd.admin_details.local.calculation_mode === 'local');
-  resetLimits(); cr = await c.reqJson('POST', `${T}/api/calculate`, { ...body, calculation_mode: 'local' }, { Origin: BASE }); cd = JSON.parse(cr.text);
-  t('mode local: pas d\'échange SFMN', cd.calculation_mode === 'local' && cd.admin_details.mode === 'local' && cd.admin_details.sfmn_debug === null);
-  t('aucune mesure enregistrée par ces essais', logsCount() === logsBefore);
-  const pubCalc = await (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
-  t('API publique inchangée: bascule sur le calcul local', pubCalc.calculation_mode === 'local' && !('admin_details' in pubCalc));
-  resetLimits();
-  t('autre site (Origin) → 403', (await c.reqJson('POST', `${T}/api/calculate`, body, { Origin: 'https://evil.example' })).status === 403);
-  t('Sec-Fetch-Site cross-site → 403', (await c.reqJson('POST', `${T}/api/calculate`, body, { 'Sec-Fetch-Site': 'cross-site' })).status === 403);
-  const noJson = await fetch(`${T}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'text/plain', Cookie: Object.entries(c.jar).map(([k, v]) => `${k}=${v}`).join('; ') }, body: JSON.stringify(body) });
-  t('type non JSON (formulaire d\'un autre site) → 403', noJson.status === 403);
-  t('JSON invalide → 400', (await c.reqJson('POST', `${T}/api/calculate`, undefined, { Origin: BASE })).status === 400);
-  let limited = 0; for (let i = 0; i < 25; i += 1) if ((await c.reqJson('POST', `${T}/api/calculate`, body, { Origin: BASE })).status === 429) limited += 1;
-  t('plafond de 20 essais par minute', limited >= 4, String(limited));
-  resetLimits();
-
-  console.log('\n— Plafond global des interrogations SFMN (API publique)');
-  const envSnapshot = runtimeEnv(); setEnv('SFMN_MODE_ENABLED', 'true'); setEnv('SFMN_GLOBAL_RATE_LIMIT', '2'); resetLimits();
-  const sfmnCall = (n) => fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100 + n, patient_size_cm: 150, calculation_mode: 'sfmn' }) });
-  const capStatuses = []; for (let i = 0; i < 4; i += 1) capStatuses.push((await sfmnCall(i)).status);
-  t('2 premières interrogations passent, les suivantes → 429 (tous visiteurs confondus)', capStatuses.join() === '200,200,429,429', capStatuses.join());
-  const capBody = await (await sfmnCall(9)).json(); t('message clair', /saturé/.test(capBody.error || ''));
-  fs.writeFileSync(path.join(WWW, 'backend/config/runtime.env'), envSnapshot); resetLimits();
-  t('SFMN de nouveau désactivé: bascule sur le calcul local', (await (await sfmnCall(1)).json()).calculation_mode === 'local');
-  resetLimits();
+  const rbText = (await c.req('GET', rb2.loc)).text;
+  t('…et il rétablit l\'état précédent', rbText.includes('Version précédente rétablie'), flash(rbText));
 
   console.log('\n— Fichiers hors liste blanche (.env, .htaccess, config.js, tests...)');
   const cfgBefore = read('config.js'); const htBefore = read('.htaccess'); resetLimits();

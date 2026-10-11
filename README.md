@@ -19,13 +19,13 @@ backend/           → copié dans le dossier du backend (privé)
   config/            runtime.env (généré, 600) et local.env (réglages locaux, jamais écrasé)
   data/              logs/ (mesures), var/ (sessions, version installée, sauvegarde, compteurs)
 tests/             outillage de développement (jamais déployé)
-install.php, update.php, deploy.sh   scripts d'installation / de mise à jour (jamais publiés)
+install.php, update.php   installation web (seule méthode) et mise à jour de secours (jamais publiés par une mise à jour)
 ```
 
-- **Où est le backend ?** Par défaut dans la racine web, sous `backend/`, protégé ; il peut être placé ailleurs (de préférence **hors** de la racine web) avec `BACKEND_DIR` (fichier de configuration de `deploy.sh` / `install.php`) ou le champ « Dossier du backend » de `install.php`. La façade `api/index.php` le trouve dans cet ordre : variable d'environnement `RADIV_BACKEND`, fichier `api/backend.php` (généré par l'installation), puis `<racine web>/backend`. Déplacer le backend plus tard = déplacer le dossier et changer une ligne de `api/backend.php`.
+- **Où est le backend ?** Par défaut dans la racine web, sous `backend/`, protégé ; il peut être placé ailleurs (de préférence **hors** de la racine web) avec le champ « Dossier du backend » d'`install.php` (ou `BACKEND_DIR` dans le fichier de configuration qu'il lit). La façade `api/index.php` le trouve dans cet ordre : variable d'environnement `RADIV_BACKEND`, fichier `api/backend.php` (généré par l'installation), puis `<racine web>/backend`. Déplacer le backend plus tard = déplacer le dossier et changer une ligne de `api/backend.php`.
 - **Où sont les données ?** Dans `backend/data/` par défaut ; `DATA_DIR` (dans `config/runtime.env`) les place ailleurs (chemin absolu ou relatif au backend).
 - **Le navigateur ne connaît aucun dossier** : `config.js` ne contient que des adresses (site, API).
-- **Protection** (le backend peut être dans la racine web, donc plusieurs couches indépendantes) : `backend/.htaccess` refuse tout (recréé s'il manque) ; une règle en tête du `.htaccess` racine interdit l'adresse du backend ; chaque fichier PHP du backend refuse de s'exécuter hors de l'API ; l'installation **vérifie en HTTP, avant d'y écrire des secrets**, que le backend est illisible et s'interrompt sinon (demandant un dossier hors de la racine web) ; `deploy.sh` fait le même contrôle ; droits `600` sur les secrets, `750` sur `config/` et `data/`.
+- **Protection** (le backend peut être dans la racine web, donc plusieurs couches indépendantes) : `backend/.htaccess` refuse tout (recréé s'il manque) ; une règle en tête du `.htaccess` racine interdit l'adresse du backend ; chaque fichier PHP du backend refuse de s'exécuter hors de l'API ; l'installation **vérifie en HTTP, avant d'y écrire des secrets**, que le backend est illisible et s'interrompt sinon (demandant un dossier hors de la racine web) ; droits `600` sur les secrets, `750` sur `config/` et `data/`.
 
 ## Pages et fichiers frontend (`public/`)
 
@@ -39,12 +39,12 @@ install.php, update.php, deploy.sh   scripts d'installation / de mise à jour (j
 | `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
 | `api-fonctionnement.html` | Documentation publique du contrat API. |
 | `test-api.html` | Page de test manuel des endpoints API. |
-| `config.js` | Configuration runtime (URLs API/site) injectée par `deploy.sh` en production. |
+| `config.js` | Configuration runtime (URLs API/site) générée par `install.php` (jamais écrasée par les mises à jour). |
 | `vendor/` | Polices et bibliothèques d'impression hébergées sur le site (aucun CDN ; licences dans `vendor/LICENSES.txt`). |
 | `downloads/` | Modèles Xplore à importer dans un RIS Xplore (voir `xplore.html`). |
 | `robots.txt` | Autorise l'indexation de la page d'accueil uniquement (voir [Référencement](#référencement)). |
 
-`deploy.sh` ajoute dans `.htaccess` des raccourcis sans `.html` pour ces pages : `/legal`, `/contact`, `/print`, `/explain`, `/doc` (→ `api-fonctionnement.html`),
+`install.php` ajoute dans `.htaccess` des raccourcis sans `.html` pour ces pages : `/legal`, `/contact`, `/print`, `/explain`, `/doc` (→ `api-fonctionnement.html`),
 `/test-api`, `/xplore`. La consultation des mesures n'a plus de page statique : elle fait partie
 de l'administration du site, derrière la connexion Google (voir [Administration](#administration-du-site-auth--connexion-google-mesures-mises-à-jour)).
 
@@ -61,7 +61,7 @@ niveaux de protection, indépendants l'un de l'autre :
 - Chaque page sauf l'accueil porte `<meta name="robots" content="noindex, nofollow">`,
   qui bloque l'indexation même si un lien externe venait un jour à pointer vers elle.
 
-`sitemap.xml` est généré par `deploy.sh` (comme `config.js`) car il doit contenir
+`sitemap.xml` est généré par `install.php` (comme `config.js`) car il doit contenir
 une URL absolue (`SITE_PUBLIC_URL`) — inutile de le commiter avec un domaine factice.
 Il ne référence que la page d'accueil.
 
@@ -79,7 +79,7 @@ suffisent pas rétroactivement.
 | `backend/src/app.php` | Application de l'API PHP : routage HTTP, sécurité. |
 | `backend/src/calculation.php` | Mode de calcul « local » : données (isotopes, scénarios), formalisme et validation. Fichier autonome (aucune dépendance au reste du serveur), pensé pour être audité ou testé isolément. |
 | `backend/src/lib/*.php` | Configuration, état partagé, HTTP, journal des mesures, géoIP, proxy SFMN, contact/SMTP, administration `/auth`, mises à jour. |
-| `deploy.sh` | Script de déploiement/mise à jour idempotent (voir [Déploiement](#déploiement)). |
+| `update.php` | Mise à jour de secours autonome et idempotente (voir [Mise à jour de secours](#mise-à-jour-de-secours-updatephp)). |
 | `install.php` | Première installation sans SSH (voir [Première installation](#première-installation-sans-ssh-installphp-ex-hébergement-mutualisé-ovh)). |
 | `.env.example` | Modèle de configuration pour le déploiement. |
 | `formules.txt` | Documentation interne des formules et méthodes de calcul. |
@@ -225,9 +225,11 @@ Depuis la racine du dépôt (sert aussi les pages statiques) :
 php -S 127.0.0.1:8081 -t public tests/dev-router.php
 ```
 
-## Déploiement
+## Installation et mises à jour
 
-Voir [Déploiement](#déploiement-deploysh) et, sans SSH, [Première installation](#première-installation-sans-ssh-installphp-ex-hébergement-mutualisé-ovh).
+- **Installation** : uniquement par la page web `install.php` (voir [Première installation](#première-installation-sans-ssh-installphp-ex-hébergement-mutualisé-ovh)), sans SSH ni `git`.
+- **Mises à jour courantes** : depuis la page d'administration `/auth` (voir [Administration](#administration-du-site-auth--connexion-google-mesures-mises-à-jour)), avec sauvegarde, contrôle de fonctionnement et retour arrière.
+- **Secours** : `update.php`, à copier dans la racine web si `/auth` est inutilisable (voir [Mise à jour de secours](#mise-à-jour-de-secours-updatephp)).
 
 ## Façade et backend PHP
 
@@ -246,7 +248,6 @@ relancer ni à surveiller.
 | `backend/src/calculation.php` | Calcul local (données, formules, validation). |
 | `backend/src/lib/*.php` | Config, état partagé (rate-limit, cache géoIP), HTTP, journal des mesures, géoIP, SFMN, contact/SMTP, accès admin. |
 | `tests/` | Outillage de développement (jamais déployé) : tests, faux services (Google, GitHub, SMTP), routeur de dev. |
-| `deploy.sh` | Déploiement (voir ci-dessous). |
 
 ### Prérequis hébergement
 
@@ -257,24 +258,10 @@ relancer ni à surveiller.
 ### Configuration
 
 Variables documentées dans `.env.example`. Le backend lit `config/runtime.env`
-(généré par `deploy.sh` ou `install.php`) puis `config/local.env` (réglages purement locaux, jamais
+(généré par `install.php`) puis `config/local.env` (réglages purement locaux, jamais
 écrasé) ; une variable déjà définie dans l'environnement du serveur l'emporte. Ces fichiers sont relus à
 chaque requête : toute modification est immédiate. `RATE_LIMIT_BACKEND` choisit le stockage du rate-limit,
 `DATA_DIR` l'emplacement des données.
-
-### Déploiement (`deploy.sh`)
-
-`.env` de déploiement (`GIT_REPO`, `GIT_TOKEN`, `FRONTEND_DIR`, `BACKEND_DIR`, `SITE_PUBLIC_URL`,
-`API_PUBLIC_URL`...), basé sur `.env.example`, à côté de `deploy.sh`. Lancer `./deploy.sh`.
-`public/` du dépôt va dans `FRONTEND_DIR` (la racine web), `backend/` dans `BACKEND_DIR` (par défaut
-`FRONTEND_DIR/backend`) ; le clone du dépôt (`CHECKOUT_DIR`, par défaut `~/radiv-repo`) ne doit jamais être dans la racine web.
-Le script contrôle la syntaxe PHP avant toute publication, fait un `git pull`, synchronise les deux dossiers
-(en protégeant `config/` et `data/` du backend), génère `config.js`, `sitemap.xml`, `api/backend.php`,
-`config/runtime.env` (600) et les règles `.htaccess` (raccourcis sans `.html`, `/health`, `/auth`, HTTPS, en-têtes, interdiction du backend et des
-fichiers `.env`), puis vérifie en HTTP que le backend est illisible (il s'arrête sinon).
-Si `SITE_PUBLIC_URL` commence par `www.`, il ajoute (idempotent) une redirection 301 vers ce
-domaine canonique ; en cas de changement de domaine, l'ancienne règle n'est pas supprimée :
-nettoyer `.htaccess` à la main.
 
 ### Première installation sans SSH (`install.php`, ex. hébergement mutualisé OVH)
 
@@ -283,26 +270,28 @@ Quand l'hébergement n'offre ni SSH ni `git` (cas de l'offre gratuite incluse av
 1. Générez une clé secrète (`openssl rand -hex 24`) et collez-la dans `install.php`, à la place de `CHANGEZ-MOI` (`const INSTALL_KEY`). Sans clé d'au moins 24 caractères, la page refuse tout.
 2. Envoyez **uniquement** `install.php` à la racine web (dossier `www/` chez OVH) puis ouvrez `https://<votre-domaine>/install.php`. HTTPS est exigé (secrets saisis dans la page).
 3. Saisissez la clé, la page **vérifie l'hébergement** (PHP ≥ 8.0, extensions cURL / zip / mbstring / OpenSSL, droits d'écriture, accès à GitHub, espace disque, `mod_rewrite` si détectable) et bloque l'installation si un point critique échoue.
-4. Renseignez le formulaire : dépôt et version à installer (un **tag validé** de préférence), **jeton d'accès GitHub** (lecture seule, jamais enregistré), adresse du site, connexion Google (identifiant, secret, adresses autorisées), formulaire de contact (reCAPTCHA, SMTP), options (arrondi, journalisation, conservation, taille des journaux, mode SFMN). **Ou, plus simple : fournissez un fichier de configuration** (voir ci-dessous), la page ne demande alors plus que la version, le jeton et ce qui manque dans le fichier. Le champ **Dossier du backend** (vide = `backend` dans la racine web ; sinon relatif, absolu ou `~/…`, de préférence hors de la racine web) place le code, la configuration et les données.
+4. Renseignez le formulaire : dépôt et version à installer (un **tag validé** de préférence), **jeton d'accès GitHub** (lecture seule, jamais enregistré), adresse du site, connexion Google (identifiant, secret, adresses autorisées), formulaire de contact (reCAPTCHA, SMTP), options (arrondi, journalisation, conservation, taille des journaux, mode SFMN). **Ou, plus simple : fournissez un fichier de configuration** (modèle : `.env.example`) (voir ci-dessous), la page ne demande alors plus que la version, le jeton et ce qui manque dans le fichier. Le champ **Dossier du backend** (vide = `backend` dans la racine web ; sinon relatif, absolu ou `~/…`, de préférence hors de la racine web) place le code, la configuration et les données.
 5. La page télécharge l'archive du commit exact, la valide **avant la moindre écriture** (mêmes contrôles que les mises à jour : chemins, liens symboliques, tailles, liste blanche, syntaxe PHP, version capable de se mettre à jour), sauvegarde ce qui existait (ex. page d'attente de l'hébergeur), installe (`public/` dans la racine web, `backend/` dans le dossier du backend), génère `config.js`, `sitemap.xml`, `api/backend.php`, `config/runtime.env` (600), complète le `.htaccess` **sans toucher à ses règles existantes**, **vérifie en HTTP, avant d'y écrire des secrets, que le backend n'est pas lisible depuis le web** (sinon tout est annulé et la page demande un dossier hors de la racine web), puis contrôle `/api/config`, `/health` et `/auth`. **Au moindre échec pendant l'écriture, tout est remis dans l'état précédent.**
-6. Elle se **supprime** (`install.php` n'est jamais publié par `deploy.sh` ni par `/auth`) et pose un verrou ; si la suppression automatique est impossible, supprimez-le par FTP (il est déjà inactif). Si un contrôle final échoue (réécriture d'URL absente...), le fichier est conservé et la page peut être relancée.
+6. Elle se **supprime** (`install.php` n'est jamais publié par une mise à jour) et pose un verrou ; si la suppression automatique est impossible, supprimez-le par FTP (il est déjà inactif). Si un contrôle final échoue (réécriture d'URL absente...), le fichier est conservé et la page peut être relancée.
 
 **Installer à partir d'un fichier de configuration (`.env` ou ancien `runtime.env`)** : `install.php` lit un fichier au même format que `.env.example`. Il le cherche, dans l'ordre : à l'emplacement de la constante `ENV_FILE` en tête de `install.php` (par défaut `../.env`, le dossier **parent** du site : chez OVH, au-dessus de `www/`, donc **non accessible depuis le web** ; chemin absolu ou `~/…` acceptés, `''` désactive cet emplacement), puis `.env` et `.runtime.env` **dans la racine du site**. Ce dernier cas permet de **réinstaller sur un site existant en copiant simplement son ancien `config/runtime.env` (ou `.runtime.env`) dans la racine** : il sert de `.env`, et il est supprimé à la fin de l'installation puisqu'il se trouvait dans le dossier public. Quand le fichier est trouvé, la page affiche la configuration lue (secrets masqués, jamais renvoyés au navigateur), puis ne demande que **la version** (préremplie par `GIT_BRANCH`), **le jeton** et, au besoin, **le dossier du backend**. **Ce qui manque ou est invalide dans le fichier est demandé à ce moment-là** (par groupe : site, connexion Google, reCAPTCHA, SMTP, options) ; les valeurs saisies remplacent seulement celles qui manquaient, un secret laissé vide reste celui du fichier, et le navigateur ne peut jamais modifier ce que le fichier renseigne correctement. Les variables reconnues : celles de `.env.example` (`SITE_PUBLIC_URL`, `GOOGLE_*`, `ADMIN_GOOGLE_EMAILS`, `ADMIN_UPDATE_ENABLED`, `SMTP_*`, `CONTACT_DEST`, `RECAPTCHA_*`, `SFMN_*`, `RESTRICTION_ROUNDING_MODE`, `MEASUREMENT_LOGGING_LEVEL`, `LOGS_*`, `CALCULATE_RATE_LIMIT`, `TRUSTED_PROXIES`, `SITE_NAME`, `COPYRIGHT_OWNER`, `DATA_DIR`, `BACKEND_DIR`...), et le dépôt vient de `UPDATE_GITHUB_REPO` ou de `GIT_REPO`. Le fichier lu n'est jamais modifié, sauf s'il se trouvait dans le dossier public (supprimé après l'installation).
 
 Le jeton peut être saisi dans la page, ou mis dans ce `.env` pour ne plus rien taper : `UPDATE_GITHUB_TOKEN` (reporté dans `config/runtime.env`, 600, pour que `/auth` ne le redemande pas) ou `GIT_TOKEN` (utilisé pour l'installation seulement, non reporté ; `/auth` en demandera un). Un jeton du `.env` refusé par GitHub est ignoré et la page en redemande un. **Ne mettez jamais le jeton dans `install.php` lui-même** : ce fichier est servi par le site, et un échec de sa suppression le laisserait en ligne.
 
-Ensuite : déclarez dans Google Cloud l'URI de redirection `https://<votre-domaine>/auth/callback`, connectez-vous sur `/auth` ; les mises à jour suivantes se font depuis cette page. Au plus 10 clés incorrectes par heure et par adresse. Écrit en PHP 7.0 pour afficher un message clair, plutôt qu'une erreur blanche, sur un hébergement resté en PHP ancien. Si l'extension `zip` ou les connexions sortantes manquent, la page l'indique : installez alors par FTP avec `deploy.sh` exécuté ailleurs.
+Ensuite : déclarez dans Google Cloud l'URI de redirection `https://<votre-domaine>/auth/callback`, connectez-vous sur `/auth` ; les mises à jour suivantes se font depuis cette page. Au plus 10 clés incorrectes par heure et par adresse. Écrit en PHP 7.0 pour afficher un message clair, plutôt qu'une erreur blanche, sur un hébergement resté en PHP ancien. Si l'extension `zip` ou les connexions sortantes manquent, la page l'indique : installez alors les fichiers par FTP (voir le dépôt : `public/` dans la racine web, `backend/` dans le dossier du backend).
 
-Vérification : `tests/test-install.js` (140 contrôles sur un Apache vierge : clé absente/courte/fausse/limitée, lecture du `.env` (emplacements parent / public / `~/` / absolu, jetons valides ou périmés, `.env` invalide, secrets jamais renvoyés), diagnostic, 15 saisies invalides, jeton refusé, 6 archives piégées, retour arrière complet sur échec d'écriture, fichiers préexistants de l'hébergeur conservés ou restaurés, version qui ne démarre pas, installation réussie, jeton jamais écrit, listes blanches identiques à `updater.php` et `deploy.sh`).
+Vérification : `tests/test-install.js` (140 contrôles sur un Apache vierge : clé absente/courte/fausse/limitée, lecture du `.env` (emplacements parent / public / `~/` / absolu, jetons valides ou périmés, `.env` invalide, secrets jamais renvoyés), diagnostic, 15 saisies invalides, jeton refusé, 6 archives piégées, retour arrière complet sur échec d'écriture, fichiers préexistants de l'hébergeur conservés ou restaurés, version qui ne démarre pas, installation réussie, jeton jamais écrit, listes blanches).
 
-### Mise à jour ponctuelle sans connexion (`update.php`)
+### Mise à jour de secours (`update.php`)
 
-Pour mettre le site à jour sans passer par `/auth` (connexion Google indisponible, par exemple) :
+Pour mettre le site à jour ou le **réparer** quand `/auth` est inutilisable (connexion Google indisponible, code du site endommagé ou incomplet...) :
 1. Remplacez la clé `UPDATE_KEY` en tête de `update.php` par une valeur secrète d'au moins 24 caractères.
-2. Envoyez le fichier seul à la racine web (FTP) et ouvrez `https://<votre-domaine>/update.php`.
-3. Saisissez la clé et la version voulue (tag, branche ou commit) ; un jeton d'accès n'est demandé que si celui de `config/runtime.env` manque ou n'est plus valide, et n'est jamais conservé.
+2. Envoyez le fichier seul à la racine web (FTP) et ouvrez `https://<votre-domaine>/update.php` (HTTPS exigé).
+3. Saisissez la clé et la version voulue (tag, branche ou commit, préremplie avec la version installée) ; un jeton d'accès n'est demandé que si celui de `config/runtime.env` manque ou n'est plus accepté par GitHub, et n'est jamais conservé.
 
-Même effet qu'une mise à jour depuis `/auth` (le script appelle le même code du backend) : archive validée avant toute écriture, sauvegarde, contrôle de fonctionnement, retour arrière automatique en cas d'échec, entrée dans le journal ; le retour arrière manuel reste possible depuis `/auth`. Après une mise à jour réussie le fichier **se supprime** ; en cas d'échec il est conservé pour une nouvelle tentative (supprimez-le par FTP si vous y renoncez). Il n'est jamais publié par `deploy.sh` ni par les mises à jour. Il s'appuie sur le code déjà installé : une correction de l'outil de mise à jour lui-même ne s'applique qu'à la mise à jour suivante. Vérifié par `tests/test-admin-site.js`.
+**Autonome** : le script ne dépend d'aucun code du site installé ; il retrouve le backend comme la façade (variable `RADIV_BACKEND`, `api/backend.php`, `<racine>/backend`) et lit seulement `config/runtime.env` (dépôt, adresse du site, jeton éventuel). Il télécharge la version, la valide **avant toute écriture** (chemins, liens symboliques, tailles, liste blanche, syntaxe PHP), sauvegarde ce qu'il remplace dans le même format que `/auth` (le retour arrière manuel y reste possible), remplace les fichiers (backend d'abord, façade en dernier), **répare ce qui manque** (`.htaccess` du backend et des dossiers de données, `api/backend.php`, blocs du `.htaccess` racine, `config.js`, `sitemap.xml`, ligne `Sitemap` de `robots.txt` — sans jamais écraser l'existant), contrôle que l'API répond et **revient en arrière automatiquement** sinon. La configuration (`config/`) et les données (`data/`) ne sont jamais touchées.
+
+**Idempotent** : le relancer avec la version déjà installée réinstalle les mêmes fichiers et redonne exactement le même état (c'est une réparation) ; la sauvegarde de la version précédente (retour arrière de `/auth`) est alors conservée. Après un succès le fichier **se supprime** ; en cas d'échec il est conservé pour un nouvel essai (supprimez-le par FTP si vous y renoncez). Au plus 10 clés incorrectes par heure et par adresse. Écrit en PHP 7.0 pour afficher un message clair sur un hébergement resté en PHP ancien. Ses fonctions communes avec `install.php` sont des copies identiques (vérifiées par `tests/check-shared-code.js`, de même que les listes blanches). Vérifié par `tests/test-admin-site.js` (clé, jeton, archives piégées, retour arrière automatique, idempotence, réparation d'un site endommagé, jeton de la configuration).
 
 #### Onglet « Test SFMN »
 
@@ -313,7 +302,7 @@ Même si le calcul SFMN est désactivé sur le site (`SFMN_MODE_ENABLED=false`),
 - **Aucun service tiers au simple affichage d'une page** : polices (Archivo, Source Sans 3, IBM Plex Mono) et bibliothèques d'impression (html2canvas, jsPDF) sont hébergées dans `vendor/` (licences dans `vendor/LICENSES.txt`) ; Leaflet l'est dans `api/assets/`. Les empreintes SRI de l'ancienne version CDN ont été vérifiées identiques aux fichiers hébergés.
 - **reCAPTCHA** (formulaire de contact uniquement) : le script de Google n'est chargé qu'après avoir coché une case d'accord explicite ; sans elle, l'envoi est bloqué. Côté serveur, le jeton est contrôlé (succès, action `contact_form`, nom de domaine, score ≥ `RECAPTCHA_MIN_SCORE`, 0,5 par défaut).
 - **Conservation des journaux** : 12 mois par défaut (`LOGS_RETENTION_MONTHS`), `0` pour une conservation illimitée. La purge s'applique aussi aux journaux existants, au plus une fois par jour. Les mentions légales (`/legal`) décrivent automatiquement la configuration réelle ; services de géolocalisation d'IP et reCAPTCHA y sont déclarés.
-- **HTTPS et en-têtes** : `deploy.sh` et `install.php` ajoutent dans `.htaccess` (si le site est en `https://`) une redirection HTTP → HTTPS en tête de fichier (308 : un POST garde sa méthode et son corps) et, pour les pages, des en-têtes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, une CSP limitée aux directives sans effet sur les scripts en ligne (`frame-ancestors`, `base-uri`, `object-src`, `form-action`) et HSTS (sans `includeSubDomains`, pour ne pas imposer HTTPS à d'éventuels sous-domaines). Ils ne remplacent pas ceux de l'API et de `/auth`, plus stricts (`setifempty`). Nécessite `mod_headers` (sinon ignorés sans erreur).
+- **HTTPS et en-têtes** : `install.php` (et `update.php` si besoin) ajoute dans `.htaccess` (si le site est en `https://`) une redirection HTTP → HTTPS en tête de fichier (308 : un POST garde sa méthode et son corps) et, pour les pages, des en-têtes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, une CSP limitée aux directives sans effet sur les scripts en ligne (`frame-ancestors`, `base-uri`, `object-src`, `form-action`) et HSTS (sans `includeSubDomains`, pour ne pas imposer HTTPS à d'éventuels sous-domaines). Ils ne remplacent pas ceux de l'API et de `/auth`, plus stricts (`setifempty`). Nécessite `mod_headers` (sinon ignorés sans erreur).
 - **Adresse IP derrière un proxy** : `X-Forwarded-For` est lu de droite à gauche en ignorant les proxys déclarés dans `TRUSTED_PROXIES` ; ce qui est à gauche est écrit par le client et n'est jamais cru.
 - **Interrogations du site SFMN** : plafond global `SFMN_GLOBAL_RATE_LIMIT` (120 par minute, tous visiteurs) et résultats identiques réutilisés 10 minutes, pour ne pas servir de relais d'abus vers ce site.
 - **À faire de votre côté** (hors code) : registre des traitements, accords de sous-traitance (hébergeur, messagerie), procédure en cas de violation de données, qualification éventuelle du logiciel au regard du règlement (UE) 2017/745 sur les dispositifs médicaux, et accord du site SFMN pour l'interrogation automatisée de son outil.
@@ -348,13 +337,13 @@ Une seule page d'administration, à l'adresse **`https://<votre-domaine>/auth`**
 | `/auth/mesures`, `/auth/mesures.csv` | Mesures (`?year=2026&month=9`) et export, sur session valide. |
 | `/auth/update`, `/auth/rollback`, `/auth/logout` | Actions (formulaires `POST`). |
 
-**Mise en place Google** : console Google Cloud → *API et services* → *Identifiants* → client OAuth de type *Application Web*, avec pour URI de redirection `https://<votre-domaine>/auth/callback`. En mode « Test » de l'écran de consentement, ajoutez vos adresses comme utilisateurs de test : aucune validation par Google n'est nécessaire. Renseignez `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_GOOGLE_EMAILS` et `SITE_PUBLIC_URL` (voir `.env.example`). `deploy.sh` ajoute la règle `/auth` au `.htaccess`. `ADMIN_MEASUREMENTS_ENABLED=false` retire la section Mesures ; `ADMIN_SITE_ENABLED=false` coupe toute l'administration. Les mises à jour exigent en plus `ADMIN_UPDATE_ENABLED=true`.
+**Mise en place Google** : console Google Cloud → *API et services* → *Identifiants* → client OAuth de type *Application Web*, avec pour URI de redirection `https://<votre-domaine>/auth/callback`. En mode « Test » de l'écran de consentement, ajoutez vos adresses comme utilisateurs de test : aucune validation par Google n'est nécessaire. Renseignez `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_GOOGLE_EMAILS` et `SITE_PUBLIC_URL` (voir `.env.example`). `install.php` ajoute la règle `/auth` au `.htaccess`. `ADMIN_MEASUREMENTS_ENABLED=false` retire la section Mesures ; `ADMIN_SITE_ENABLED=false` coupe toute l'administration. Les mises à jour exigent en plus `ADMIN_UPDATE_ENABLED=true`.
 
 **Jeton GitHub** : le dépôt étant privé, le téléchargement exige un jeton en lecture seule (*fine-grained token*, permission « Contents : lecture » sur ce seul dépôt). S'il est dans `.env` (`UPDATE_GITHUB_TOKEN`) et accepté par GitHub, il est utilisé. **S'il est absent ou refusé, la page affiche simplement un champ « Jeton d'accès »** pour en saisir un, valable pour l'opération en cours : il n'est jamais enregistré (ni disque, ni session, ni journal). Il n'est envoyé qu'à l'API GitHub, jamais à l'adresse de téléchargement vers laquelle GitHub redirige.
 
 **Déroulement d'une mise à jour** : (1) le commit demandé (tag, branche ou SHA ; un tag validé est recommandé) est résolu en SHA exact ; (2) l'archive ZIP est téléchargée dans `backend/data/var/tmp/` (20 Mo maximum) ; (3) tout est validé **avant la moindre écriture sur le site** : dossier racine correspondant au SHA, aucun chemin `..`, absolu ou lien symbolique (l'archive entière est refusée), tailles et nombre de fichiers plafonnés, seuls les fichiers de la liste blanche sont extraits (jamais `.env`, `.htaccess` racine, `config.js`, `sitemap.xml`, `api/backend.php`, `backend/config/`, `backend/data/`, `tests/`), syntaxe de chaque fichier PHP contrôlée, version cible capable de se mettre elle-même à jour (sinon refusée) ; (4) la version en place est sauvegardée (une génération) ; (5) les fichiers sont remplacés un par un par renommage atomique (le code du backend d'abord, la façade `api/index.php` en dernier) ; (6) l'API est interrogée : **si elle ne répond pas correctement, l'ancienne version est rétablie automatiquement** ; (7) l'archive et les fichiers de préparation sont supprimés (même en cas d'échec), l'opération est journalisée (`backend/data/logs/updates.jsonl`) et un e-mail est envoyé à `CONTACT_DEST` si le SMTP est configuré. « Rétablir la version précédente » restaure la sauvegarde.
 
-Limites : le `.htaccess` racine, `config.js`, `sitemap.xml` et `api/backend.php` restent gérés par `deploy.sh` ; l'extension PHP `zip` est requise (la page l'indique) ; la première installation se fait par `deploy.sh` (avec SSH) ou par `install.php` (voir plus haut), la connexion Google n'existant pas encore à ce stade ; la lecture d'un mois de mesures charge le fichier en mémoire (d'où l'intérêt de `LOGS_MAX_BYTES` et `LOGS_RETENTION_MONTHS` sur un petit hébergement).
+Limites : le `.htaccess` racine, `config.js`, `sitemap.xml` et `api/backend.php` restent gérés par `install.php` (et réparés au besoin par `update.php`) ; l'extension PHP `zip` est requise (la page l'indique) ; la première installation se fait par `install.php` (voir plus haut), la connexion Google n'existant pas encore à ce stade ; la lecture d'un mois de mesures charge le fichier en mémoire (d'où l'intérêt de `LOGS_MAX_BYTES` et `LOGS_RETENTION_MONTHS` sur un petit hébergement).
 
 Vérification : `tests/test-admin-site.js` (112 contrôles : connexion refusée/acceptée, PKCE, CSRF, connexion ancienne, mesures et export CSV avec valeurs hostiles, jeton invalide/valide/du `.env`, archives piégées, retour arrière automatique et manuel, fichiers hors liste blanche, jeton jamais écrit ni transmis au téléchargement, anciennes adresses `/api/admin/*` en 404) contre un site déployé sous Apache et `tests/fake-services.js` (faux Google + faux GitHub) ; les archives de test sont fabriquées par `tests/make-fixtures.php`.
 
