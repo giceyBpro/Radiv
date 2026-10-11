@@ -19,6 +19,18 @@ const LOGGED_INPUT_FIELDS = [
     'benign_activity_mbq', 'benign_fixation_pct', 'cure_count',
 ];
 
+// Résultat conservé dans une ligne de journal : seulement ce qui varie d'un calcul à l'autre (réussite, durées en jours,
+// période effective, erreurs). Les textes identiques à chaque ligne (fiche du radiopharmaceutique « selected », libellés et
+// conditions des scénarios « rows ») et les données de diagnostic distant (« sfmn_debug ») ne sont jamais écrits.
+const LOGGED_RESULT_FIELDS = [
+    'ok', 'calculation_mode', 'cure_count', 'computed_dose_rate', 'effective_days', 'effective_hours', 'errors', 'error', 'recommendations_days',
+];
+
+function compact_result(array $result): array
+{
+    return array_intersect_key($result, array_flip(LOGGED_RESULT_FIELDS));
+}
+
 function now_iso(): string
 {
     return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.v\Z');
@@ -128,11 +140,14 @@ function append(array $entry): void
     }
 }
 
-// Suppression, à l'écriture, de ce qui est exactement dupliqué dans une ligne : l'adresse de ip_geo quand elle est
-// identique à « ip ». Rien d'autre n'est modifié ; expand_row() la rétablit à la lecture, donc les lectures (onglet
+// Compactage à l'écriture d'une ligne : résultat limité à ce qui varie (voir LOGGED_RESULT_FIELDS) et suppression de ce qui est
+// exactement dupliqué, l'adresse de ip_geo quand elle est identique à « ip ». Rien d'autre n'est modifié ; expand_row() la rétablit à la lecture, donc les lectures (onglet
 // Mesures, export CSV) voient les mêmes données qu'avant, et les anciennes lignes (avec le doublon) restent lisibles.
 function compact_entry(array $entry): array
 {
+    if (isset($entry['result']) && is_array($entry['result'])) {
+        $entry['result'] = compact_result($entry['result']);
+    }
     if (isset($entry['ip_geo']) && is_array($entry['ip_geo']) && isset($entry['ip_geo']['ip'], $entry['ip']) && $entry['ip_geo']['ip'] === $entry['ip']) {
         unset($entry['ip_geo']['ip']);
     }
@@ -272,7 +287,7 @@ function csv_escape(mixed $value): string
 
 function to_csv(array $rows): string
 {
-    $headers = ['timestamp', 'ip', 'ip_geo', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'rows'];
+    $headers = ['timestamp', 'ip', 'ip_geo', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'recommendations_days'];
     $lines = [implode(',', $headers)];
     foreach ($rows as $row) {
         $result = $row->result ?? null;
@@ -288,7 +303,7 @@ function to_csv(array $rows): string
             is_object($result) ? ($result->effective_days ?? null) : null,
             is_object($result) ? ($result->ok ?? null) : null,
             implode(' | ', array_map('Radiv\Measurements\js_str', $errors)),
-            Json\encode(is_object($result) ? ($result->rows ?? []) : []),
+            Json\encode(is_object($result) ? ($result->recommendations_days ?? new \stdClass()) : new \stdClass()),
         ];
         $lines[] = implode(',', array_map('Radiv\Measurements\csv_escape', $cells));
     }
