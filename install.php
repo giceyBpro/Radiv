@@ -43,10 +43,10 @@ $REQUIRED_FILES = array(
     'backend/src/app.php', 'backend/src/calculation.php', 'backend/src/lib/config.php',
     'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 );
-$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir');
+$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir', 'disk_mb');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
 // Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT');
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT', 'DISK_PURGE_PERCENT');
 // Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Seul install.php la produit (tests/check-runtime-layout.js vérifie qu'elle est lisible par le backend).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -99,6 +99,10 @@ MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, r
 |seulement ; none = rien. Défaut : full.
 LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = 12 mois. 0 = conservation illimitée (à justifier).
 LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
+== Espace disque
+DISK_QUOTA_MB|Espace disque de l'hébergement, en Mo (ex. 100). Sert à mesurer l'occupation du site. Vide = mesure du disque du serveur
+|(peu utile en hébergement mutualisé, où ce disque est partagé).
+DISK_PURGE_PERCENT|Seuil d'occupation (en %) à partir duquel les journaux de mesures les plus anciens sont supprimés. Défaut : 85. 0 = jamais.
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
 SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
@@ -488,6 +492,7 @@ function render_form($key, $values, $errors)
         . '<option value="full">Complète</option><option value="user"' . ((isset($values['logging']) && $values['logging'] === 'user') ? ' selected' : '') . '>Qui et quand uniquement</option><option value="none"' . ((isset($values['logging']) && $values['logging'] === 'none') ? ' selected' : '') . '>Aucune</option></select>'
         . '<label>Conservation des journaux (mois ; vide = 12 ; 0 = illimitée)</label><input type="text" name="retention" value="' . $v('retention', '12') . '">'
         . '<label>Taille maximale d\'un journal mensuel (Mo)</label><input type="text" name="logs_mb" value="' . $v('logs_mb', '5') . '">'
+        . '<label>Espace disque de l\'hébergement (Mo ; vide = mesure du disque du serveur). Au-delà de 85 % d\'occupation, les journaux les plus anciens sont supprimés.</label><input type="text" name="disk_mb" value="' . $v('disk_mb', '100') . '">'
         . '<label class="inline"><input type="checkbox" name="sfmn" value="1"' . (isset($values['sfmn']) ? ' checked' : '') . '> Activer le mode « calcul SFMN » (appelle un site distant)</label>';
     $out .= '<button type="submit">Installer</button></form>';
     return $out;
@@ -514,7 +519,7 @@ function error_groups($errors)
         elseif (strpos($m, 'Connexion Google') === 0 || strpos($m, 'Identifiant client Google') === 0 || strpos($m, 'Secret client Google') === 0 || strpos($m, 'Adresse administrateur') === 0) $g['google'] = true;
         elseif (strpos($m, 'reCAPTCHA') === 0) $g['recaptcha'] = true;
         elseif (strpos($m, 'SMTP') === 0 || strpos($m, 'Port SMTP') === 0 || strpos($m, 'Adresse destinataire') === 0) $g['smtp'] = true;
-        elseif (strpos($m, 'Arrondi') === 0 || strpos($m, 'Niveau de journalisation') === 0 || strpos($m, 'Conservation') === 0 || strpos($m, 'Taille de journal') === 0) $g['options'] = true;
+        elseif (strpos($m, 'Espace disque') === 0 || strpos($m, 'Arrondi') === 0 || strpos($m, 'Niveau de journalisation') === 0 || strpos($m, 'Conservation') === 0 || strpos($m, 'Taille de journal') === 0) $g['options'] = true;
         elseif (strpos($m, 'Adresse SFMN') === 0) $g['sfmn'] = true;
         else $g['other'] = true;
     }
@@ -551,7 +556,8 @@ function render_missing_fields($groups, $d)
         $out .= '<h2>Options</h2><label>Arrondi (round ou floor)</label><input type="text" name="rounding" value="' . $v('rounding') . '">'
             . '<label>Journalisation (full, user ou none)</label><input type="text" name="logging" value="' . $v('logging') . '">'
             . '<label>Conservation des journaux (mois ; 0 = illimitée)</label><input type="text" name="retention" value="' . $v('retention') . '">'
-            . '<label>Taille maximale d\'un journal mensuel (Mo)</label><input type="text" name="logs_mb" value="' . $v('logs_mb') . '">';
+            . '<label>Taille maximale d\'un journal mensuel (Mo)</label><input type="text" name="logs_mb" value="' . $v('logs_mb') . '">'
+            . '<label>Espace disque de l\'hébergement (Mo ; vide = disque du serveur)</label><input type="text" name="disk_mb" value="' . $v('disk_mb') . '">';
     }
     if (isset($groups['sfmn'])) $out .= '<label>Adresse du calculateur SFMN (https://…)</label><input type="text" name="sfmn_url" value="' . $v('sfmn_url') . '">';
     return $out;
@@ -571,6 +577,7 @@ function render_env_summary($key, $d, $extras, $errors, $needToken, $inside)
         array('reCAPTCHA', $d['recaptcha_site'] !== '' ? 'clé du site ' . $d['recaptcha_site'] . ', clé secrète ' . mask($d['recaptcha_secret']) : '—'),
         array('Mode SFMN', $d['sfmn'] ? 'activé' : 'désactivé'),
         array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] === '' ? '12 mois (défaut)' : ($d['retention'] === '0' ? 'illimitée' : $d['retention'] . ' mois')) . ', journal ' . $d['logs_mb'] . ' Mo'),
+        array('Espace disque', $d['disk_mb'] !== '' ? $d['disk_mb'] . ' Mo (purge des journaux anciens à 85 %)' : 'non défini : mesure du disque du serveur'),
         array('Autres variables transmises', $extras ? implode(', ', array_keys($extras)) : '—'),
     );
     $out = '<h2>Configuration lue dans le fichier de configuration</h2><table>';
@@ -780,6 +787,7 @@ function env_to_source($env)
         'sfmn' => strtolower($get('SFMN_MODE_ENABLED', 'true')) !== 'false',
         'sfmn_url' => $get('SFMN_CALCULATOR_URL'),
         'backend_dir' => $get('BACKEND_DIR'),
+        'disk_mb' => $get('DISK_QUOTA_MB'),
     );
     $extras = array();
     foreach ($PASSTHROUGH_VARS as $name) {
@@ -852,6 +860,7 @@ function validate_inputs($src)
     if (!in_array($d['logging'], array('full', 'user', 'none'), true)) $e[] = 'Niveau de journalisation invalide.';
     if ($d['retention'] !== '' && !preg_match('/^(?:0|[1-9]\d{0,2})$/', $d['retention'])) $e[] = 'Conservation des journaux invalide.';
     if (!preg_match('/^[1-9]\d{0,2}$/', $d['logs_mb'])) $e[] = 'Taille de journal invalide.';
+    if ($d['disk_mb'] !== '' && !preg_match('/^[1-9]\d{0,5}$/', $d['disk_mb'])) $e[] = 'Espace disque invalide (nombre de Mo, ou vide).';
     return array($d, $e);
 }
 
@@ -976,7 +985,7 @@ if (isset($_POST['use_env']) && $_POST['use_env'] === '1') {
     list($d0, $errors0) = validate_inputs($src);
     $groupFields = array('repo' => array('repo'), 'site' => array('site_url'), 'google' => array('google_id', 'google_secret', 'admin_emails'),
         'recaptcha' => array('recaptcha_site', 'recaptcha_secret'), 'smtp' => array('smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest'),
-        'options' => array('rounding', 'logging', 'retention', 'logs_mb'), 'sfmn' => array('sfmn_url'));
+        'options' => array('rounding', 'logging', 'retention', 'logs_mb', 'disk_mb'), 'sfmn' => array('sfmn_url'));
     $overridable = array('ref', 'backend_dir');
     foreach (array_keys(error_groups($errors0)) as $g) {
         if (isset($groupFields[$g])) $overridable = array_merge($overridable, $groupFields[$g]);
@@ -1143,7 +1152,7 @@ try {
         'SMTP_USER' => $d['smtp_user'], 'SMTP_PASS' => $d['smtp_pass'], 'SMTP_FROM' => $d['smtp_from'], 'CONTACT_DEST' => $d['contact_dest'],
         'SFMN_MODE_ENABLED' => $d['sfmn'] ? 'true' : 'false', 'SFMN_CALCULATOR_URL' => $d['sfmn'] ? ($d['sfmn_url'] !== '' ? $d['sfmn_url'] : DEFAULT_SFMN_URL) : '',
         'RESTRICTION_ROUNDING_MODE' => $d['rounding'], 'MEASUREMENT_LOGGING_LEVEL' => $d['logging'],
-        'LOGS_RETENTION_MONTHS' => $d['retention'], 'LOGS_MAX_BYTES' => (string) ((int) $d['logs_mb'] * 1048576),
+        'LOGS_RETENTION_MONTHS' => $d['retention'], 'LOGS_MAX_BYTES' => (string) ((int) $d['logs_mb'] * 1048576), 'DISK_QUOTA_MB' => $d['disk_mb'],
     );
     if ($d['local']) $vars['ADMIN_ALLOW_INSECURE_HTTP'] = 'true'; // uniquement pour un essai en local (http://127.0.0.1)
     foreach ($extras as $name => $value) $vars[$name] = $value; // réglages du .env sans champ de formulaire

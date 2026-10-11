@@ -22,7 +22,7 @@ const snapshot = () => crypto.createHash('sha256').update(listing().map((f) => f
 const form = (over = {}) => ({ step: 'install', key: KEY, repo: 'giceyBpro/Radiv', ref: 'v1.1', token: TOKEN, site_url: BASE,
   google_id: 'cid.apps.googleusercontent.com', google_secret: GSECRET, admin_emails: 'admin@example.org, second@example.org', update_enabled: '1',
   recaptcha_site: 'sitekey', recaptcha_secret: 'recaptchasecret', smtp_host: 'smtp.example.org', smtp_port: '587', smtp_user: 'contact@example.org', smtp_pass: SECRET_SMTP,
-  smtp_from: 'Site <no-reply@example.org>', contact_dest: 'dest@example.org', rounding: 'round', logging: 'full', retention: '3', logs_mb: '5', ...over });
+  smtp_from: 'Site <no-reply@example.org>', contact_dest: 'dest@example.org', rounding: 'round', logging: 'full', retention: '3', logs_mb: '5', disk_mb: '100', ...over });
 const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
 
 (async () => {
@@ -48,7 +48,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   const cases = [['dépôt invalide', { repo: 'pas un depot' }], ['version invalide', { ref: '../x' }], ['jeton de forme invalide', { token: 'court' }], ['adresse sans https', { site_url: 'http://exemple.fr' }],
     ['adresse avec chemin', { site_url: 'https://exemple.fr/chemin' }], ['e-mail administrateur invalide', { admin_emails: 'pas-un-mail' }], ['Google incomplet', { google_secret: '' }],
     ['reCAPTCHA incomplet', { recaptcha_secret: '' }], ['SMTP incomplet', { smtp_user: '' }], ['port SMTP invalide', { smtp_port: 'abc' }], ['destinataire invalide', { contact_dest: 'x' }],
-    ['arrondi invalide', { rounding: 'ceil' }], ['journalisation invalide', { logging: 'tout' }], ['conservation invalide', { retention: '-1' }], ['saut de ligne dans une valeur', { smtp_from: 'a\nINJECT=1' }]];
+    ['arrondi invalide', { rounding: 'ceil' }], ['journalisation invalide', { logging: 'tout' }], ['conservation invalide', { retention: '-1' }], ['espace disque invalide', { disk_mb: 'abc' }], ['saut de ligne dans une valeur', { smtp_from: 'a\nINJECT=1' }]];
   for (const [label, over] of cases) { r = await post(form(over)); t(`${label} → refusé, formulaire réaffiché`, r.status === 400 && /name="step" value="install"/.test(r.text) && listing().join() === 'install.php', `${r.status} ${msg(r.text)}`); }
   t('les secrets saisis ne sont pas renvoyés dans le formulaire réaffiché', !(await post(form({ repo: 'x' }))).text.includes(GSECRET) && !(await post(form({ repo: 'x' }))).text.includes(TOKEN));
 
@@ -95,6 +95,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   t('API: ses propres en-têtes restent prioritaires (CSP stricte, pas de doublon)', apiHdr.get('content-security-policy') === "default-src 'none'; frame-ancestors 'none'" && apiHdr.get('referrer-policy') === 'no-referrer' && apiHdr.get('x-frame-options') === 'DENY');
   t('polices et bibliothèques hébergées installées (vendor/)', fs.existsSync(path.join(WWW, 'vendor/fonts.css')) && fs.readFileSync(path.join(WWW, 'vendor/fonts.css'), 'utf8') === fs.readFileSync(path.join(REPO_DIR, 'public/vendor/fonts.css'), 'utf8'));
   const envFile = path.join(WWW, 'backend/config/runtime.env'); const env = fs.readFileSync(envFile, 'utf8');
+  t('.runtime.env: quota disque (DISK_QUOTA_MB) renseigné', env.includes('DISK_QUOTA_MB="100"') && /^# Espace disque$/m.test(env));
   t('.runtime.env en 600', (fs.statSync(envFile).mode & 0o777) === 0o600);
   t('.runtime.env: valeurs et guillemets (mot de passe avec ")', env.includes(`SMTP_PASS='${SECRET_SMTP}'`) && env.includes(`GOOGLE_CLIENT_SECRET="${GSECRET}"`) && env.includes('ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"') && env.includes('LOGS_MAX_BYTES="5242880"') && env.includes('SFMN_MODE_ENABLED="false"') && env.includes('ADMIN_UPDATE_ENABLED="true"'));
   t('.runtime.env: pas de jeton GitHub, SFMN sans URL (variables seulement en commentaire « #NOM= »)', !env.includes(TOKEN) && !/^UPDATE_GITHUB_TOKEN=/m.test(env) && !/^SFMN_CALCULATOR_URL=/m.test(env) && /^#UPDATE_GITHUB_TOKEN=$/m.test(env));
