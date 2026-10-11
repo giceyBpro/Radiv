@@ -102,6 +102,51 @@ function require_admin(): ?array
     return Session\admin();
 }
 
+// Réglages attendus par fonctionnalité : [titre, conséquence si incomplet, variables, actif ?]. « Défini » = présent et non vide dans
+// config/runtime.env (ou l'environnement du serveur).
+function config_groups(): array
+{
+    return [
+        ['Adresse du site', 'liens, contrôle d\'origine des formulaires et retour Google inutilisables', ['SITE_PUBLIC_URL'], true],
+        ['Connexion Google (/auth)', 'connexion à cette administration impossible', ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'ADMIN_GOOGLE_EMAILS'], true],
+        ['Formulaire de contact', 'envoi des messages refusé', ['RECAPTCHA_SITE_KEY', 'RECAPTCHA_SECRET_KEY', 'SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'CONTACT_DEST'], true],
+        ['Calcul SFMN', 'calcul SFMN indisponible', ['SFMN_CALCULATOR_URL'], Config\sfmn_mode_enabled()],
+    ];
+}
+
+// Réglages facultatifs : non définis, le site applique sa valeur par défaut.
+function config_optional(): array
+{
+    return ['SITE_NAME', 'COPYRIGHT_OWNER', 'API_PUBLIC_URL', 'DISK_QUOTA_MB', 'DISK_MIN_FREE_MB', 'LOGS_RETENTION_MONTHS', 'LOGS_MAX_BYTES', 'MEASUREMENT_LOGGING_LEVEL',
+        'RESTRICTION_ROUNDING_MODE', 'TRUSTED_PROXIES', 'CALCULATE_RATE_LIMIT', 'SFMN_GLOBAL_RATE_LIMIT', 'RECAPTCHA_MIN_SCORE'];
+}
+
+function config_card(): string
+{
+    $set = static fn (string $n): bool => Config\env($n) !== '';
+    $out = '<section class="card"><h2>Configuration lue</h2><p class="small">Fichier <code>config/runtime.env</code> du backend, relu à chaque requête.</p><ul class="small">';
+    $missingTotal = 0;
+    foreach (config_groups() as [$title, $impact, $vars, $active]) {
+        if (!$active) {
+            $out .= '<li>' . h($title) . ' : <span class="muted">désactivé</span></li>';
+            continue;
+        }
+        $missing = array_values(array_filter($vars, static fn (string $n): bool => !$set($n)));
+        $missingTotal += count($missing);
+        $out .= $missing
+            ? '<li><strong class="err">' . h($title) . '</strong> — manque : <code>' . implode('</code>, <code>', array_map('Radiv\\AdminSite\\h', $missing)) . '</code> (' . h($impact) . ')</li>'
+            : '<li>' . h($title) . ' : complet</li>';
+    }
+    $out .= '</ul>';
+    $default = array_values(array_filter(config_optional(), static fn (string $n): bool => !$set($n) && !($n === 'TRUSTED_PROXIES' && getenv($n) !== false)));
+    if ($default) {
+        $out .= '<details><summary class="small">Réglages facultatifs non définis (valeur par défaut utilisée) : ' . count($default) . '</summary><p class="small"><code>'
+            . implode('</code>, <code>', array_map('Radiv\\AdminSite\\h', $default)) . '</code></p></details>';
+    }
+    if ($missingTotal) $out .= '<p class="small">Ajoutez les lignes manquantes dans <code>config/runtime.env</code> (retirez le <code>#</code> devant le nom et renseignez la valeur) : la prise en compte est immédiate.</p>';
+    return $out . '</section>';
+}
+
 function do_site(): bool
 {
     $admin = require_admin();
@@ -121,6 +166,8 @@ function do_site(): bool
             . '<p class="small">Installée le ' . h($v['at'] ?? '') . ' par ' . h($v['by'] ?? '') . '</p>'
         : '<p>Inconnue (installation initiale, antérieure à ce système de mise à jour).</p>';
     $out .= '<p class="small">Dépôt : ' . h($status['repo']) . ' · PHP ' . h($status['php']) . ' · extension zip : ' . ($status['zip'] ? 'oui' : 'non') . '</p></section>';
+
+    $out .= config_card();
 
     $disk = Disk\usage();
     $minFree = Config\disk_min_free_bytes();

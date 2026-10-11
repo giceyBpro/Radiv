@@ -185,6 +185,11 @@ async function update(c, ref, token) {
   setEnv('DISK_QUOTA_MB', String(quotaMb)); resetLimits(); try { fs.unlinkSync(path.join(logsDir, '.last-disk-check')); } catch (e) { /* absent */ }
   const diskPage = await c.req('GET', `${BASE}/auth`);
   t('page Site : occupation du quota affichée', /Espace disque/.test(diskPage.text) && /quota de l'hébergement/.test(diskPage.text) && /\d+(,\d)? %/.test(diskPage.text) && /libres/.test(diskPage.text) && /Sous 30 Mo libres/.test(diskPage.text));
+  t('page Site : zone « Configuration lue » (groupes, champs facultatifs non définis)', /Configuration lue/.test(diskPage.text) && /Connexion Google \(\/auth\)\s*:\s*complet/.test(diskPage.text) && /Réglages facultatifs non définis/.test(diskPage.text));
+  { const e0 = runtimeEnv(); setEnv('SMTP_HOST', null); setEnv('RECAPTCHA_SECRET_KEY', null);
+    const cfgPage = (await c.req('GET', `${BASE}/auth`)).text;
+    t('champs manquants listés avec leur conséquence', /Formulaire de contact<\/strong> — manque : [^\n]*<code>RECAPTCHA_SECRET_KEY<\/code>, <code>SMTP_HOST<\/code>/.test(cfgPage) && /envoi des messages refusé/.test(cfgPage) && !/RECAPTCHA_SECRET_KEY<\/code> valeur/.test(cfgPage), cfgPage.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, ' ').match(/Configuration lue[\s\S]{0,700}/)?.[0]);
+    fs.writeFileSync(path.join(WWW, 'backend/config/runtime.env'), e0); }
   const before = fs.readdirSync(logsDir).filter((f) => f.startsWith('measurements-')).sort();
   const diskCalc = await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) });
   await new Promise((ok) => setTimeout(ok, 800)); // la purge s'exécute après l'envoi de la réponse
