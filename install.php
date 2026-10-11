@@ -60,9 +60,13 @@ API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en gé
 |« * » l'ouvre à tous les sites : à éviter.
 TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
 |séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
-== Emplacement des données
+== Emplacement du backend et des données
+BACKEND_DIR|Dossier du backend (code, configuration, données), de préférence HORS de la racine web (ex. ~/radiv-backend ou ../backend).
+|Chemin absolu, « ~/... » ou relatif à la racine du site. Non défini = emplacement actuel (par défaut backend/ dans la racine web).
+|POUR LE DÉPLACER : modifiez cette ligne puis lancez update.php : il déplace le dossier (sans rien supprimer) et met à jour le site.
 DATA_DIR|Dossier des journaux et de l'état du site (sessions, version installée, sauvegarde). Facultatif :
 |par défaut le dossier data/ du backend. Chemin absolu, ou relatif au backend ; jamais lisible depuis le web.
+|Modifié, il est déplacé de la même façon par update.php (journaux et sessions conservés).
 == Administration du site (/auth, connexion Google)
 GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
 GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
@@ -928,12 +932,13 @@ function htaccess_head($existing, $siteUrl, $backendUrlPath)
 
 // Contenu de config/runtime.env : sections et commentaires lisibles. Une variable non définie
 // est écrite « #NOM= » (valeur par défaut du site) ; TRUSTED_PROXIES défini mais vide reste une valeur (jamais de X-Forwarded-For).
-function render_runtime_env($vars)
+function render_runtime_env($vars, $by = 'install.php')
 {
     global $RUNTIME_LAYOUT;
     $out = "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement.\n"
-        . "# Généré par install.php le " . date('Y-m-d H:i') . " — les mises à jour de /auth ne modifient jamais ce fichier.\n"
+        . "# Généré par " . $by . " le " . date('Y-m-d H:i') . " — les mises à jour de /auth ne modifient jamais ce fichier.\n"
         . "# Pour réinstaller ou régénérer, voir le README ; config/local.env reste pour les réglages purement locaux.\n"
+        . "# Format du fichier : 2\n"
         . "#\n"
         . "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site\n"
         . "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets.\n";
@@ -1167,6 +1172,7 @@ try {
         'SFMN_MODE_ENABLED' => $d['sfmn'] ? 'true' : 'false', 'SFMN_CALCULATOR_URL' => $d['sfmn'] ? ($d['sfmn_url'] !== '' ? $d['sfmn_url'] : DEFAULT_SFMN_URL) : '',
         'RESTRICTION_ROUNDING_MODE' => $d['rounding'], 'MEASUREMENT_LOGGING_LEVEL' => $d['logging'],
         'LOGS_RETENTION_MONTHS' => $d['retention'], 'LOGS_MAX_BYTES' => (string) ((int) $d['logs_mb'] * 1048576), 'DISK_QUOTA_MB' => $d['disk_mb'],
+        'BACKEND_DIR' => $d['backend_dir'],
     );
     if ($d['local']) $vars['ADMIN_ALLOW_INSECURE_HTTP'] = 'true'; // uniquement pour un essai en local (http://127.0.0.1)
     foreach ($extras as $name => $value) $vars[$name] = $value; // réglages du .env sans champ de formulaire

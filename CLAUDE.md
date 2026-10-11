@@ -35,7 +35,7 @@ telle quelle** depuis `install.php`. À chaque modification d'`install.php`, de 
 1. **Fonctions communes** : toute modification d'une de ces fonctions d'`install.php` doit être reportée à l'identique dans `update.php`
    (liste dans `tests/check-shared-code.js`, tableau `shared`) : `h`, `page`, `starts_with`, `ends_with`, `has_text`, `rrmdir`, `make_dir`, `guard_dir`,
    `gh_headers`, `http_get`, `download_to`, `allowed`, `dest_of`, `extract_archive`, `lint_php`, `parse_env_file`, `normalize_path`, `first_valid_token`,
-   `htaccess_blocks`, `backend_deny_block`, `htaccess_head`, `copy_atomic`, `health_get`, `backend_url_path`. Ajouter à ce tableau toute nouvelle fonction partagée.
+   `htaccess_blocks`, `backend_deny_block`, `htaccess_head`, `copy_atomic`, `health_get`, `backend_url_path`, `home_dir`, `resolve_backend_dir`, `env_line`, `render_runtime_env` (et la constante `$RUNTIME_LAYOUT`, description de `runtime.env`). Ajouter à ce tableau toute nouvelle fonction partagée.
 2. **Listes blanches** : `$FRONTEND_FILES`, `$REQUIRED_FILES` et la logique de `allowed()` doivent rester identiques dans `install.php`, `update.php` et
    `backend/src/lib/updater.php`. Un nouveau fichier à installer (page, dossier, ressource...) s'ajoute aux trois.
 3. **Réparations** : tout nouvel élément généré par l'installation et hors liste blanche (fichier généré, bloc de `.htaccess`, dossier protégé, pointeur...)

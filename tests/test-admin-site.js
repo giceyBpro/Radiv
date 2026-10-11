@@ -289,6 +289,51 @@ async function update(c, ref, token) {
   fs.unlinkSync(path.join(WWW, 'backend/data/var/sessions-marker')); fs.unlinkSync(path.join(WWW, 'backend/data/logs/measurements-2026-01.jsonl'));
   fs.unlinkSync(path.join(WWW, 'backend/config/local.env'));
 
+  // Redistribution des dossiers selon BACKEND_DIR / DATA_DIR de runtime.env
+  console.log('\n— update.php : déplacement du backend et des données selon runtime.env');
+  const PARENT = path.dirname(WWW); fs.chmodSync(PARENT, 0o777);
+  const OUT = path.join(PARENT, 'moved-backend'); const OUTDATA = path.join(PARENT, 'moved-data');
+  const cfgPath = () => path.join(WWW, 'backend/config/runtime.env');
+  { // ancien format (sans marqueur), avec un réglage inconnu : remis en forme, valeurs conservées, ancienne version gardée
+    const old = runtimeEnv().split('\n').filter((l) => !/Format du fichier/.test(l)).concat(['CUSTOM_X="valeur 1"']).join('\n');
+    fs.writeFileSync(cfgPath(), old); fs.chmodSync(cfgPath(), 0o640); dropUpdate(); u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+    const parse = (txt) => Object.fromEntries(txt.split('\n').filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.split('=')[0], l.slice(l.indexOf('=') + 1).replace(/^"(.*)"$/, '$1')]));
+    const was = parse(old); const now = parse(runtimeEnv());
+    t('runtime.env remis en forme (sections, commentaires), toutes les valeurs conservées, ancienne version gardée', u.status === 200 && /# Format du fichier : 2/.test(runtimeEnv()) && /^# -{20,}\n# Site et API/m.test(runtimeEnv()) && Object.keys(was).every((k) => now[k] === was[k]) && now.CUSTOM_X === 'valeur 1' && read('backend/config/runtime.env.bak') === old && (fs.statSync(cfgPath()).mode & 0o077) === 0, `${u.status} ${Object.keys(was).filter((k) => now[k] !== was[k]).join()}`);
+  }
+  fs.writeFileSync(path.join(WWW, 'backend/data/logs/marker.jsonl'), 'journal\n'); fs.writeFileSync(path.join(WWW, 'backend/data/var/marker'), 'session\n');
+  const withEnv = (extra) => { const f = cfgPath(); const lines = fs.readFileSync(f, 'utf8').split('\n').filter((l) => !/^#?(BACKEND_DIR|DATA_DIR)=/.test(l)); fs.writeFileSync(f, lines.concat(extra).join('\n') + '\n'); };
+  dropUpdate(); withEnv([`BACKEND_DIR="${OUT}"`]);
+  let ug = await fetch(`${BASE}/update.php`); const mvForm = await ug.text();
+  t('déplacement annoncé avant d\'agir', /Déplacement prévu/.test(mvForm) && mvForm.includes(OUT));
+  u = await up({ key: UKEY, ref: 't9', token: TOKEN });
+  t('déplacement + version défaillante → tout est rétabli (backend, données, pointeur)', u.status === 500 && /rétablie automatiquement/.test(u.text) && exists('backend/src/app.php') && exists('backend/data/logs/marker.jsonl') && !fs.existsSync(OUT) && !read('api/backend.php').includes(OUT) && exists('update.php'), u.text.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').slice(0, 300));
+  u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('backend déplacé hors de la racine web', u.status === 200 && /Backend déplacé/.test(u.text) && !exists('backend') && fs.existsSync(path.join(OUT, 'src/app.php')) && !exists('update.php'), u.text.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').slice(0, 300));
+  t('…données conservées (journaux, sessions), pointeur mis à jour, dossier de données mémorisé', fs.readFileSync(path.join(OUT, 'data/logs/marker.jsonl'), 'utf8') === 'journal\n' && fs.readFileSync(path.join(OUT, 'data/var/marker'), 'utf8') === 'session\n' && read('api/backend.php').includes(OUT) && fs.readFileSync(path.join(OUT, 'config/.data-dir'), 'utf8').trim() === path.join(OUT, 'data'));
+  t('…site opérationnel depuis le nouvel emplacement', (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
+  // Données seules, ailleurs
+  const envOut = path.join(OUT, 'config/runtime.env');
+  const withEnvOut = (extra) => { const lines = fs.readFileSync(envOut, 'utf8').split('\n').filter((l) => !/^#?(BACKEND_DIR|DATA_DIR)=/.test(l)); fs.writeFileSync(envOut, lines.concat(extra).join('\n') + '\n'); };
+  dropUpdate(); withEnvOut([`BACKEND_DIR="${OUT}"`, `DATA_DIR="${OUTDATA}"`]);
+  u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('DATA_DIR modifié : les données seules sont déplacées', u.status === 200 && /Données déplacées/.test(u.text) && fs.readFileSync(path.join(OUTDATA, 'logs/marker.jsonl'), 'utf8') === 'journal\n' && !fs.existsSync(path.join(OUT, 'data')) && fs.existsSync(path.join(OUT, 'src/app.php')), u.text.replace(/<[^>]+>/g, ' ').slice(0, 300));
+  t('…site opérationnel', (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
+  // Cible non vide : refus, rien ne bouge
+  fs.mkdirSync(path.join(PARENT, 'occupied')); fs.writeFileSync(path.join(PARENT, 'occupied/x'), 'x');
+  dropUpdate(); withEnvOut([`BACKEND_DIR="${path.join(PARENT, 'occupied')}"`, `DATA_DIR="${OUTDATA}"`]);
+  u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('nouvel emplacement non vide → refusé, rien ne bouge', u.status === 500 && fs.existsSync(path.join(OUT, 'src/app.php')) && fs.existsSync(path.join(OUTDATA, 'logs/marker.jsonl')) && exists('update.php'), u.text.replace(/<[^>]+>/g, ' ').slice(0, 300));
+  fs.rmSync(path.join(PARENT, 'occupied'), { recursive: true });
+  // Retour à l'emplacement par défaut
+  dropUpdate(); withEnvOut(['BACKEND_DIR="backend"']);
+  u = await up({ key: UKEY, ref: 'main', token: TOKEN });
+  t('retour à l\'emplacement par défaut (backend/ dans la racine, données dedans)', u.status === 200 && exists('backend/src/app.php') && read('backend/data/logs/marker.jsonl') === 'journal\n' && read('backend/data/var/marker') === 'session\n' && !fs.existsSync(OUT) && !fs.existsSync(OUTDATA), u.text.replace(/<[^>]+>/g, ' ').slice(0, 300));
+  t('…site opérationnel et protégé', (await fetch(`${BASE}/api/config`)).status === 200 && (await fetch(`${BASE}/backend/config/runtime.env`)).status !== 200);
+  fs.unlinkSync(path.join(WWW, 'backend/data/logs/marker.jsonl')); fs.unlinkSync(path.join(WWW, 'backend/data/var/marker')); fs.rmSync(path.join(WWW, 'backend/config/runtime.env.bak'), { force: true });
+  withEnv(['#BACKEND_DIR=']); setEnv('UPDATE_GITHUB_TOKEN', null); setEnv('CUSTOM_X', null);
+  const envAfterLayout = runtimeEnv();
+
   console.log('\n— Fichiers hors liste blanche (.env, .htaccess, config.js, tests...)');
   const cfgBefore = read('config.js'); const htBefore = read('.htaccess'); resetLimits();
   r = await update(c, 't10', TOKEN);
@@ -297,7 +342,7 @@ async function update(c, ref, token) {
   t('config.js et .htaccess racine inchangés', read('config.js') === cfgBefore && read('.htaccess') === htBefore);
   t('config, données, outillage, pointeur et scripts hors liste blanche jamais écrits', !exists('.env') && !exists('backend/config/local.env') && !exists('deploy.sh') && !exists('update.php.bak') && !exists('backend/data/logs/x.jsonl') && !exists('tests/x.php') && !exists('backend/evil.php') && !exists('backend/src/x.txt') && !exists('backend/src/lib/sub/x.php') && !exists('api/evil.php') && !exists('api/backend.php.pirate') && !read('backend/config/runtime.env').includes('X=1') && !exists('vendor/ok.css.x'));
   t('pointeur du backend (api/backend.php) non remplacé par la version cible', !exists('api/backend.php') || !read('api/backend.php').includes('pirate'));
-  t('.runtime.env intact', runtimeEnv() === envBefore);
+  t('.runtime.env intact', runtimeEnv() === envAfterLayout);
 
   console.log('\n— Onglet « Mesures »');
   // Journaux de test aux dates RELATIVES (la durée d'antériorité est relative à « maintenant ») : valeurs hostiles

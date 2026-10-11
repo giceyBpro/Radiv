@@ -41,6 +41,71 @@ $REQUIRED_FILES = array(
     'backend/src/app.php', 'backend/src/calculation.php', 'backend/src/lib/config.php',
     'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 );
+$RUNTIME_LAYOUT = <<<'LAYOUT'
+== Site et API
+SITE_PUBLIC_URL|URL publique du site, sans « / » final (ex. https://www.exemple.fr).
+|Sert à l'URL de retour Google (/auth/callback) et au contrôle d'origine des formulaires.
+API_PUBLIC_URL|URL publique de l'API. Facultatif : par défaut SITE_PUBLIC_URL suivi de /api.
+SITE_NAME|Nom affiché dans le bandeau du site. Facultatif : par défaut le nom de domaine de SITE_PUBLIC_URL (sans www).
+COPYRIGHT_OWNER|Propriétaire affiché en bas de page (© année propriétaire). Facultatif : par défaut SITE_NAME.
+API_CORS_ORIGIN|Origine autorisée à appeler l'API depuis un navigateur (en général l'adresse du site).
+|« * » l'ouvre à tous les sites : à éviter.
+TRUSTED_PROXIES|Adresses des proxys autorisés à fournir l'IP réelle du visiteur (en-tête X-Forwarded-For),
+|séparées par des virgules. Vide = ne jamais croire cet en-tête. Non défini = 127.0.0.1,::1.
+== Emplacement du backend et des données
+BACKEND_DIR|Dossier du backend (code, configuration, données), de préférence HORS de la racine web (ex. ~/radiv-backend ou ../backend).
+|Chemin absolu, « ~/... » ou relatif à la racine du site. Non défini = emplacement actuel (par défaut backend/ dans la racine web).
+|POUR LE DÉPLACER : modifiez cette ligne puis lancez update.php : il déplace le dossier (sans rien supprimer) et met à jour le site.
+DATA_DIR|Dossier des journaux et de l'état du site (sessions, version installée, sauvegarde). Facultatif :
+|par défaut le dossier data/ du backend. Chemin absolu, ou relatif au backend ; jamais lisible depuis le web.
+|Modifié, il est déplacé de la même façon par update.php (journaux et sessions conservés).
+== Administration du site (/auth, connexion Google)
+GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
+GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
+ADMIN_GOOGLE_EMAILS|Adresses Google autorisées à se connecter à /auth, séparées par des virgules.
+|Comparaison exacte : ni domaine entier, ni joker.
+ADMIN_SITE_ENABLED|true ou false. false coupe entièrement /auth (réponse 404). Défaut : true.
+ADMIN_MEASUREMENTS_ENABLED|true ou false. false retire la consultation des mesures de /auth. Défaut : true.
+== Mises à jour depuis /auth
+ADMIN_UPDATE_ENABLED|true ou false. Autorise les mises à jour du site depuis /auth. Défaut : false.
+UPDATE_GITHUB_REPO|Dépôt GitHub à télécharger lors d'une mise à jour (propriétaire/nom).
+UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = /auth en demande un à chaque
+|mise à jour et ne le conserve pas.
+== Formulaire de contact
+RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
+RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
+RECAPTCHA_MIN_SCORE|Score minimal reCAPTCHA v3 accepté, de 0 (robot) à 1 (humain). Défaut : 0.5.
+SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
+SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
+SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
+SMTP_USER|Identifiant SMTP.
+SMTP_PASS|Mot de passe SMTP (confidentiel).
+SMTP_FROM|Expéditeur affiché, ex. Site <no-reply@exemple.fr>.
+CONTACT_DEST|Adresse qui reçoit les messages du formulaire.
+SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 15000.
+== Calcul des durées de restriction
+RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
+SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
+|false = calcul local seul.
+SFMN_CALCULATOR_URL|Adresse du calculateur SFMN distant (utile seulement si le mode SFMN est actif).
+SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
+|à laisser sur false. Défaut : false.
+== Mesures et journaux (RGPD)
+MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
+|seulement ; none = rien. Défaut : full.
+LOGS_RETENTION_MONTHS|Supprime les journaux plus vieux que N mois. Non défini = 12 mois. 0 = conservation illimitée (à justifier).
+LOGS_MAX_BYTES|Taille maximale d'un journal mensuel, en octets. Défaut : 52428800 (50 Mo).
+== Espace disque
+DISK_QUOTA_MB|Espace disque de l'hébergement, en Mo (ex. 100). Sert à mesurer l'occupation du site. Vide = mesure du disque du serveur
+|(peu utile en hébergement mutualisé, où ce disque est partagé).
+DISK_MIN_FREE_MB|Espace libre minimal, en Mo : en dessous, les journaux de mesures les plus anciens sont supprimés. Défaut : 30. 0 = jamais.
+== Protection contre les abus
+CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
+SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
+RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
+== Essais en local uniquement
+ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.
+LAYOUT;
 const MAX_ZIP_BYTES = 20971520;
 const MAX_FILE_BYTES = 10485760;
 const MAX_TOTAL_BYTES = 52428800;
@@ -400,6 +465,93 @@ function backend_url_path($backendDir, $docroot)
     return strpos($backendDir, $docroot . '/') === 0 ? substr($backendDir, strlen($docroot) + 1) : null;
 }
 
+function home_dir()
+{
+    foreach (array(getenv('HOME'), isset($_SERVER['HOME']) ? $_SERVER['HOME'] : '') as $home) {
+        if (is_string($home) && $home !== '' && $home[0] === '/') return rtrim($home, '/');
+    }
+    if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
+        $pw = @posix_getpwuid(posix_geteuid());
+        if (is_array($pw) && !empty($pw['dir'])) return rtrim($pw['dir'], '/');
+    }
+    return null;
+}
+
+function resolve_backend_dir($raw, $docroot)
+{
+    $raw = trim($raw);
+    if ($raw === '') return array($docroot . '/backend', null);
+    if ($raw === '~' || strpos($raw, '~/') === 0) {
+        $home = home_dir();
+        if ($home === null) return array(null, 'Dossier du backend : « ~ » n\'est pas résoluble ici, indiquez un chemin absolu.');
+        $raw = $home . substr($raw, 1);
+    } elseif ($raw[0] !== '/') {
+        $raw = $docroot . '/' . $raw;
+    }
+    $path = normalize_path($raw);
+    if ($path === '/' || $path === $docroot || strpos($docroot . '/', $path . '/') === 0) {
+        return array(null, 'Dossier du backend invalide : il ne peut être ni la racine du site ni un dossier qui la contient.');
+    }
+    if ($path === $docroot . '/api' || strpos($path, $docroot . '/api/') === 0 || $path === $docroot . '/vendor' || $path === $docroot . '/downloads') {
+        return array(null, 'Dossier du backend invalide : réservé au site.');
+    }
+    if (is_file($path)) return array(null, 'Dossier du backend invalide : c\'est un fichier.');
+    if (is_dir($path) && array_diff(scandir($path), array('.', '..')) !== array() && !is_file($path . '/src/app.php')) {
+        return array(null, 'Dossier du backend non vide et sans installation précédente : choisissez un dossier vide ou inexistant.');
+    }
+    return array($path, null);
+}
+
+function env_line($name, $value)
+{
+    $value = (string) $value;
+    if ($value === '') return '';
+    if (strpbrk($value, "\r\n\0") !== false) throw new RuntimeException($name . ' contient un caractère interdit.');
+    if (strpos($value, '"') === false) return $name . '="' . $value . '"' . "\n";
+    if (strpos($value, "'") === false) return $name . "='" . $value . "'\n";
+    throw new RuntimeException($name . ' ne peut pas contenir à la fois des guillemets simples et doubles.');
+}
+
+function render_runtime_env($vars, $by = 'install.php')
+{
+    global $RUNTIME_LAYOUT;
+    $out = "# Configuration du site. Lue à CHAQUE requête : toute modification est prise en compte immédiatement.\n"
+        . "# Généré par " . $by . " le " . date('Y-m-d H:i') . " — les mises à jour de /auth ne modifient jamais ce fichier.\n"
+        . "# Pour réinstaller ou régénérer, voir le README ; config/local.env reste pour les réglages purement locaux.\n"
+        . "# Format du fichier : 2\n"
+        . "#\n"
+        . "# Une ligne qui commence par # est un commentaire. Une variable écrite « #NOM= » n'est pas définie : le site\n"
+        . "# utilise alors sa valeur par défaut. Pour la définir, retirez le # et mettez la valeur entre guillemets.\n";
+    $name = '';
+    $comment = array();
+    $flush = function () use (&$name, &$comment, &$out, $vars) {
+        if ($name === '') return;
+        $line = '';
+        if (array_key_exists($name, $vars) && ($vars[$name] !== '' || $name === 'TRUSTED_PROXIES')) {
+            $line = $name === 'TRUSTED_PROXIES' && $vars[$name] === '' ? 'TRUSTED_PROXIES=""' . "\n" : env_line($name, $vars[$name]);
+        }
+        $out .= "\n" . implode("\n", $comment) . "\n" . ($line !== '' ? $line : '#' . $name . "=\n");
+        $name = '';
+        $comment = array();
+    };
+    foreach (explode("\n", $RUNTIME_LAYOUT) as $row) {
+        if (strpos($row, '== ') === 0) {
+            $flush();
+            $out .= "\n\n# ------------------------------------------------------------------------------------------\n# " . substr($row, 3)
+                . "\n# ------------------------------------------------------------------------------------------\n";
+        } elseif (isset($row[0]) && $row[0] === '|') {
+            $comment[] = '# ' . substr($row, 1);
+        } else {
+            $flush();
+            $parts = explode('|', $row, 2);
+            $name = $parts[0];
+            $comment = array('# ' . (isset($parts[1]) ? $parts[1] : ''));
+        }
+    }
+    $flush();
+    return $out;
+}
+
 // --- Garde-fous d'accès ------------------------------------------------------------------------
 
 if (version_compare(PHP_VERSION, '8.0.0', '<')) {
@@ -457,6 +609,49 @@ function read_json($file)
     return is_array($data) ? $data : null;
 }
 
+// Déplace un dossier : renommage, ou à défaut (autre volume) copie vérifiée dont la source est conservée jusqu'au succès final.
+function copy_tree($from, $to, &$count, &$bytes)
+{
+    if (!make_dir($to)) throw new RuntimeException('Copie impossible : ' . $to);
+    foreach (scandir($from) as $n) {
+        if ($n === '.' || $n === '..') continue;
+        $a = $from . '/' . $n;
+        $b = $to . '/' . $n;
+        if (is_link($a)) throw new RuntimeException('Lien symbolique non déplaçable : ' . $a);
+        if (is_dir($a)) { copy_tree($a, $b, $count, $bytes); continue; }
+        if (!@copy($a, $b)) throw new RuntimeException('Copie impossible : ' . $a);
+        @chmod($b, fileperms($a) & 0777);
+        $count++;
+        $bytes += filesize($b);
+    }
+}
+function tree_stats($dir, &$count, &$bytes)
+{
+    foreach (scandir($dir) as $n) {
+        if ($n === '.' || $n === '..') continue;
+        $a = $dir . '/' . $n;
+        if (is_dir($a) && !is_link($a)) { tree_stats($a, $count, $bytes); continue; }
+        $count++;
+        $bytes += is_link($a) ? 0 : filesize($a);
+    }
+}
+function move_path($from, $to, &$moved)
+{
+    if (!make_dir(dirname($to))) throw new RuntimeException('Dossier inaccessible : ' . dirname($to));
+    if (is_dir($to)) @rmdir($to);
+    if (@rename($from, $to)) { $moved[] = array($from, $to, 'rename'); return; }
+    $c1 = $b1 = $c2 = $b2 = 0;
+    try {
+        copy_tree($from, $to, $c1, $b1);
+        tree_stats($to, $c2, $b2);
+        if ($c1 !== $c2 || $b1 !== $b2) throw new RuntimeException('Copie incomplète : ' . $to);
+    } catch (RuntimeException $e) {
+        rrmdir($to);
+        throw $e;
+    }
+    $moved[] = array($from, $to, 'copy');
+}
+
 $backend = locate_backend($docroot);
 $configFile = $backend . '/config/runtime.env';
 // Ancienne structure (tout dans api/ : .runtime.env, lib/, logs/, var/) : migrée vers public/ + backend/ par ce script.
@@ -471,11 +666,31 @@ $cfg = $cfg === null ? array() : $cfg;
 $repo = isset($cfg['UPDATE_GITHUB_REPO']) && preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $cfg['UPDATE_GITHUB_REPO']) ? $cfg['UPDATE_GITHUB_REPO'] : DEFAULT_REPO;
 $site = isset($cfg['SITE_PUBLIC_URL']) ? rtrim($cfg['SITE_PUBLIC_URL'], '/') : '';
 if ($site !== '' && !preg_match('#^(https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:\d+)?|http://(localhost|127\.0\.0\.1)(:\d+)?)$#', $site)) $site = '';
-$dataDir = $backend . '/data';
-if (isset($cfg['DATA_DIR']) && $cfg['DATA_DIR'] !== '' && strpos($cfg['DATA_DIR'], '..') === false) {
-    $dd = $cfg['DATA_DIR'];
-    $dataDir = $dd[0] === '/' ? normalize_path($dd) : normalize_path($backend . '/' . $dd);
+// Dossier de données d'après DATA_DIR (absolu, ou relatif au backend donné), sinon <backend>/data
+function data_path_for($cfg, $backend)
+{
+    if (isset($cfg['DATA_DIR']) && $cfg['DATA_DIR'] !== '' && strpos($cfg['DATA_DIR'], '..') === false) {
+        $dd = $cfg['DATA_DIR'];
+        return $dd[0] === '/' ? normalize_path($dd) : normalize_path($backend . '/' . $dd);
+    }
+    return $backend . '/data';
 }
+// Emplacements SOUHAITÉS (BACKEND_DIR et DATA_DIR de runtime.env) et ACTUELS (pointeur api/backend.php ; dossier de données
+// mémorisé dans config/.data-dir, à défaut celui qui existe). S'ils diffèrent, la mise à jour déplace les dossiers.
+$wantedBackend = $backend;
+$layoutError = null;
+if (!$legacy && !empty($cfg['BACKEND_DIR'])) {
+    list($wb, $layoutError) = resolve_backend_dir($cfg['BACKEND_DIR'], $docroot);
+    if ($layoutError === null) $wantedBackend = $wb;
+}
+$wantedData = data_path_for($cfg, $wantedBackend);
+$recorded = !$legacy && is_file($backend . '/config/.data-dir') ? trim((string) @file_get_contents($backend . '/config/.data-dir')) : '';
+$dataDir = data_path_for($cfg, $backend);
+if ($recorded !== '' && $recorded[0] === '/') $dataDir = normalize_path($recorded);
+elseif (!is_dir($dataDir) && is_dir($backend . '/data')) $dataDir = $backend . '/data';
+if ($legacy) { $dataDir = $backend . '/data'; $wantedData = $dataDir; }
+$origBackend = $backend;
+$origData = $dataDir;
 $current = read_json(($legacy ? $oldApi : $dataDir) . '/var/version.json');
 $cfgToken = isset($cfg['UPDATE_GITHUB_TOKEN']) ? $cfg['UPDATE_GITHUB_TOKEN'] : '';
 
@@ -500,7 +715,14 @@ $defaultRef = $current && !empty($current['ref']) && preg_match('#^[A-Za-z0-9][A
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $needToken = true;
     if ($cfgToken !== '' && function_exists('curl_init')) $needToken = first_valid_token($repo, array(array($cfgToken, 'config'))) === null;
-    $state = ($legacy ? '<p class="msg">Ancienne structure détectée (code et données dans <code>api/</code>). Ce script la migre vers <code>public/</code> + <code>backend/</code> : configuration, journaux et sessions sont conservés (déplacés vers <code>backend/</code>), l\'ancien code de <code>api/</code> est supprimé après succès, et tout est rétabli en cas d\'échec.</p>' : '')
+    $plan = '';
+    if ($layoutError !== null) $plan = '<p class="msg">' . h($layoutError) . '</p>';
+    elseif (!$legacy && ($wantedBackend !== $backend || $wantedData !== $dataDir)) {
+        $plan = '<p class="msg">Déplacement prévu par <code>runtime.env</code> (rien n\'est supprimé) :'
+            . ($wantedBackend !== $backend ? '<br>backend : <code>' . h($backend) . '</code> → <code>' . h($wantedBackend) . '</code>' : '')
+            . ($wantedData !== $dataDir && !($wantedBackend !== $backend && $dataDir === $backend . '/data' && $wantedData === $wantedBackend . '/data') ? '<br>données : <code>' . h($dataDir) . '</code> → <code>' . h($wantedData) . '</code>' : '') . '</p>';
+    }
+    $state = $plan . ($legacy ? '<p class="msg">Ancienne structure détectée (code et données dans <code>api/</code>). Ce script la migre vers <code>public/</code> + <code>backend/</code> : configuration, journaux et sessions sont conservés (déplacés vers <code>backend/</code>), l\'ancien code de <code>api/</code> est supprimé après succès, et tout est rétabli en cas d\'échec.</p>' : '')
         . '<table><tr><td>Backend</td><td>' . h($backend) . '</td></tr><tr><td>Dépôt</td><td>' . h($repo) . '</td></tr>'
         . '<tr><td>Version installée</td><td>' . ($current ? h(substr((string) (isset($current['sha']) ? $current['sha'] : ''), 0, 7) . ' (' . (isset($current['ref']) ? $current['ref'] : '?') . ')') : 'inconnue') . '</td></tr></table>'
         . '<p class="small">Relancer avec la version déjà installée réinstalle les mêmes fichiers : c\'est une réparation.</p>';
@@ -542,6 +764,7 @@ $tmp = $docroot . '/.update-tmp-' . bin2hex(random_bytes(4));
 $backupDir = $varDir . '/backup/prev';
 $backupRoot = $tmp . '/rollback';      // sauvegarde des fichiers hors liste blanche modifiés par la réparation
 $fatal = null;
+$sameVersion = false;
 $applied = false;
 $backupStarted = false;
 $lock = null;
@@ -554,6 +777,7 @@ $oldState = $tmp . '/oldstate';         // migration : état de l'ancienne struc
 try {
     if (!make_dir($tmp) || !guard_dir($tmp)) throw new RuntimeException('Dossier temporaire inaccessible.');
     // Ancienne structure : le verrou reste dans api/var (partagé avec l'ancien /auth) jusqu'à la migration
+    if ($layoutError !== null) throw new RuntimeException($layoutError);
     $lockDir = $legacy ? $oldApi . '/var' : $varDir;
     foreach ($legacy ? array($lockDir) : array($backend . '/config', $dataDir, $dataDir . '/logs', $varDir) as $dir) {
         if (!guard_dir($dir)) throw new RuntimeException('Dossier inaccessible : ' . $dir);
@@ -574,6 +798,7 @@ try {
         // Même version : la sauvegarde de la version précédente (retour arrière de /auth) est conservée telle quelle ;
         // celle de cette opération reste dans le dossier temporaire, utilisée seulement en cas d'échec.
         $backupDir = $tmp . '/prev';
+        $sameVersion = true;
     }
 
     // 2) Téléchargement : la redirection est suivie à la main pour ne JAMAIS envoyer le jeton au second appel
@@ -614,12 +839,42 @@ try {
             if (!file_exists($m[0])) continue;
             if (file_exists($m[1])) throw new RuntimeException('Migration impossible : ' . $m[1] . ' existe déjà.');
             if (!@rename($m[0], $m[1])) throw new RuntimeException('Migration impossible : déplacement de ' . basename($m[0]) . '.');
-            $moved[] = $m;
+            $moved[] = array($m[0], $m[1], 'rename');
         }
         foreach (array($backend . '/config', $dataDir, $dataDir . '/logs', $varDir) as $dir) {
             if (!guard_dir($dir)) throw new RuntimeException('Dossier inaccessible : ' . $dir);
         }
         $notes[] = 'Ancienne structure migrée : configuration, journaux et sessions déplacés vers ' . $backend . '.';
+    }
+
+    // 3 ter) Redistribution des dossiers selon BACKEND_DIR / DATA_DIR : déplacés (renommés, ou copiés puis vérifiés), jamais supprimés
+    if (!$legacy && ($wantedBackend !== $backend || $wantedData !== $dataDir)) {
+        $inside = function ($p, $dir) { return $p === $dir || strpos($p . '/', $dir . '/') === 0; };
+        $freeTarget = function ($p) {
+            if (file_exists($p) && !(is_dir($p) && array_diff(scandir($p), array('.', '..')) === array())) throw new RuntimeException('Le nouvel emplacement existe déjà et n\'est pas vide : ' . $p);
+        };
+        $dataAfter = $dataDir;
+        if ($wantedBackend !== $backend) {
+            if ($inside($wantedBackend, $backend) || $inside($backend, $wantedBackend)) throw new RuntimeException('Le nouvel emplacement du backend ne peut pas être dans l\'ancien (ni l\'inverse).');
+            $freeTarget($wantedBackend);
+            move_path($backend, $wantedBackend, $moved);
+            if ($inside($dataDir, $backend)) $dataAfter = $wantedBackend . substr($dataDir, strlen($backend));
+            $backend = $wantedBackend;
+            $configFile = $backend . '/config/runtime.env';
+            $notes[] = 'Backend déplacé vers ' . $backend . '.';
+        }
+        if ($wantedData !== $dataAfter && is_dir($dataAfter)) {
+            if ($inside($wantedData, $dataAfter) || $inside($dataAfter, $wantedData)) throw new RuntimeException('Le nouvel emplacement des données ne peut pas être dans l\'ancien (ni l\'inverse).');
+            $freeTarget($wantedData);
+            move_path($dataAfter, $wantedData, $moved);
+            $notes[] = 'Données déplacées vers ' . $wantedData . '.';
+        }
+        $dataDir = $wantedData;
+        $varDir = $dataDir . '/var';
+        $backupDir = $sameVersion ? $tmp . '/prev' : $varDir . '/backup/prev';
+        foreach (array($backend . '/config', $dataDir, $dataDir . '/logs', $varDir) as $dir) {
+            if (!guard_dir($dir)) throw new RuntimeException('Dossier inaccessible : ' . $dir);
+        }
     }
 
     // 4) Sauvegarde (même format que la mise à jour de /auth : le retour arrière manuel y reste possible)
@@ -677,10 +932,53 @@ try {
         }
     };
     $pointer = $docroot . '/api/backend.php';
-    if (!is_file($pointer)) {
+    $pointed = null;
+    if (is_file($pointer)) {
+        if (function_exists('opcache_invalidate')) @opcache_invalidate($pointer, true);
+        $pointed = include $pointer;
+    }
+    if ($pointed !== $backend) {
         $save($pointer);
         file_put_contents($pointer, "<?php\n// Généré par update.php : emplacement du backend.\nreturn " . var_export($backend, true) . ";\n");
-        $notes[] = 'api/backend.php recréé.';
+        if (function_exists('opcache_invalidate')) @opcache_invalidate($pointer, true);
+        $notes[] = $pointed === null ? 'api/backend.php recréé.' : 'api/backend.php mis à jour (nouvel emplacement du backend).';
+    }
+    // Dossier de données en service (mémorisé pour détecter un changement de DATA_DIR à la prochaine mise à jour)
+    $record = $backend . '/config/.data-dir';
+    if (!is_file($record) || trim((string) file_get_contents($record)) !== $dataDir) {
+        $save($record);
+        file_put_contents($record, $dataDir . "\n");
+    }
+    // runtime.env au format lisible (sections et commentaires) : réécrit une fois, valeurs conservées, ancienne version gardée en .bak
+    $envNow = (string) @file_get_contents($configFile);
+    if ($envNow !== '' && strpos($envNow, '# Format du fichier : 2') === false) {
+        $vars = parse_env_file($configFile);
+        if (is_array($vars)) {
+            $names = array();
+            foreach (explode("\n", $RUNTIME_LAYOUT) as $row) {
+                if ($row !== '' && $row[0] !== '|' && strpos($row, '== ') !== 0) $names[] = explode('|', $row, 2)[0];
+            }
+            $RUNTIME_LAYOUT_BASE = $RUNTIME_LAYOUT;
+            $extra = array_diff(array_keys($vars), $names);
+            if ($extra) {
+                $RUNTIME_LAYOUT .= "\n== Autres réglages (conservés tels quels)\n";
+                foreach ($extra as $n) $RUNTIME_LAYOUT .= $n . "|Réglage non documenté, conservé.\n";
+                $RUNTIME_LAYOUT = rtrim($RUNTIME_LAYOUT, "\n");
+            }
+            try {
+                $pretty = render_runtime_env($vars, 'update.php');
+                $save($configFile . '.bak');
+                file_put_contents($configFile . '.bak', $envNow);
+                @chmod($configFile . '.bak', 0600);
+                $save($configFile);
+                if (file_put_contents($configFile, $pretty) === false) throw new RuntimeException('Écriture impossible : config/runtime.env');
+                @chmod($configFile, 0600);
+                $notes[] = 'config/runtime.env remis en forme (ancienne version : config/runtime.env.bak).';
+            } catch (RuntimeException $e) {
+                $notes[] = 'config/runtime.env laissé tel quel : ' . $e->getMessage();
+            }
+            $RUNTIME_LAYOUT = $RUNTIME_LAYOUT_BASE;
+        }
     }
     if ($site !== '') {
         $siteHost = preg_replace('#^https?://#', '', $site);
@@ -738,6 +1036,9 @@ try {
         }
     }
     if ($health === 'bad') throw new RuntimeException('La nouvelle version ne répond pas correctement : l\'ancienne a été rétablie automatiquement.');
+    foreach ($moved as $m) {
+        if ($m[2] === 'copy') rrmdir($m[0]); // déplacement entre volumes : la source n'est supprimée qu'après le succès de tout
+    }
     if ($legacy) {
         // Ancien code d'api/ devenu inutile (la façade api/index.php n'en utilise plus rien)
         rrmdir($oldApi . '/lib');
@@ -772,24 +1073,27 @@ if ($fatal !== null) {
         }
     }
     if ($backupStarted) rrmdir($backupDir); // une sauvegarde partielle ou déjà rétablie ne doit jamais rester proposée par /auth
-    if ($legacy) {
-        // Migration : éléments remis à leur place d'origine, dans l'ordre inverse
+    if ($moved) {
+        // Déplacements annulés, dans l'ordre inverse (une copie entre volumes est simplement effacée : la source est intacte)
         $reverted = true;
         foreach (array_reverse($moved) as $m) {
-            if (!@rename($m[1], $m[0])) $reverted = false;
+            if ($m[2] === 'copy') rrmdir($m[1]);
+            elseif (!@rename($m[1], $m[0])) $reverted = false;
         }
         if ($reverted) {
-            $dataDir = $oldApi;
-            foreach (array('version.json', 'manifest.json') as $f) {
-                if (is_file($oldState . '/' . $f)) @copy($oldState . '/' . $f, $oldApi . '/var/' . $f);
+            $backend = $origBackend;
+            $dataDir = $legacy ? $oldApi : $origData;
+            if ($legacy) {
+                foreach (array('version.json', 'manifest.json') as $f) {
+                    if (is_file($oldState . '/' . $f)) @copy($oldState . '/' . $f, $oldApi . '/var/' . $f);
+                }
+                if (is_dir($oldState . '/prev') && is_dir($oldApi . '/var')) @rename($oldState . '/prev', $oldApi . '/var/backup/prev');
+                if ($createdBackend) rrmdir($backend);
             }
-            if (is_dir($oldState . '/prev') && is_dir($oldApi . '/var')) @rename($oldState . '/prev', $oldApi . '/var/backup/prev');
-            if ($createdBackend) rrmdir($backend);
         } else {
-            $fatal .= ' ATTENTION : la configuration ou les données n\'ont pas pu être remises à leur place d\'origine, vérifiez ' . $backend . '.';
+            $fatal .= ' ATTENTION : des dossiers n\'ont pas pu être remis à leur place d\'origine, vérifiez ' . $origBackend . ' et ' . $backend . '.';
         }
     }
-    @file_put_contents($dataDir . '/logs/updates.jsonl', json_encode(array('at' => gmdate('Y-m-d\TH:i:s.000\Z'), 'action' => 'update', 'by' => 'update.php', 'ref' => $ref, 'ok' => false, 'error' => $fatal)) . "\n", FILE_APPEND);
     if ($lock) { flock($lock, LOCK_UN); fclose($lock); }
     rrmdir($tmp);
     page('Échec de la mise à jour', '<p class="msg">' . h($fatal) . '</p><p class="small">Le site a été remis dans son état précédent. Le fichier <code>update.php</code> est conservé : relancez après correction, ou supprimez-le par FTP.</p>'
