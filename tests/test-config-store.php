@@ -37,15 +37,22 @@ $check('cache: résultat relu à l\'identique', Radiv\Store\result_get($key) ===
 $tmpData = sys_get_temp_dir() . '/radiv-test-logs-' . bin2hex(random_bytes(3));
 putenv('DATA_DIR=' . $tmpData);
 $entry = ['timestamp' => '2026-10-11T10:00:00.000Z', 'ip' => '203.0.113.7', 'ip_geo' => ['ip' => '203.0.113.7', 'provider' => 'ipwho.is', 'country' => 'France', 'city' => 'Paris', 'latitude' => 48.857, 'longitude' => 2.352], 'input' => ['isotope_code' => 'radium223'], 'result' => ['ok' => true]];
+$full = ['ok' => true, 'calculation_mode' => 'local', 'selected' => ['api_code' => 'radium223', 'label' => 'Radium-223', 'reference' => 'texte long', 'remark' => 'x'], 'cure_count' => 1, 'cure_count_allowed' => [1],
+    'computed_dose_rate' => null, 'effective_days' => 11.43, 'effective_hours' => 274.3, 'errors' => [], 'recommendations_days' => ['conjoint_plus_60' => 12, 'transport_commun' => 3],
+    'rows' => [['audience_code' => 'conjoint_plus_60', 'label' => 'Contact avec le conjoint', 'condition' => '8 h à 0,3 m', 'value' => 12]], 'sfmn_debug' => ['enabled' => true, 'requests' => [['step' => 'x']]]];
+$entryFull = $entry; $entryFull['result'] = $full;
 $other = ['timestamp' => '2026-10-11T10:00:01.000Z', 'ip' => '203.0.113.8', 'ip_geo' => ['ip' => '198.51.100.1', 'country' => 'X'], 'input' => ['isotope_code' => 'radium223']];
 $private = ['timestamp' => '2026-10-11T10:00:02.000Z', 'ip' => '127.0.0.1', 'ip_geo' => ['ip' => '127.0.0.1', 'scope' => 'private_or_local']];
 $noGeo = ['timestamp' => '2026-10-11T10:00:03.000Z', 'ip' => '203.0.113.9'];
-foreach ([$entry, $other, $private, $noGeo] as $e) Radiv\Measurements\append($e);
+foreach ([$entry, $other, $private, $noGeo, $entryFull] as $e) Radiv\Measurements\append($e);
 $raw = file_get_contents($tmpData . '/logs/measurements-2026-10.jsonl');
 $lines = explode("\n", trim($raw));
 $check('doublon exact ip_geo.ip non écrit', strpos($lines[0], '"ip_geo":{"provider"') !== false && substr_count($lines[0], '203.0.113.7') === 1);
 $check('ip_geo.ip différent de ip : conservé', strpos($lines[1], '"ip_geo":{"ip":"198.51.100.1"') !== false);
 $check('adresse locale : doublon retiré aussi, scope conservé', strpos($lines[2], '"scope":"private_or_local"') !== false && substr_count($lines[2], '127.0.0.1') === 1);
+$check('résultat : seules les valeurs variables sont écrites (jours, période, erreurs)', strpos($lines[4], '"recommendations_days":{"conjoint_plus_60":12,"transport_commun":3}') !== false && strpos($lines[4], '"effective_days":11.43') !== false);
+$check('résultat : fiche, libellés, scénarios et diagnostic distant jamais écrits', !preg_match('/selected|reference|Radium-223|"rows"|Contact avec|condition|sfmn_debug|cure_count_allowed/', $lines[4]));
+$check('ligne nettement plus courte (< 450 octets contre ≈ 1 000 avec les textes)', strlen($lines[4]) < 450, (string) strlen($lines[4]));
 $back = Radiv\Measurements\read_file($tmpData . '/logs/measurements-2026-10.jsonl');
 $check('lecture : ip_geo.ip rétabli en tête, mêmes données qu\'avant', json_encode($back[0]->ip_geo) === json_encode((object) $entry['ip_geo']));
 $check('lecture : ip_geo différent inchangé', json_encode($back[1]->ip_geo) === json_encode((object) $other['ip_geo']));
