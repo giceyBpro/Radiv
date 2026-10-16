@@ -86,6 +86,9 @@ try {
             }
             $payload = is_array($decoded) ? $decoded : []; // scalaire JSON (5, "x"): aucun champ
         }
+        // Origine de la requête (site ou logiciel appelant) : retirée du payload pour ne pas fausser le cache SFMN ni le calcul
+        $provider = Measurements\clean_provider($payload['provider'] ?? null);
+        unset($payload['provider']);
         $sfmnEnabled = Config\sfmn_mode_enabled();
         $rawMode = $payload['calculation_mode'] ?? null;
         $mode = ($rawMode === null || $rawMode === false || $rawMode === '' || $rawMode === 0 || $rawMode === 0.0)
@@ -123,7 +126,7 @@ try {
                 'timestamp' => $timestamp,
                 'ip' => $ip,
                 'ip_geo' => Geo\resolve($ip),
-            ] + ($level === 'full' ? ['input' => Measurements\sanitize_input($payload), 'result' => $result] : []));
+            ] + ($provider !== null ? ['provider' => $provider] : []) + ($level === 'full' ? ['input' => Measurements\sanitize_input($payload), 'result' => $result] : []));
         }
         exit;
     }

@@ -177,6 +177,23 @@ async function update(c, ref, token) {
   t('état exactement identique à la v1.1', treeHash() === afterGood); t('version = v1.1', JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40));
   page = await c.req('GET', `${BASE}/auth`); t('plus de retour arrière possible', !/Rétablir la version précédente/.test(page.text));
 
+  console.log('\n— Origine des requêtes API (provider)');
+  { const lf = path.join(WWW, 'backend/data/logs', `measurements-${new Date().toISOString().slice(0, 7)}.jsonl`);
+    const post = async (extra) => { await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', ...extra }) }); await new Promise((ok) => setTimeout(ok, 700)); const l = fs.readFileSync(lf, 'utf8').trim().split('\n'); return JSON.parse(l[l.length - 1]); };
+    resetLimits();
+    let row = await post({ provider: 'MonRIS 2.1 <script>"x"</script>' });
+    t('provider enregistré, assaini (caractères hors jeu sûr retirés)', row.provider === 'MonRIS 2.1 scriptx/script', JSON.stringify(row.provider));
+    row = await post({ provider: 'radiv.fr' }); t('provider du site', row.provider === 'radiv.fr' && row.input.provider === undefined);
+    row = await post({ provider: 'x'.repeat(200) }); t('provider borné à 64 caractères', row.provider.length === 64);
+    row = await post({}); t('sans provider : champ absent (non déclaré)', !('provider' in row));
+    row = await post({ provider: { a: 1 } }); t('provider non textuel ignoré', !('provider' in row));
+    const resp = await (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', provider: 'abc' }) })).json();
+    t('réponse de l\'API inchangée par le provider', resp.ok === true);
+    const mes = (await c.req('GET', `${BASE}/auth/mesures?days=1&q=radiv.fr`)).text;
+    t('onglet Mesures : colonne Origine et recherche par provider', /<th>Origine<\/th>/.test(mes) && mes.includes('radiv.fr'));
+    t('app.js du site envoie provider', /provider: window\.RADIOPROTECTION_SITE_NAME/.test(read('app.js')));
+    resetLimits(); }
+
   console.log('\n— Espace disque : purge des journaux les plus anciens sous 30 Mo libres');
   const envDisk = runtimeEnv(); const logsDir = path.join(WWW, 'backend/data/logs');
   const treeBytes = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? treeBytes(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
