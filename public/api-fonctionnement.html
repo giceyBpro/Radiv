@@ -34,6 +34,22 @@
       <li><code>GET /health</code> : disponibilité du service.</li>
     </ul>
 
+    <h2>Authentification (clé d'API obligatoire)</h2>
+    <p>
+      Tout appel extérieur à <code>POST /api/calculate</code> doit présenter une <strong>clé d'API</strong> propre à votre logiciel ou service,
+      fournie par l'administrateur du site. Transmettez-la dans l'en-tête HTTP <code>X-API-Key</code> (ou <code>Authorization: Bearer &lt;clé&gt;</code>),
+      <strong>jamais dans l'adresse</strong>, en HTTPS uniquement :
+    </p>
+    <pre><code>POST /api/calculate
+Content-Type: application/json
+X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
+    <ul>
+      <li>Clé absente : <code>401</code>, <code>"code": "API_KEY_REQUIRED"</code>. Clé invalide, expirée, révoquée ou fournisseur suspendu : <code>401</code>, <code>"code": "API_KEY_INVALID"</code>.</li>
+      <li>Chaque fournisseur a son propre plafond de requêtes par minute (<code>429</code> au-delà).</li>
+      <li>Gardez la clé secrète (jamais dans une page web publique ni un dépôt de code) ; en cas de fuite, demandez-en la révocation et une nouvelle clé.</li>
+      <li><code>GET /api/config</code> et <code>GET /health</code> restent publics.</li>
+    </ul>
+
     <h2>Payload — <code>POST /api/calculate</code></h2>
     <pre><code>{<span id="modeLinePayload" hidden>
   "calculation_mode": "sfmn",</span>
@@ -53,7 +69,7 @@
 
     <h2>Règles</h2>
     <ul>
-      <li><strong>provider</strong> (facultatif) : nom du logiciel ou du service qui appelle l'API (ex. <code>MonRIS 2.1</code>), 64 caractères maximum (lettres, chiffres, espace et <code>. _ : / @ + ( ) -</code>). Il permet à l'éditeur de connaître l'origine des requêtes automatiques ; les requêtes du site sont enregistrées avec le nom du site. Simple déclaration, non vérifiée.</li>
+      <li><strong>provider</strong> (facultatif) : nom et version du logiciel qui appelle l'API (ex. <code>MonRIS 2.1</code>), 64 caractères maximum (lettres, chiffres, espace et <code>. _ : / @ + ( ) -</code>). Simple déclaration, non vérifiée : c'est la clé d'API qui identifie le fournisseur (les requêtes du site sont enregistrées au nom du site).</li>
       <li><strong>Standard</strong> : <code>dose_rate</code> + <code>patient_size_cm</code>.</li>
       <li><strong>iode131_benin</strong> : <code>benign_activity_mbq</code> + <code>benign_fixation_pct</code> (%) ; <code>dose_rate</code> ignoré.</li>
       <li><strong>non_defini</strong> : <code>user_period_days</code> strictement positif obligatoire.</li>

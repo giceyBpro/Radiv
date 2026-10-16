@@ -177,9 +177,75 @@ async function update(c, ref, token) {
   t('état exactement identique à la v1.1', treeHash() === afterGood); t('version = v1.1', JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40));
   page = await c.req('GET', `${BASE}/auth`); t('plus de retour arrière possible', !/Rétablir la version précédente/.test(page.text));
 
+  console.log('\n— Fournisseurs de l\'API et clés d\'API (clé obligatoire)');
+  { resetLimits();
+    const regFile = path.join(WWW, 'backend/config/providers.json');
+    const calc = (headers = {}, extra = '') => fetch(`${BASE}/api/calculate${extra}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', provider: 'MonRIS 2.1' }) }).then(async (x) => ({ status: x.status, body: await x.json().catch(() => ({})) }));
+    const adminPost = async (action, form) => { const pg = await c.req('GET', `${BASE}/auth/fournisseurs`); return c.req('POST', `${BASE}/auth/fournisseurs/${action}`, { form: { csrf: csrfOf(pg.text), ...form }, headers: { Origin: BASE } }); };
+    let pg = await c.req('GET', `${BASE}/auth/fournisseurs`);
+    t('onglet Fournisseurs (liste vide, formulaire de création)', pg.status === 200 && /Nouveau fournisseur/.test(pg.text) && /Aucun fournisseur/.test(pg.text) && /<a class="tab on"[^>]*>Fournisseurs/.test(pg.text));
+    t('sans session : onglet inaccessible (404 générique)', (await fetch(`${BASE}/auth/fournisseurs`)).status === 404);
+    let r = await c.req('POST', `${BASE}/auth/fournisseurs/creer`, { form: { id: 'monris', name: 'MonRIS' }, headers: { Origin: BASE } });
+    t('création sans jeton CSRF → refusée', r.status === 403 && !exists('backend/config/providers.json'));
+    r = await adminPost('creer', { id: 'Mauvais Id!', name: 'x' }); t('identifiant invalide refusé', /Identifiant invalide/.test(flash((await c.req('GET', r.loc)).text)) || /Identifiant invalide/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text));
+    r = await adminPost('creer', { id: 'monris', name: 'MonRIS <b>CHU</b>' }); await c.req('GET', r.loc);
+    r = await adminPost('cle', { id: 'monris', days: '30' });
+    const keyPage = (await c.req('GET', r.loc)).text; const KEY = (keyPage.match(/rdv_[0-9a-f]{8}_[A-Za-z0-9_-]{43}/) || [])[0];
+    t('clé générée et affichée une seule fois', !!KEY && /ne sera plus jamais affichée/.test(keyPage) && !/rdv_[0-9a-f]{8}_[A-Za-z0-9_-]{43}/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text));
+    const reg = fs.readFileSync(regFile, 'utf8');
+    t('registre : empreinte SHA-256 seulement, jamais la clé, droits 600, nom assaini', !reg.includes(KEY) && reg.includes(crypto.createHash('sha256').update(KEY).digest('hex')) && (fs.statSync(regFile).mode & 0o077) === 0 && !reg.includes('<b>'));
+    t('registre et dossier de configuration illisibles depuis le web', (await fetch(`${BASE}/backend/config/providers.json`)).status !== 200);
+    let x = await calc(); t('appel extérieur sans clé → 401 API_KEY_REQUIRED', x.status === 401 && x.body.code === 'API_KEY_REQUIRED' && x.body.ok === false);
+    x = await calc({ 'X-API-Key': KEY }); t('avec la clé (X-API-Key) → 200', x.status === 200 && x.body.ok === true);
+    x = await calc({ Authorization: `Bearer ${KEY}` }); t('avec la clé (Authorization: Bearer) → 200', x.status === 200 && x.body.ok === true);
+    x = await calc({}, `?api_key=${KEY}`); t('clé dans l\'adresse ignorée → 401', x.status === 401);
+    x = await calc({ 'X-API-Key': KEY.slice(0, -1) + (KEY.endsWith('A') ? 'B' : 'A') }); t('clé altérée → 401 API_KEY_INVALID', x.status === 401 && x.body.code === 'API_KEY_INVALID');
+    x = await calc({ 'X-API-Key': 'n\'importe quoi' }); t('clé de forme invalide → 401 API_KEY_INVALID', x.status === 401 && x.body.code === 'API_KEY_INVALID');
+    x = await calc({ Origin: BASE }); t('pages du site : dispensées de clé', x.status === 200);
+    x = await calc({ Origin: 'https://evil.example' }); t('autre origine sans clé → 401', x.status === 401);
+    x = await calc({ Origin: 'https://evil.example', 'X-API-Key': KEY }); t('autre origine avec clé valide → 200', x.status === 200);
+    const pre = await fetch(`${BASE}/api/calculate`, { method: 'OPTIONS', headers: { Origin: 'https://exemple.org', 'Access-Control-Request-Headers': 'x-api-key,content-type' } });
+    t('préalable CORS : X-API-Key autorisé', pre.status === 204 && /X-API-Key/i.test(pre.headers.get('access-control-allow-headers') || ''));
+    await new Promise((ok) => setTimeout(ok, 700));
+    const lf = path.join(WWW, 'backend/data/logs', `measurements-${new Date().toISOString().slice(0, 7)}.jsonl`);
+    const rows = fs.readFileSync(lf, 'utf8').trim().split('\n').map((l) => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean);
+    const mine = rows.filter((w) => w.provider_id === 'monris'); const site = rows.filter((w) => w.provider_id === '127.0.0.1');
+    t('journal : fournisseur identifié (provider_id) distinct du nom déclaré (provider)', mine.length >= 3 && mine.every((w) => w.provider === 'MonRIS 2.1') && site.length >= 1);
+    t('journal : aucune clé écrite', !fs.readFileSync(lf, 'utf8').includes(KEY) && !fs.readFileSync(path.join(WWW, 'backend/data/logs/updates.jsonl'), 'utf8').includes(KEY));
+    const mes = (await c.req('GET', `${BASE}/auth/mesures?days=1&q=monris`)).text;
+    t('onglet Mesures : colonne Origine avec le fournisseur identifié', /<strong>monris<\/strong>/.test(mes));
+    t('page Site : zone Configuration signale les clés obligatoires et 1 fournisseur actif', /Clés d'API : obligatoires, 1 fournisseur\(s\) actif\(s\)/.test((await c.req('GET', `${BASE}/auth`)).text));
+    // Plafond propre au fournisseur
+    await adminPost('creer', { id: 'lent', name: 'Plafonné', rate: '2' }); r = await adminPost('cle', { id: 'lent', days: '' });
+    const LENT = ((await c.req('GET', r.loc)).text.match(/rdv_[0-9a-f]{8}_[A-Za-z0-9_-]{43}/) || [])[0];
+    resetLimits(); const codes = []; for (let i = 0; i < 4; i++) codes.push((await calc({ 'X-API-Key': LENT })).status);
+    t('plafond par fournisseur (2/min) → 429 au-delà, sans gêner les autres', codes.join() === '200,200,429,429' && (await calc({ 'X-API-Key': KEY })).status === 200, codes.join());
+    // Révocation, suspension
+    pg = (await c.req('GET', `${BASE}/auth/fournisseurs`)).text; const prefix = KEY.split('_')[1];
+    r = await adminPost('revoquer', { id: 'monris', prefix }); resetLimits();
+    x = await calc({ 'X-API-Key': KEY }); t('clé révoquée → refusée immédiatement', x.status === 401 && x.body.code === 'API_KEY_INVALID' && /révoquée/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text));
+    r = await adminPost('cle', { id: 'monris', days: '' }); const KEY2 = ((await c.req('GET', r.loc)).text.match(/rdv_[0-9a-f]{8}_[A-Za-z0-9_-]{43}/) || [])[0];
+    t('rotation : nouvelle clé valable', (await calc({ 'X-API-Key': KEY2 })).status === 200);
+    r = await adminPost('etat', { id: 'monris', status: 'suspended' }); await c.req('GET', r.loc); resetLimits();
+    t('fournisseur suspendu → toutes ses clés refusées', (await calc({ 'X-API-Key': KEY2 })).status === 401);
+    r = await adminPost('etat', { id: 'monris', status: 'active' }); await c.req('GET', r.loc);
+    t('réactivé → la clé refonctionne', (await calc({ 'X-API-Key': KEY2 })).status === 200);
+    // Expiration
+    const regObj = JSON.parse(fs.readFileSync(regFile, 'utf8')); regObj.providers.find((q) => q.id === 'monris').keys.find((k) => !k.revoked).expires = '2020-01-01'; fs.writeFileSync(regFile, JSON.stringify(regObj));
+    x = await calc({ 'X-API-Key': KEY2 }); t('clé expirée → 401', x.status === 401);
+    // Limitation des essais de clés
+    resetLimits(); const bad = []; for (let i = 0; i < 22; i++) bad.push((await calc({ 'X-API-Key': 'rdv_00000000_' + 'a'.repeat(43) })).status);
+    t('essais de clés limités (429 après 20 refus par minute)', bad[0] === 401 && bad[bad.length - 1] === 429, bad.join());
+    // Clé facultative (migration)
+    resetLimits(); setEnv('API_KEY_REQUIRED', 'false');
+    x = await calc(); t('API_KEY_REQUIRED=false : appel sans clé accepté', x.status === 200);
+    t('…signalé dans la zone Configuration', /Clés d'API facultatives/.test((await c.req('GET', `${BASE}/auth`)).text));
+    setEnv('API_KEY_REQUIRED', null);
+    fs.rmSync(regFile, { force: true }); resetLimits(); }
+
   console.log('\n— Origine des requêtes API (provider)');
   { const lf = path.join(WWW, 'backend/data/logs', `measurements-${new Date().toISOString().slice(0, 7)}.jsonl`);
-    const post = async (extra) => { await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', ...extra }) }); await new Promise((ok) => setTimeout(ok, 700)); const l = fs.readFileSync(lf, 'utf8').trim().split('\n'); return JSON.parse(l[l.length - 1]); };
+    const post = async (extra) => { await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', ...extra }) }); await new Promise((ok) => setTimeout(ok, 700)); const l = fs.readFileSync(lf, 'utf8').trim().split('\n'); return JSON.parse(l[l.length - 1]); };
     resetLimits();
     let row = await post({ provider: 'MonRIS 2.1 <script>"x"</script>' });
     t('provider enregistré, assaini (caractères hors jeu sûr retirés)', row.provider === 'MonRIS 2.1 scriptx/script', JSON.stringify(row.provider));
@@ -187,7 +253,7 @@ async function update(c, ref, token) {
     row = await post({ provider: 'x'.repeat(200) }); t('provider borné à 64 caractères', row.provider.length === 64);
     row = await post({}); t('sans provider : champ absent (non déclaré)', !('provider' in row));
     row = await post({ provider: { a: 1 } }); t('provider non textuel ignoré', !('provider' in row));
-    const resp = await (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', provider: 'abc' }) })).json();
+    const resp = await (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local', provider: 'abc' }) })).json();
     t('réponse de l\'API inchangée par le provider', resp.ok === true);
     const mes = (await c.req('GET', `${BASE}/auth/mesures?days=1&q=radiv.fr`)).text;
     t('onglet Mesures : colonne Origine et recherche par provider', /<th>Origine<\/th>/.test(mes) && mes.includes('radiv.fr'));
@@ -208,7 +274,7 @@ async function update(c, ref, token) {
     t('champs manquants listés avec leur conséquence', /Formulaire de contact<\/strong> — manque : [^\n]*<code>RECAPTCHA_SECRET_KEY<\/code>, <code>SMTP_HOST<\/code>/.test(cfgPage) && /envoi des messages refusé/.test(cfgPage) && !/RECAPTCHA_SECRET_KEY<\/code> valeur/.test(cfgPage), cfgPage.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, ' ').match(/Configuration lue[\s\S]{0,700}/)?.[0]);
     fs.writeFileSync(path.join(WWW, 'backend/config/runtime.env'), e0); }
   const before = fs.readdirSync(logsDir).filter((f) => f.startsWith('measurements-')).sort();
-  const diskCalc = await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) });
+  const diskCalc = await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) });
   await new Promise((ok) => setTimeout(ok, 800)); // la purge s'exécute après l'envoi de la réponse
   const after = fs.readdirSync(logsDir).filter((f) => f.startsWith('measurements-')).sort();
   t('calcul normal malgré l\'espace saturé', diskCalc.status === 200);

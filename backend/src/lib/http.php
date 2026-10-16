@@ -53,7 +53,7 @@ function client_ip(): string
 function set_cors_headers(): void
 {
     header('Access-Control-Allow-Origin: ' . Config\cors_origin());
-    header('Access-Control-Allow-Headers: Content-Type');
+    header('Access-Control-Allow-Headers: Content-Type, X-API-Key, Authorization');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');

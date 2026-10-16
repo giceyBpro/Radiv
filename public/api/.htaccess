@@ -4,6 +4,9 @@
 Options -Indexes
 <IfModule mod_rewrite.c>
 RewriteEngine On
+# Certains hébergements retirent l'en-tête Authorization avant PHP : on le transmet (la clé d'API se passe de préférence par X-API-Key)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteRule ^index\.php$ - [L]
 RewriteRule ^ index.php [L]
 </IfModule>

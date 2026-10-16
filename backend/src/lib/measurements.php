@@ -299,7 +299,7 @@ function csv_escape(mixed $value): string
 
 function to_csv(array $rows): string
 {
-    $headers = ['timestamp', 'ip', 'ip_geo', 'provider', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'recommendations_days'];
+    $headers = ['timestamp', 'ip', 'ip_geo', 'provider_id', 'provider', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'recommendations_days'];
     $lines = [implode(',', $headers)];
     foreach ($rows as $row) {
         $result = $row->result ?? null;
@@ -309,6 +309,7 @@ function to_csv(array $rows): string
             $row->timestamp ?? null,
             $row->ip ?? null,
             Json\encode($row->ip_geo ?? null),
+            $row->provider_id ?? null,
             $row->provider ?? null,
             is_object($input) ? ($input->isotope_code ?? null) : null,
             is_object($input) ? ($input->dose_rate ?? null) : null,

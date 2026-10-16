@@ -107,6 +107,15 @@ function result_ok(object $row): ?bool
     return is_object($result) && is_bool($result->ok ?? null) ? $result->ok : null;
 }
 
+// Origine d'une requête : fournisseur identifié (ou site), puis le nom que l'appelant déclare s'il diffère.
+function origin_cell(object $row): string
+{
+    $id = isset($row->provider_id) && is_string($row->provider_id) ? $row->provider_id : '';
+    $declared = isset($row->provider) && is_string($row->provider) ? $row->provider : '';
+    if ($id === '' && $declared === '') return '<span class="muted">—</span>';
+    return ($id !== '' ? '<strong>' . h($id) . '</strong>' : '') . ($declared !== '' && $declared !== $id ? ($id !== '' ? '<br>' : '') . '<span class="small">' . h($declared) . ($id === '' ? ' (déclaré)' : '') . '</span>' : '');
+}
+
 function filter_rows(array $rows, array $q): array
 {
     $needle = mb_strtolower($q['q']);
@@ -117,7 +126,7 @@ function filter_rows(array $rows, array $q): array
             if ($ok === null || $ok !== ($q['ok'] === '1')) return false;
         }
         if ($needle !== '') {
-            $hay = mb_strtolower((string) ($row->ip ?? '') . ' ' . place($row) . ' ' . (string) ($row->provider ?? ''));
+            $hay = mb_strtolower((string) ($row->ip ?? '') . ' ' . place($row) . ' ' . (string) ($row->provider ?? '') . ' ' . (string) ($row->provider_id ?? ''));
             if (!str_contains($hay, $needle)) return false;
         }
         return true;
@@ -346,7 +355,7 @@ function render_tab(array $q, string $loggingLevel): array
             $ok = result_ok($row);
             $dt = (new \DateTimeImmutable('@' . Measurements\row_ts($row)))->setTimezone(paris());
             $out .= '<tr><td class="nowrap">' . h($dt->format('d/m/Y H:i:s')) . '</td><td class="nowrap">' . h($row->ip ?? '') . '</td><td>' . h(place($row)) . '</td>'
-                . '<td>' . (isset($row->provider) && is_string($row->provider) ? h($row->provider) : '<span class="muted">—</span>') . '</td><td>' . h(isotope_of($row)) . '</td><td>' . pills_input($row) . '</td><td>' . pills_result($row) . '</td>'
+                . '<td>' . origin_cell($row) . '</td><td>' . h(isotope_of($row)) . '</td><td>' . pills_input($row) . '</td><td>' . pills_result($row) . '</td>'
                 . '<td>' . ($ok === true ? '<span class="badge good">OK</span>' : ($ok === false ? '<span class="badge bad">Erreur</span>' : '<span class="muted">—</span>')) . '</td></tr>';
         }
         $out .= '</tbody></table></div>';
