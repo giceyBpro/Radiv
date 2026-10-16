@@ -102,6 +102,9 @@ DISK_MIN_FREE_MB|Espace libre minimal, en Mo : en dessous, les journaux de mesur
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
 SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
+API_KEY_REQUIRED|true ou false. true = les appels extérieurs à /api/calculate exigent une clé d'API (en-tête X-API-Key), créée dans
+|l'onglet Fournisseurs de /auth ; les pages du site en sont dispensées. false = appels sans clé acceptés. Défaut : true.
+PROVIDER_RATE_LIMIT|Nombre maximal de calculs par minute et par fournisseur (clé d'API), sauf plafond propre au fournisseur. Défaut : 300.
 RATE_LIMIT_BACKEND|Stockage des compteurs : auto (APCu si disponible, sinon fichiers), apcu ou file. Défaut : auto.
 == Essais en local uniquement
 ADMIN_ALLOW_INSECURE_HTTP|true autorise /auth en http (essais sur ordinateur). NE JAMAIS l'activer en production.

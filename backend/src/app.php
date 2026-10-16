@@ -20,6 +20,7 @@ require __DIR__ . '/lib/http.php';
 require __DIR__ . '/lib/geo.php';
 require __DIR__ . '/lib/disk.php';
 require __DIR__ . '/lib/measurements.php';
+require __DIR__ . '/lib/providers.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
 require __DIR__ . '/lib/session.php';
@@ -39,6 +40,7 @@ use Radiv\Geo;
 use Radiv\Http;
 use Radiv\Json;
 use Radiv\Measurements;
+use Radiv\Providers;
 use Radiv\Sfmn;
 use Radiv\Store;
 use Radiv\Updater;
@@ -72,7 +74,14 @@ try {
             Http\send_json(413, ['ok' => false, 'error' => 'Requête trop volumineuse.']);
             exit;
         }
-        if (!Store\rate_limit_hit('calculate', $ip, Config\int_env('CALCULATE_RATE_LIMIT', 60))) {
+        // Appelant : pages du site, ou fournisseur identifié par sa clé d'API (obligatoire pour les appels extérieurs)
+        $caller = Providers\identify($ip);
+        if (isset($caller['error'])) {
+            Http\send_json($caller['status'], ['ok' => false, 'error' => $caller['error'], 'code' => $caller['code']]);
+            exit;
+        }
+        $rateKey = $caller['kind'] === 'key' ? 'p:' . $caller['id'] : $ip;
+        if (!Store\rate_limit_hit('calculate', $rateKey, $caller['limit'] ?? Config\int_env('CALCULATE_RATE_LIMIT', 60))) {
             Http\send_json(429, ['ok' => false, 'error' => 'Trop de requêtes. Réessayez dans une minute.']);
             exit;
         }
@@ -126,7 +135,7 @@ try {
                 'timestamp' => $timestamp,
                 'ip' => $ip,
                 'ip_geo' => Geo\resolve($ip),
-            ] + ($provider !== null ? ['provider' => $provider] : []) + ($level === 'full' ? ['input' => Measurements\sanitize_input($payload), 'result' => $result] : []));
+            ] + ($caller['id'] !== null ? ['provider_id' => $caller['id']] : []) + ($provider !== null ? ['provider' => $provider] : []) + ($level === 'full' ? ['input' => Measurements\sanitize_input($payload), 'result' => $result] : []));
         }
         exit;
     }

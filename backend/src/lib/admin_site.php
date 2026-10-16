@@ -17,6 +17,7 @@ use Radiv\Contact;
 use Radiv\Google;
 use Radiv\Http;
 use Radiv\Measurements;
+use Radiv\Providers;
 use Radiv\Session;
 use Radiv\Store;
 use Radiv\Updater;
@@ -35,6 +36,11 @@ const ROUTES = [
     'GET /auth/test-sfmn/api/config' => 'sfmn_api_config',
     'GET /auth/test-sfmn/api/public-config' => 'sfmn_api_public',
     'POST /auth/test-sfmn/api/calculate' => 'sfmn_api_calculate',
+    'GET /auth/fournisseurs' => 'providers',
+    'POST /auth/fournisseurs/creer' => 'provider_create',
+    'POST /auth/fournisseurs/cle' => 'provider_key',
+    'POST /auth/fournisseurs/revoquer' => 'provider_revoke',
+    'POST /auth/fournisseurs/etat' => 'provider_status',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
     'POST /auth/logout' => 'logout',
@@ -137,6 +143,10 @@ function config_card(): string
             ? '<li><strong class="err">' . h($title) . '</strong> — manque : <code>' . implode('</code>, <code>', array_map('Radiv\\AdminSite\\h', $missing)) . '</code> (' . h($impact) . ')</li>'
             : '<li>' . h($title) . ' : complet</li>';
     }
+    $nProv = count(array_filter(Providers\load(), static fn ($p) => ($p['status'] ?? 'active') === 'active'));
+    $out .= '<li>' . (Config\api_key_required()
+        ? ($nProv ? 'Clés d\'API : obligatoires, ' . $nProv . ' fournisseur(s) actif(s)' : '<strong class="err">Clés d\'API obligatoires mais aucun fournisseur actif</strong> — seul le site peut appeler l\'API (onglet Fournisseurs)')
+        : '<strong class="err">Clés d\'API facultatives</strong> (<code>API_KEY_REQUIRED=false</code>) — appels extérieurs sans clé acceptés') . '</li>';
     $out .= '</ul>';
     $default = array_values(array_filter(config_optional(), static fn (string $n): bool => !$set($n) && !($n === 'TRUSTED_PROXIES' && getenv($n) !== false)));
     if ($default) {
@@ -338,6 +348,112 @@ function do_asset(string $name): bool
     return true;
 }
 
+// --- Fournisseurs de l'API et clés d'API ---------------------------------------------------------------
+
+function do_providers(): bool
+{
+    if (Session\admin() === null) return false;
+    $flash = Session\flash_take();
+    $csrf = h(Session\csrf_token());
+    $out = '';
+    if ($flash) {
+        $out .= '<p class="msg ' . ($flash['ok'] ? 'ok' : 'ko') . '">' . h($flash['message']) . '</p>';
+        if (!empty($flash['key'])) {
+            $out .= '<section class="card"><h2>Nouvelle clé</h2><p><strong>Copiez cette clé maintenant : elle ne sera plus jamais affichée.</strong></p>'
+                . '<p><code style="word-break:break-all;user-select:all">' . h($flash['key']) . '</code></p>'
+                . '<p class="small">À transmettre au fournisseur par un canal sûr. Elle se passe dans l\'en-tête <code>X-API-Key</code>. Seule son empreinte est conservée sur le serveur.</p></section>';
+        }
+    }
+    $out .= '<p class="small">Chaque logiciel ou service qui appelle <code>/api/calculate</code> reçoit une clé d\'API ' . (Config\api_key_required() ? '(<strong>obligatoire</strong> : <code>API_KEY_REQUIRED</code>)' : '(<strong>facultative</strong> actuellement : <code>API_KEY_REQUIRED=false</code>)')
+        . '. Les pages du site en sont dispensées. La clé identifie le fournisseur dans les mesures (colonne « Origine »).</p>';
+    $providers = Providers\load();
+    foreach ($providers as $p) {
+        $suspended = ($p['status'] ?? 'active') !== 'active';
+        $id = h($p['id']);
+        $out .= '<section class="card"><h2>' . h($p['name'] ?? $p['id']) . ' <span class="small">(<code>' . $id . '</code>)</span> '
+            . ($suspended ? '<span class="badge bad">suspendu</span>' : '<span class="badge good">actif</span>') . '</h2>';
+        $out .= '<p class="small">Plafond : ' . h(isset($p['rate_limit']) && is_int($p['rate_limit']) ? $p['rate_limit'] : Config\int_env('PROVIDER_RATE_LIMIT', 300)) . ' requêtes par minute · créé le ' . h(substr((string) ($p['created'] ?? ''), 0, 10)) . '</p>';
+        if (empty($p['keys'])) {
+            $out .= '<p class="muted">Aucune clé.</p>';
+        } else {
+            $out .= '<div class="tablewrap"><table><thead><tr><th>Clé</th><th>Créée</th><th>Expire</th><th>État</th><th></th></tr></thead><tbody>';
+            foreach ($p['keys'] as $k) {
+                $revoked = !empty($k['revoked']);
+                $expired = !empty($k['expires']) && gmdate('Y-m-d') > $k['expires'];
+                $out .= '<tr><td><code>rdv_' . h($k['prefix'] ?? '') . '_…</code></td><td class="nowrap">' . h(substr((string) ($k['created'] ?? ''), 0, 10)) . '</td><td class="nowrap">' . h($k['expires'] ?? '—') . '</td><td>'
+                    . ($revoked ? '<span class="badge bad">révoquée</span>' : ($expired ? '<span class="badge bad">expirée</span>' : '<span class="badge good">valide</span>')) . '</td><td>'
+                    . ($revoked ? '' : '<form method="post" action="/auth/fournisseurs/revoquer" style="margin:0"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="id" value="' . $id . '"><input type="hidden" name="prefix" value="' . h($k['prefix'] ?? '') . '"><button type="submit" class="secondary">Révoquer</button></form>')
+                    . '</td></tr>';
+            }
+            $out .= '</tbody></table></div>';
+        }
+        $out .= '<form method="post" action="/auth/fournisseurs/cle" class="stack" autocomplete="off"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="id" value="' . $id . '">'
+            . '<label>Valable (jours, vide = sans expiration)<input name="days" inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4" placeholder="ex. 365"></label><div><button type="submit">Générer une nouvelle clé</button></div></form>';
+        $out .= '<form method="post" action="/auth/fournisseurs/etat" style="margin-top:8px"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="id" value="' . $id . '"><input type="hidden" name="status" value="' . ($suspended ? 'active' : 'suspended') . '">'
+            . '<button type="submit" class="secondary">' . ($suspended ? 'Réactiver ce fournisseur' : 'Suspendre ce fournisseur (toutes ses clés)') . '</button></form></section>';
+    }
+    if (!$providers) $out .= '<section class="card"><p class="muted">Aucun fournisseur. Créez-en un ci-dessous.</p></section>';
+    $out .= '<section class="card"><h2>Nouveau fournisseur</h2><form method="post" action="/auth/fournisseurs/creer" class="stack" autocomplete="off"><input type="hidden" name="csrf" value="' . $csrf . '">'
+        . '<label>Identifiant (minuscules, chiffres, - et _)<input name="id" required maxlength="32" pattern="[a-z0-9][a-z0-9_\-]{1,31}" placeholder="ex. monris"></label>'
+        . '<label>Nom affiché<input name="name" maxlength="80" placeholder="ex. MonRIS (CHU de ...)"></label>'
+        . '<label>Plafond (requêtes par minute, vide = ' . h(Config\int_env('PROVIDER_RATE_LIMIT', 300)) . ')<input name="rate" inputmode="numeric" pattern="[0-9]{1,6}" maxlength="6"></label>'
+        . '<div><button type="submit">Créer le fournisseur</button></div></form></section>';
+    page('fournisseurs', 'Fournisseurs de l\'API', $out);
+    return true;
+}
+
+// Actions sur les fournisseurs : session, CSRF et connexion Google récente (comme les mises à jour).
+function provider_guard(): ?array
+{
+    $admin = guard_post(true);
+    if ($admin === null) return null;
+    if (!Store\rate_limit_hit('adminprov', Http\client_ip(), 30)) return null;
+    return $admin;
+}
+
+function provider_done(array $flash): bool
+{
+    Session\flash_set($flash);
+    Http\redirect(Config\site_public_url() . '/auth/fournisseurs', 303);
+    return true;
+}
+
+function do_provider_create(): bool
+{
+    if (provider_guard() === null) return false;
+    $rate = trim((string) ($_POST['rate'] ?? ''));
+    $err = Providers\create((string) ($_POST['id'] ?? ''), (string) ($_POST['name'] ?? ''), $rate === '' ? null : (preg_match('/^\d{1,6}$/', $rate) === 1 ? (int) $rate : 0));
+    return provider_done($err === null ? ['ok' => true, 'message' => 'Fournisseur créé. Générez-lui une clé.'] : ['ok' => false, 'message' => $err]);
+}
+
+function do_provider_key(): bool
+{
+    $admin = provider_guard();
+    if ($admin === null) return false;
+    $days = trim((string) ($_POST['days'] ?? ''));
+    if ($days !== '' && preg_match('/^\d{1,4}$/', $days) !== 1) return provider_done(['ok' => false, 'message' => 'Durée de validité invalide.']);
+    $r = Providers\add_key((string) ($_POST['id'] ?? ''), $days === '' ? null : (int) $days);
+    if (is_string($r)) return provider_done(['ok' => false, 'message' => $r]);
+    error_log('[API-KEY] Clé ' . $r['prefix'] . ' créée pour ' . (string) ($_POST['id'] ?? '') . ' par ' . $admin['email']);
+    return provider_done(['ok' => true, 'message' => 'Clé générée.', 'key' => $r['key']]);
+}
+
+function do_provider_revoke(): bool
+{
+    $admin = provider_guard();
+    if ($admin === null) return false;
+    $err = Providers\revoke_key((string) ($_POST['id'] ?? ''), (string) ($_POST['prefix'] ?? ''));
+    if ($err === null) error_log('[API-KEY] Clé ' . (string) ($_POST['prefix'] ?? '') . ' révoquée par ' . $admin['email']);
+    return provider_done($err === null ? ['ok' => true, 'message' => 'Clé révoquée : elle est refusée immédiatement.'] : ['ok' => false, 'message' => $err]);
+}
+
+function do_provider_status(): bool
+{
+    if (provider_guard() === null) return false;
+    $err = Providers\set_status((string) ($_POST['id'] ?? ''), (string) ($_POST['status'] ?? ''));
+    return provider_done($err === null ? ['ok' => true, 'message' => 'État mis à jour.'] : ['ok' => false, 'message' => $err]);
+}
+
 function do_logout(): bool
 {
     if (guard_post(false) === null) return false;
@@ -397,6 +513,7 @@ function tabs_html(string $active): string
         '<a class="tab' . ($active === $key ? ' on' : '') . '" href="' . $href . '"' . ($active === $key ? ' aria-current="page"' : '') . '>' . $label . '</a>';
     $tabs = $tab('site', '/auth', 'Site');
     if (Config\admin_measurements_enabled()) $tabs .= $tab('mesures', '/auth/mesures', 'Mesures');
+    $tabs .= $tab('fournisseurs', '/auth/fournisseurs', 'Fournisseurs');
     return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN');
 }
 
