@@ -31,6 +31,17 @@ function compact_result(array $result): array
     return array_intersect_key($result, array_flip(LOGGED_RESULT_FIELDS));
 }
 
+// Origine déclarée de la requête (champ « provider » : site ou logiciel appelant l'API). Simple déclaration de l'appelant, jamais une
+// preuve : réduite à 64 caractères d'un jeu sûr (lettres, chiffres, espace et . _ : / @ + ( ) -) ; vide ou invalide = non déclaré (null).
+function clean_provider(mixed $value): ?string
+{
+    if (!is_string($value)) return null;
+    $s = preg_replace('/[^\p{L}\p{N} ._:\/@+()\-]/u', '', $value);
+    $s = trim((string) preg_replace('/ {2,}/', ' ', (string) $s));
+    $s = trim(mb_substr($s, 0, 64));
+    return $s === '' ? null : $s;
+}
+
 function now_iso(): string
 {
     return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.v\Z');
@@ -288,7 +299,7 @@ function csv_escape(mixed $value): string
 
 function to_csv(array $rows): string
 {
-    $headers = ['timestamp', 'ip', 'ip_geo', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'recommendations_days'];
+    $headers = ['timestamp', 'ip', 'ip_geo', 'provider', 'isotope_code', 'dose_rate', 'patient_size_cm', 'effective_days', 'ok', 'errors', 'recommendations_days'];
     $lines = [implode(',', $headers)];
     foreach ($rows as $row) {
         $result = $row->result ?? null;
@@ -298,6 +309,7 @@ function to_csv(array $rows): string
             $row->timestamp ?? null,
             $row->ip ?? null,
             Json\encode($row->ip_geo ?? null),
+            $row->provider ?? null,
             is_object($input) ? ($input->isotope_code ?? null) : null,
             is_object($input) ? ($input->dose_rate ?? null) : null,
             is_object($input) ? ($input->patient_size_cm ?? null) : null,

@@ -47,11 +47,13 @@
   "user_limit": null,
   "benign_activity_mbq": null,
   "benign_fixation_pct": null,
-  "cure_count": 1
+  "cure_count": 1,
+  "provider": "nom-de-votre-logiciel"
 }</code></pre>
 
     <h2>Règles</h2>
     <ul>
+      <li><strong>provider</strong> (facultatif) : nom du logiciel ou du service qui appelle l'API (ex. <code>MonRIS 2.1</code>), 64 caractères maximum (lettres, chiffres, espace et <code>. _ : / @ + ( ) -</code>). Il permet à l'éditeur de connaître l'origine des requêtes automatiques ; les requêtes du site sont enregistrées avec le nom du site. Simple déclaration, non vérifiée.</li>
       <li><strong>Standard</strong> : <code>dose_rate</code> + <code>patient_size_cm</code>.</li>
       <li><strong>iode131_benin</strong> : <code>benign_activity_mbq</code> + <code>benign_fixation_pct</code> (%) ; <code>dose_rate</code> ignoré.</li>
       <li><strong>non_defini</strong> : <code>user_period_days</code> strictement positif obligatoire.</li>

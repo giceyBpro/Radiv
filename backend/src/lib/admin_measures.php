@@ -117,7 +117,7 @@ function filter_rows(array $rows, array $q): array
             if ($ok === null || $ok !== ($q['ok'] === '1')) return false;
         }
         if ($needle !== '') {
-            $hay = mb_strtolower((string) ($row->ip ?? '') . ' ' . place($row));
+            $hay = mb_strtolower((string) ($row->ip ?? '') . ' ' . place($row) . ' ' . (string) ($row->provider ?? ''));
             if (!str_contains($hay, $needle)) return false;
         }
         return true;
@@ -341,12 +341,12 @@ function render_tab(array $q, string $loggingLevel): array
         $page = min($q['page'], $pages);
         $slice = array_slice($rows, ($page - 1) * PER_PAGE, PER_PAGE);
         $out .= '<section class="card"><div class="toolbar"><h2>Détail</h2><a class="btn secondary" href="' . url($q, ['page' => 1], '/auth/mesures.csv') . '">Exporter en CSV (' . $stats['total'] . ' lignes)</a></div>';
-        $out .= '<div class="tablewrap"><table><thead><tr><th>Date</th><th>IP</th><th>Lieu</th><th>Isotope</th><th>Entrées</th><th>Résultats</th><th>État</th></tr></thead><tbody>';
+        $out .= '<div class="tablewrap"><table><thead><tr><th>Date</th><th>IP</th><th>Lieu</th><th>Origine</th><th>Isotope</th><th>Entrées</th><th>Résultats</th><th>État</th></tr></thead><tbody>';
         foreach ($slice as $row) {
             $ok = result_ok($row);
             $dt = (new \DateTimeImmutable('@' . Measurements\row_ts($row)))->setTimezone(paris());
             $out .= '<tr><td class="nowrap">' . h($dt->format('d/m/Y H:i:s')) . '</td><td class="nowrap">' . h($row->ip ?? '') . '</td><td>' . h(place($row)) . '</td>'
-                . '<td>' . h(isotope_of($row)) . '</td><td>' . pills_input($row) . '</td><td>' . pills_result($row) . '</td>'
+                . '<td>' . (isset($row->provider) && is_string($row->provider) ? h($row->provider) : '<span class="muted">—</span>') . '</td><td>' . h(isotope_of($row)) . '</td><td>' . pills_input($row) . '</td><td>' . pills_result($row) . '</td>'
                 . '<td>' . ($ok === true ? '<span class="badge good">OK</span>' : ($ok === false ? '<span class="badge bad">Erreur</span>' : '<span class="muted">—</span>')) . '</td></tr>';
         }
         $out .= '</tbody></table></div>';

@@ -165,11 +165,11 @@
         return 'Aucune donnée n’est conservée suite à un calcul (ni adresse IP, ni paramètres saisis).';
       }
       if (level === 'user') {
-        return 'À chaque calcul : horodatage, adresse IP et localisation approximative (ville/pays) ' +
+        return 'À chaque calcul : horodatage, adresse IP, origine déclarée de la requête (le site ou le logiciel qui appelle l’API) et localisation approximative (ville/pays) ' +
           'dérivée de cette IP. Les paramètres du calcul (radiopharmaceutique, débit de dose, taille, ' +
           'nombre de cures) et le résultat ne sont pas conservés.';
       }
-      return 'À chaque calcul : horodatage, adresse IP, localisation approximative (ville/pays) dérivée ' +
+      return 'À chaque calcul : horodatage, adresse IP, origine déclarée de la requête (le site ou le logiciel qui appelle l’API), localisation approximative (ville/pays) dérivée ' +
         'de cette IP, paramètres du calcul demandé (radiopharmaceutique, débit de dose, taille, nombre ' +
         'de cures) et résultat obtenu.';
     }

@@ -261,6 +261,7 @@
         renderCureSelector(isotopeCode);
       }
       return {
+        provider: window.RADIOPROTECTION_SITE_NAME || window.location.hostname, // origine de la requête : le site lui-même
         calculation_mode: selectedCalculationMode || 'sfmn',
         isotope_code: isotopeCode,
         dose_rate: isotopeCode === 'iode131_benin' ? null : getNumberOrNull('doseRate'),

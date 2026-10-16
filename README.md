@@ -109,7 +109,8 @@ Payload JSON :
   "user_limit": null,
   "benign_activity_mbq": null,
   "benign_fixation_pct": null,
-  "cure_count": 1
+  "cure_count": 1,
+  "provider": "MonRIS 2.1"
 }
 ```
 
@@ -117,6 +118,7 @@ Payload JSON :
 - `calculation_mode` : `local` (défaut) ou `sfmn` (interroge le formulaire SFMN distant).
 - Pour `iode131_benin` : `benign_activity_mbq` et `benign_fixation_pct` sont obligatoires ; `dose_rate` est ignoré.
 - Pour `non_defini` : `user_period_days` est obligatoire (> 0).
+- `provider` : optionnel, **origine de la requête** (nom du logiciel ou du service qui appelle l'API, ex. `MonRIS 2.1`). Réduit à 64 caractères (lettres, chiffres, espace et `. _ : / @ + ( ) -`), retiré du calcul et du cache SFMN, il est enregistré dans le journal des mesures (champ `provider`, absent si non déclaré), affiché dans la colonne « Origine » de l'onglet Mesures de `/auth` (recherchable) et exporté en CSV. Les requêtes du site envoient le nom du site (`radiv.fr`). C'est une simple déclaration de l'appelant, non vérifiée : à ne pas utiliser pour une décision de sécurité.
 - `cure_count` : optionnel (défaut `1`). Pris en compte pour `radium223`, `psma_177lu`, `lutetium177_net`.
 
 En mode `local`, l'arrondi des durées de restriction (en jours) dépend de `RESTRICTION_ROUNDING_MODE` :
