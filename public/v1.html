@@ -573,15 +573,15 @@
             <div>
               <div class="field-title">Type d'exposition (menu déroulant)</div>
               <select id="isotope"></select>
-              <div id="cureSelector" class="cure-selector" aria-label="Nombre de cures">
-                <span class="small">Nombre de cures :</span>
+              <div id="cureSelector" class="cure-selector" aria-label="Nombre de cures planifiées">
+                <span class="small">Nombre de cures planifiées :</span>
                 <button type="button" data-cure="1">1 cure</button>
                 <button type="button" data-cure="4">4 cures</button>
                 <button type="button" data-cure="6">6 cures</button>
               </div>
             </div>
             <div>
-              <div class="field-title">Débit de dose à 1 m (µSv/h) en sortie de chambre</div>
+              <div class="field-title">Débit de dose mesuré à 1 m du patient à sa sortie de chambre (µSv/h)</div>
               <input id="doseRate" type="number" min="0" step="0.01" value="">
               <div class="small" id="doseRateHelp">Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.</div>
             </div>
@@ -638,7 +638,7 @@
 
             <div class="opt-cell opt-period">
               <div>
-                <strong class="block" id="effectivePeriodLabel">Période effective (j) imposée par l'utilisateur (laisser vide sinon)</strong>
+                <strong class="block" id="effectivePeriodLabel">Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)</strong>
                 À remplir uniquement si vous souhaitez imposer manuellement une période effective différente de celle liée au radiopharmaceutique choisi.
               </div>
             </div>
@@ -705,16 +705,16 @@
 
     <div id="resultsSection" hidden>
     <div class="effective-box">
-      <div id="effectiveDaysText">Période effective retenue en jours : -</div>
-      <div id="effectiveHoursText">Période effective retenue en heures : -</div>
+      <div id="effectiveDaysText">Période effective appliquée au calcul, en jours : -</div>
+      <div id="effectiveHoursText">Période effective appliquée au calcul, en heures : -</div>
     </div>
 
     <table class="results">
       <thead>
         <tr>
-          <th>Scénario</th>
-          <th id="durationHead" class="duration-head">Durée restriction<br>(jours)</th>
-          <th style="text-align:center;">Conditions</th>
+          <th>Situation</th>
+          <th id="durationHead" class="duration-head">Durée de restriction<br>(jours)</th>
+          <th style="text-align:center;">Exposition et limite de dose</th>
         </tr>
       </thead>
       <tbody id="resultsBody"></tbody>

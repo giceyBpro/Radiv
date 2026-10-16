@@ -88,8 +88,8 @@
       <table>
         <thead>
           <tr>
-            <th>Scénario</th>
-            <th>Durée (jours)</th>
+            <th>Situation</th>
+            <th>Durée de restriction (jours)</th>
           </tr>
         </thead>
         <tbody id="resultRows"></tbody>
@@ -142,16 +142,16 @@
       const shouldShowCureCount = cureIsotopeSet.has(selectedApiCode);
       const inputEntries = [
         ['Type d\'exposition', form.isotope_label],
-        ['Débit de dose à 1 m (µSv/h)', form.dose_rate],
+        ['Débit de dose mesuré à 1 m (µSv/h)', form.dose_rate],
         ['Taille patient (cm)', form.patient_size_cm],
         ['Activité bénin (MBq)', form.benign_activity_mbq],
         ['Fixation bénin (%)', form.benign_fixation_pct],
-        ['Période effective utilisateur (j)', form.user_period_days],
+        ['Période effective forcée (j)', form.user_period_days],
         ['Durée distance X (h)', form.user_hours_1],
         ['Distance X (m)', form.user_distance_1],
         ['Durée à 1 m (h)', form.user_hours_2],
         ['Limite dosimétrique (mSv)', form.user_limit],
-        ['Nombre de cures', shouldShowCureCount ? form.cure_count : null],
+        ['Nombre de cures planifiées', shouldShowCureCount ? form.cure_count : null],
       ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '');
 
       document.getElementById('inputGrid').innerHTML = inputEntries.length
@@ -167,16 +167,16 @@
       document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
       const effDays = result.effective_days ?? '-';
       const effHours = result.effective_hours ?? '-';
-      document.getElementById('effectiveText').innerHTML = `<strong>Période effective retenue :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
+      document.getElementById('effectiveText').innerHTML = `<strong>Période effective appliquée au calcul :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
 
       const audienceMeta = {
-        conjoint_plus_60: 'Contact avec le (la) conjoint(e) > 60 ans',
-        conjoint_moins_60: 'Contact avec le (la) conjoint(e) < 60 ans',
-        conjointe_enceinte: 'Contact avec la conjointe enceinte',
-        transport_commun: 'Transport en commun',
-        enfant_moins_3_ans: 'Contact avec un enfant (<3 ans)\nau retour à la maison',
-        enfant_3_11_ans: 'Contact avec un enfant (entre 3 et 11 ans)\nau retour à la maison',
-        collegues_travail: 'Contact avec des collègues de travail',
+        conjoint_plus_60: 'Proximité avec son/sa conjoint(e) de plus de 60 ans',
+        conjoint_moins_60: 'Proximité avec son/sa conjoint(e) de moins de 60 ans',
+        conjointe_enceinte: 'Proximité avec une conjointe enceinte',
+        transport_commun: 'Déplacement en transports en commun',
+        enfant_moins_3_ans: 'Proximité avec un enfant de moins de 3 ans\nà la maison après la sortie',
+        enfant_3_11_ans: 'Proximité avec un enfant de 3 à 11 ans\nà la maison après la sortie',
+        collegues_travail: 'Présence auprès de collègues de travail',
         scenario_utilisateur: 'Scénario utilisateur'
       };
       const rows = Array.isArray(result.rows) && result.rows.length

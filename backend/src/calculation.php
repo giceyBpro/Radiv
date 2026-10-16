@@ -102,18 +102,18 @@ function scenarios(): array
 {
     $e = static fn (float $hours, float $distance, bool $unit): array => ['hours' => $hours, 'distance' => $distance, 'unit_factor_at_1m' => $unit];
     return [
-        ['audience_code' => 'conjoint_plus_60', 'label' => 'Contact avec le (la) conjoint(e) > 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 15, 'condition' => "8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv"],
-        ['audience_code' => 'conjoint_moins_60', 'label' => 'Contact avec le (la) conjoint(e) < 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 3, 'condition' => "8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv"],
-        ['audience_code' => 'conjointe_enceinte', 'label' => 'Contact avec la conjointe enceinte', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 1, 'condition' => "8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv"],
-        ['audience_code' => 'transport_commun', 'label' => 'Transport en commun', 'exposures' => [$e(3, 0.5, false)], 'limit' => 1, 'condition' => "3 h à 0,5 m,\nlimite 1 mSv"],
-        ['audience_code' => 'enfant_moins_3_ans', 'label' => 'Contact avec un enfant (<3 ans) au retour à la maison', 'exposures' => [$e(9, 1, true)], 'limit' => 1, 'condition' => "9 h à 1 m,\nlimite 1 mSv"],
-        ['audience_code' => 'enfant_3_11_ans', 'label' => 'Contact avec un enfant (entre 3 et 11 ans) au retour à la maison', 'exposures' => [$e(2, 0.5, false), $e(2, 1, true)], 'limit' => 1, 'condition' => "2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv"],
+        ['audience_code' => 'conjoint_plus_60', 'label' => 'Proximité avec son/sa conjoint(e) de plus de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 15, 'condition' => "Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 15 mSv"],
+        ['audience_code' => 'conjoint_moins_60', 'label' => 'Proximité avec son/sa conjoint(e) de moins de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 3, 'condition' => "Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 3 mSv"],
+        ['audience_code' => 'conjointe_enceinte', 'label' => 'Proximité avec une conjointe enceinte', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 1, 'condition' => "Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 1 mSv"],
+        ['audience_code' => 'transport_commun', 'label' => 'Déplacement en transports en commun', 'exposures' => [$e(3, 0.5, false)], 'limit' => 1, 'condition' => "Exposition : 3 h à 0,5 m · limite de dose : 1 mSv"],
+        ['audience_code' => 'enfant_moins_3_ans', 'label' => 'Proximité avec un enfant de moins de 3 ans, à la maison après la sortie', 'exposures' => [$e(9, 1, true)], 'limit' => 1, 'condition' => "Exposition : 9 h à 1 m · limite de dose : 1 mSv"],
+        ['audience_code' => 'enfant_3_11_ans', 'label' => 'Proximité avec un enfant de 3 à 11 ans, à la maison après la sortie', 'exposures' => [$e(2, 0.5, false), $e(2, 1, true)], 'limit' => 1, 'condition' => "Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv"],
         // unit_factor_at_1m corrigé à true (2026-09-02): c'était la seule exposition à 1 m sur les
         // 6 du tableau à avoir false, ce qui appliquait par erreur le facteur géométrique complet
         // (~0,86 pour un patient de 150 cm) au lieu de la référence 1 à cette distance — écart de
         // 2 jours constaté par comparaison directe avec l'outil SFMN de référence (Radium-223,
         // 100 µSv/h, 150 cm: 38 j attendus, 36 j calculés avant ce correctif).
-        ['audience_code' => 'collegues_travail', 'label' => 'Contact avec des collègues de travail', 'exposures' => [$e(6, 1, true)], 'limit' => 1, 'condition' => "6 h à 1 m,\nlimite 1 mSv"],
+        ['audience_code' => 'collegues_travail', 'label' => 'Présence auprès de collègues de travail', 'exposures' => [$e(6, 1, true)], 'limit' => 1, 'condition' => "Exposition : 6 h à 1 m · limite de dose : 1 mSv"],
     ];
 }
 
@@ -361,8 +361,8 @@ function calculate(array $payload): array
         $userRow = [
             'audience_code' => 'scenario_utilisateur',
             'label' => 'Scénario utilisateur',
-            'condition' => js_number_to_string($user['hours1']) . ' h à ' . js_number_to_string($user['distance1']) . ' m et '
-                . js_number_to_string($user['hours2']) . " h à 1 m,\nlimite " . js_number_to_string($user['limit']) . ' mSv',
+            'condition' => 'Exposition : ' . js_number_to_string($user['hours1']) . ' h à ' . js_number_to_string($user['distance1']) . ' m + '
+                . js_number_to_string($user['hours2']) . ' h à 1 m · limite de dose : ' . js_number_to_string($user['limit']) . ' mSv',
             'value' => $errors ? null : restriction_days($effectiveDays, $doseRate, $patientSizeCm, [
                 ['hours' => $user['hours1'], 'distance' => $user['distance1'], 'unit_factor_at_1m' => false],
                 ['hours' => $user['hours2'], 'distance' => 1.0, 'unit_factor_at_1m' => true],
