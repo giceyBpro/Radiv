@@ -33,14 +33,14 @@
     let lastResult = null;
     let latestRequestId = 0;
     const audienceMeta = {
-      conjoint_plus_60: { label: 'Contact avec le (la) conjoint(e) > 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 15 mSv' },
-      conjoint_moins_60: { label: 'Contact avec le (la) conjoint(e) < 60 ans', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 3 mSv' },
-      conjointe_enceinte: { label: 'Contact avec la conjointe enceinte', condition: '8 h à 0,3 m et 3 h à 1 m,\nlimite 1 mSv' },
-      transport_commun: { label: 'Transport en commun', condition: '3 h à 0,5 m,\nlimite 1 mSv' },
-      enfant_moins_3_ans: { label: 'Contact avec un enfant (<3 ans)\nau retour à la maison', condition: '9 h à 1 m,\nlimite 1 mSv' },
-      enfant_3_11_ans: { label: 'Contact avec un enfant (entre 3 et 11 ans)\nau retour à la maison', condition: '2 h à 0,5 m et 2 h à 1 m,\nlimite 1 mSv' },
-      collegues_travail: { label: 'Contact avec des collègues de travail', condition: '6 h à 1 m,\nlimite 1 mSv' },
-      scenario_utilisateur: { label: 'Scénario utilisateur', condition: 'h à m et h à 1 m,\nlimite mSv' }
+      conjoint_plus_60: { label: 'Proximité avec son/sa conjoint(e) de plus de 60 ans', condition: 'Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 15 mSv' },
+      conjoint_moins_60: { label: 'Proximité avec son/sa conjoint(e) de moins de 60 ans', condition: 'Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 3 mSv' },
+      conjointe_enceinte: { label: 'Proximité avec une conjointe enceinte', condition: 'Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 1 mSv' },
+      transport_commun: { label: 'Déplacement en transports en commun', condition: 'Exposition : 3 h à 0,5 m · limite de dose : 1 mSv' },
+      enfant_moins_3_ans: { label: 'Proximité avec un enfant de moins de 3 ans\nà la maison après la sortie', condition: 'Exposition : 9 h à 1 m · limite de dose : 1 mSv' },
+      enfant_3_11_ans: { label: 'Proximité avec un enfant de 3 à 11 ans\nà la maison après la sortie', condition: 'Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv' },
+      collegues_travail: { label: 'Présence auprès de collègues de travail', condition: 'Exposition : 6 h à 1 m · limite de dose : 1 mSv' },
+      scenario_utilisateur: { label: 'Scénario utilisateur', condition: 'Exposition : h à m + h à 1 m · limite de dose : mSv' }
     };
 
     function formatNumber(value, decimals = 2) {
@@ -286,8 +286,8 @@
 
     function clearDisplayedResults() {
       lastResult = null;
-      $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
-      $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
+      $('effectiveDaysText').textContent = 'Période effective appliquée au calcul, en jours : -';
+      $('effectiveHoursText').textContent = 'Période effective appliquée au calcul, en heures : -';
       $('resultsBody').innerHTML = '';
       updateResultsVisibility();
       document.dispatchEvent(new CustomEvent('radiv:clear'));
@@ -316,7 +316,7 @@
       const h2 = getNumberOrNull('userHours2');
       const limit = getNumberOrNull('userLimit');
       if (h1 !== null && d1 !== null && h2 !== null && limit !== null) {
-        return `${h1} h à ${d1} m et ${h2} h à 1 m,\nlimite ${limit} mSv`;
+        return `Exposition : ${h1} h à ${d1} m + ${h2} h à 1 m · limite de dose : ${limit} mSv`;
       }
       return audienceMeta.scenario_utilisateur.condition;
     }
@@ -338,8 +338,8 @@
       $('referenceText').textContent = selected?.reference || '-';
       $('remarkText').textContent = selected?.remark || '-';
       $('effectivePeriodLabel').textContent = selectedCode === 'non_defini'
-        ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
-        : 'Période effective (j) imposée par l’utilisateur (laisser vide sinon)';
+        ? 'Période effective à renseigner, en jours (obligatoire dans ce cas)'
+        : 'Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)';
     }
 
     function renderFromResult(result) {
@@ -371,15 +371,15 @@
         : 'Durée restriction<br>(jours)';
 
       $('effectivePeriodLabel').textContent = selected.api_code === 'non_defini'
-        ? 'Période effective (j) (obligatoire à renseigner dans ce cas)'
-        : 'Période effective (j) imposée par l’utilisateur (laisser vide sinon)';
+        ? 'Période effective à renseigner, en jours (obligatoire dans ce cas)'
+        : 'Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)';
 
       if (result.effective_days !== null && Number.isFinite(result.effective_days)) {
-        $('effectiveDaysText').textContent = `Période effective retenue en jours : ${formatNumber(result.effective_days, 2)}`;
-        $('effectiveHoursText').textContent = `Période effective retenue en heures : ${formatNumber(result.effective_hours, 2)}`;
+        $('effectiveDaysText').textContent = `Période effective appliquée au calcul, en jours : ${formatNumber(result.effective_days, 2)}`;
+        $('effectiveHoursText').textContent = `Période effective appliquée au calcul, en heures : ${formatNumber(result.effective_hours, 2)}`;
       } else {
-        $('effectiveDaysText').textContent = 'Période effective retenue en jours : -';
-        $('effectiveHoursText').textContent = 'Période effective retenue en heures : -';
+        $('effectiveDaysText').textContent = 'Période effective appliquée au calcul, en jours : -';
+        $('effectiveHoursText').textContent = 'Période effective appliquée au calcul, en heures : -';
       }
 
       const errorBox = $('errorBox');
