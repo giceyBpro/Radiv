@@ -22,12 +22,41 @@ function registry_file(): string
     return Config\config_dir() . '/providers.json';
 }
 
-function load(): array
+function load_registry(): array
 {
     $raw = @file_get_contents(registry_file());
     $data = $raw === false ? null : json_decode($raw, true);
-    $providers = is_array($data) && isset($data['providers']) && is_array($data['providers']) ? $data['providers'] : [];
+    return is_array($data) ? $data : [];
+}
+
+function load(): array
+{
+    $data = load_registry();
+    $providers = isset($data['providers']) && is_array($data['providers']) ? $data['providers'] : [];
     return array_values(array_filter($providers, static fn ($p) => is_array($p) && isset($p['id']) && is_string($p['id'])));
+}
+
+// Clé d'API obligatoire pour les appels extérieurs ? Le choix enregistré dans l'administration (registre) l'emporte sur
+// API_KEY_REQUIRED ; sans choix enregistré, c'est la variable d'environnement (faux par défaut).
+function required(): bool
+{
+    $data = load_registry();
+    return isset($data['required']) && is_bool($data['required']) ? $data['required'] : Config\api_key_required();
+}
+
+// Vrai si l'obligation vient d'un choix fait dans l'administration (et non de l'environnement).
+function required_is_set(): bool
+{
+    $data = load_registry();
+    return isset($data['required']) && is_bool($data['required']);
+}
+
+function set_required(bool $required): ?string
+{
+    $r = transact(static function (array $providers) use ($required): array {
+        return [$providers, null, ['required' => $required]];
+    });
+    return is_string($r) ? $r : null;
 }
 
 // Lecture-modification-écriture exclusive du registre. $change reçoit la liste et retourne [nouvelle liste, résultat].
@@ -37,10 +66,15 @@ function transact(callable $change): mixed
     $lock = @fopen(Config\config_dir() . '/.providers.lock', 'c');
     if (!$lock || !flock($lock, LOCK_EX)) return 'Registre verrouillé, réessayez.';
     try {
-        [$providers, $result] = $change(load());
+        $changed = $change(load());
+        $providers = $changed[0];
+        $result = $changed[1];
         if ($providers !== null) {
             $tmp = registry_file() . '.tmp' . bin2hex(random_bytes(3));
-            $json = json_encode(['providers' => array_values($providers)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+            // Les réglages du registre (ex. « required ») sont conservés, ceux fournis par $change (3e élément) les remplacent
+            $registry = ['providers' => array_values($providers)] + array_diff_key(load_registry(), ['providers' => 1]);
+            $registry = ($changed[2] ?? []) + $registry;
+            $json = json_encode($registry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
             if (@file_put_contents($tmp, $json . "\n") === false) return 'Écriture du registre impossible.';
             @chmod($tmp, 0600);
             if (!@rename($tmp, registry_file())) { @unlink($tmp); return 'Écriture du registre impossible.'; }
@@ -187,6 +221,6 @@ function identify(string $ip): array
         return ['error' => 'Clé d\'API invalide, expirée ou révoquée.', 'status' => 401, 'code' => 'API_KEY_INVALID'];
     }
     if (is_site_request()) return ['kind' => 'site', 'id' => Config\site_name(), 'name' => Config\site_name(), 'limit' => null];
-    if (!Config\api_key_required()) return ['kind' => 'open', 'id' => null, 'name' => null, 'limit' => null];
+    if (!required()) return ['kind' => 'open', 'id' => null, 'name' => null, 'limit' => null];
     return ['error' => 'Clé d\'API requise : transmettez-la dans l\'en-tête X-API-Key (voir /api-fonctionnement.html).', 'status' => 401, 'code' => 'API_KEY_REQUIRED'];
 }

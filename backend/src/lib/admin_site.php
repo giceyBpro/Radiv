@@ -41,6 +41,7 @@ const ROUTES = [
     'POST /auth/fournisseurs/cle' => 'provider_key',
     'POST /auth/fournisseurs/revoquer' => 'provider_revoke',
     'POST /auth/fournisseurs/etat' => 'provider_status',
+    'POST /auth/fournisseurs/obligation' => 'provider_required',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
     'POST /auth/logout' => 'logout',
@@ -144,9 +145,9 @@ function config_card(): string
             : '<li>' . h($title) . ' : complet</li>';
     }
     $nProv = count(array_filter(Providers\load(), static fn ($p) => ($p['status'] ?? 'active') === 'active'));
-    $out .= '<li>' . (Config\api_key_required()
+    $out .= '<li>' . (Providers\required()
         ? ($nProv ? 'Clés d\'API : obligatoires, ' . $nProv . ' fournisseur(s) actif(s)' : '<strong class="err">Clés d\'API obligatoires mais aucun fournisseur actif</strong> — seul le site peut appeler l\'API (onglet Fournisseurs)')
-        : '<strong class="err">Clés d\'API facultatives</strong> (<code>API_KEY_REQUIRED=false</code>) — appels extérieurs sans clé acceptés') . '</li>';
+        : 'Clés d\'API : <strong>facultatives</strong> (appels extérieurs sans clé acceptés ; ' . $nProv . ' fournisseur(s) actif(s))') . '</li>';
     $out .= '</ul>';
     $default = array_values(array_filter(config_optional(), static fn (string $n): bool => !$set($n) && !($n === 'TRUSTED_PROXIES' && getenv($n) !== false)));
     if ($default) {
@@ -364,8 +365,15 @@ function do_providers(): bool
                 . '<p class="small">À transmettre au fournisseur par un canal sûr. Elle se passe dans l\'en-tête <code>X-API-Key</code>. Seule son empreinte est conservée sur le serveur.</p></section>';
         }
     }
-    $out .= '<p class="small">Chaque logiciel ou service qui appelle <code>/api/calculate</code> reçoit une clé d\'API ' . (Config\api_key_required() ? '(<strong>obligatoire</strong> : <code>API_KEY_REQUIRED</code>)' : '(<strong>facultative</strong> actuellement : <code>API_KEY_REQUIRED=false</code>)')
-        . '. Les pages du site en sont dispensées. La clé identifie le fournisseur dans les mesures (colonne « Origine »).</p>';
+    $req = Providers\required();
+    $out .= '<section class="card"><h2>Clé d\'API ' . ($req ? '<span class="badge good">obligatoire</span>' : '<span class="badge bad">facultative</span>') . '</h2>'
+        . '<p class="small">' . ($req
+            ? 'Les appels extérieurs à <code>/api/calculate</code> sans clé valide sont refusés (401).'
+            : 'Les appels extérieurs à <code>/api/calculate</code> sont acceptés <strong>sans clé</strong> ; une clé valide reste reconnue et identifie son fournisseur. Les clés invalides sont toujours refusées.')
+        . ' Les pages du site en sont dispensées dans les deux cas. ' . (Providers\required_is_set() ? 'Choix fait ici.' : 'Valeur issue de <code>API_KEY_REQUIRED</code> (défaut : facultative).') . '</p>'
+        . '<form method="post" action="/auth/fournisseurs/obligation"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="required" value="' . ($req ? '0' : '1') . '">'
+        . '<button type="submit" class="secondary">' . ($req ? 'Rendre la clé facultative' : 'Rendre la clé obligatoire') . '</button></form></section>';
+    $out .= '<p class="small">Chaque logiciel ou service qui appelle <code>/api/calculate</code> reçoit une clé d\'API, qui l\'identifie dans les mesures (colonne « Origine »).</p>';
     $providers = Providers\load();
     foreach ($providers as $p) {
         $suspended = ($p['status'] ?? 'active') !== 'active';
@@ -445,6 +453,16 @@ function do_provider_revoke(): bool
     $err = Providers\revoke_key((string) ($_POST['id'] ?? ''), (string) ($_POST['prefix'] ?? ''));
     if ($err === null) error_log('[API-KEY] Clé ' . (string) ($_POST['prefix'] ?? '') . ' révoquée par ' . $admin['email']);
     return provider_done($err === null ? ['ok' => true, 'message' => 'Clé révoquée : elle est refusée immédiatement.'] : ['ok' => false, 'message' => $err]);
+}
+
+function do_provider_required(): bool
+{
+    $admin = provider_guard();
+    if ($admin === null) return false;
+    $want = (string) ($_POST['required'] ?? '') === '1';
+    $err = Providers\set_required($want);
+    if ($err === null) error_log('[API-KEY] Clé d\'API ' . ($want ? 'rendue obligatoire' : 'rendue facultative') . ' par ' . $admin['email']);
+    return provider_done($err === null ? ['ok' => true, 'message' => $want ? 'Clé d\'API désormais obligatoire pour les appels extérieurs.' : 'Clé d\'API désormais facultative : les appels extérieurs sans clé sont acceptés.'] : ['ok' => false, 'message' => $err]);
 }
 
 function do_provider_status(): bool

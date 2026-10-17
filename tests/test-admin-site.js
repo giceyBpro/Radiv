@@ -195,7 +195,13 @@ async function update(c, ref, token) {
     const reg = fs.readFileSync(regFile, 'utf8');
     t('registre : empreinte SHA-256 seulement, jamais la clé, droits 600, nom assaini', !reg.includes(KEY) && reg.includes(crypto.createHash('sha256').update(KEY).digest('hex')) && (fs.statSync(regFile).mode & 0o077) === 0 && !reg.includes('<b>'));
     t('registre et dossier de configuration illisibles depuis le web', (await fetch(`${BASE}/backend/config/providers.json`)).status !== 200);
-    let x = await calc(); t('appel extérieur sans clé → 401 API_KEY_REQUIRED', x.status === 401 && x.body.code === 'API_KEY_REQUIRED' && x.body.ok === false);
+    let x = await calc(); t('par défaut : clé facultative, appel extérieur sans clé accepté', x.status === 200 && x.body.ok === true);
+    x = await calc({ 'X-API-Key': KEY.slice(0, -1) + (KEY.endsWith('A') ? 'B' : 'A') }); t('…mais une clé invalide reste refusée', x.status === 401 && x.body.code === 'API_KEY_INVALID');
+    t('onglet : état « facultative » et bouton pour la rendre obligatoire', /badge bad">facultative/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text) && /Rendre la clé obligatoire/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text));
+    r = await c.req('POST', `${BASE}/auth/fournisseurs/obligation`, { form: { required: '1' }, headers: { Origin: BASE } }); t('changement sans jeton CSRF refusé', r.status === 403);
+    r = await adminPost('obligation', { required: '1' }); await c.req('GET', r.loc);
+    t('clé rendue obligatoire depuis le backend', /badge good">obligatoire/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text) && JSON.parse(fs.readFileSync(regFile, 'utf8')).required === true);
+    x = await calc(); t('appel extérieur sans clé → 401 API_KEY_REQUIRED', x.status === 401 && x.body.code === 'API_KEY_REQUIRED' && x.body.ok === false);
     x = await calc({ 'X-API-Key': KEY }); t('avec la clé (X-API-Key) → 200', x.status === 200 && x.body.ok === true);
     x = await calc({ Authorization: `Bearer ${KEY}` }); t('avec la clé (Authorization: Bearer) → 200', x.status === 200 && x.body.ok === true);
     x = await calc({}, `?api_key=${KEY}`); t('clé dans l\'adresse ignorée → 401', x.status === 401);
@@ -236,11 +242,15 @@ async function update(c, ref, token) {
     // Limitation des essais de clés
     resetLimits(); const bad = []; for (let i = 0; i < 22; i++) bad.push((await calc({ 'X-API-Key': 'rdv_00000000_' + 'a'.repeat(43) })).status);
     t('essais de clés limités (429 après 20 refus par minute)', bad[0] === 401 && bad[bad.length - 1] === 429, bad.join());
-    // Clé facultative (migration)
-    resetLimits(); setEnv('API_KEY_REQUIRED', 'false');
-    x = await calc(); t('API_KEY_REQUIRED=false : appel sans clé accepté', x.status === 200);
-    t('…signalé dans la zone Configuration', /Clés d'API facultatives/.test((await c.req('GET', `${BASE}/auth`)).text));
-    setEnv('API_KEY_REQUIRED', null);
+    // Obligation désactivée depuis le backend, puis variable d'environnement
+    resetLimits(); r = await adminPost('obligation', { required: '0' }); await c.req('GET', r.loc);
+    x = await calc(); t('obligation désactivée depuis le backend : appel sans clé accepté', x.status === 200 && JSON.parse(fs.readFileSync(regFile, 'utf8')).required === false);
+    t('…signalé dans la zone Configuration', /Clés d'API : <strong>facultatives/.test((await c.req('GET', `${BASE}/auth`)).text) && /Choix fait ici/.test((await c.req('GET', `${BASE}/auth/fournisseurs`)).text));
+    t('…les fournisseurs et clés sont conservés', JSON.parse(fs.readFileSync(regFile, 'utf8')).providers.length === 2);
+    setEnv('API_KEY_REQUIRED', 'true'); x = await calc(); t('le choix du backend l\'emporte sur API_KEY_REQUIRED=true', x.status === 200);
+    { const o = JSON.parse(fs.readFileSync(regFile, 'utf8')); delete o.required; fs.writeFileSync(regFile, JSON.stringify(o)); }
+    x = await calc(); t('sans choix du backend : API_KEY_REQUIRED=true s\'applique', x.status === 401 && x.body.code === 'API_KEY_REQUIRED');
+    setEnv('API_KEY_REQUIRED', null); x = await calc(); t('sans choix ni variable : facultative', x.status === 200);
     fs.rmSync(regFile, { force: true }); resetLimits(); }
 
   console.log('\n— Origine des requêtes API (provider)');
