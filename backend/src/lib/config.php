@@ -154,10 +154,11 @@ function disk_min_free_bytes(): ?int
     return (int) $raw === 0 ? null : (int) $raw * 1048576;
 }
 
-// Clé d'API obligatoire pour les appels extérieurs à /api/calculate (API_KEY_REQUIRED, vrai par défaut). Les pages du site en sont dispensées.
+// Réglage d'environnement : clé d'API obligatoire pour les appels extérieurs à /api/calculate (API_KEY_REQUIRED, faux par défaut).
+// Le choix fait dans l'onglet Fournisseurs de /auth l'emporte (voir Providers\required()). Les pages du site en sont dispensées.
 function api_key_required(): bool
 {
-    return flag('API_KEY_REQUIRED');
+    return flag('API_KEY_REQUIRED', 'false');
 }
 
 function sfmn_mode_enabled(): bool

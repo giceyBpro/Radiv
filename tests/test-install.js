@@ -110,7 +110,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   const calc = await (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) })).json();
   t('POST /api/calculate fonctionne (valeur de référence 38 j)', calc.ok === true && calc.recommendations_days.collegues_travail === 38);
   { const nk = await fetch(`${BASE}/api/calculate`, { method: 'POST', body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) });
-    t('appel extérieur sans clé d\'API → 401 API_KEY_REQUIRED (clé obligatoire par défaut)', nk.status === 401 && (await nk.json()).code === 'API_KEY_REQUIRED'); }
+    t('appel extérieur sans clé d\'API accepté par défaut (clé facultative)', nk.status === 200 && (await nk.json()).ok === true); }
   t('GET /health → 200', (await fetch(`${BASE}/health`)).status === 200);
   const au = await fetch(`${BASE}/auth`, { redirect: 'manual' }); t('/auth redirige vers Google', au.status === 302 && /accounts\.google\.com/.test(au.headers.get('location')), `${au.status} ${au.headers.get('location')}`);
   const tox = async (u) => { const x = await fetch(`${BASE}${u}`, { redirect: 'manual' }); return [x.status, x.headers.get('location')]; };
