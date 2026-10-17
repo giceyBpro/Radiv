@@ -33,9 +33,9 @@
     let lastResult = null;
     let latestRequestId = 0;
     const audienceMeta = {
-      conjoint_plus_60: { label: 'Proximité avec son/sa conjoint(e) de plus de 60 ans', condition: 'Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 15 mSv' },
-      conjoint_moins_60: { label: 'Proximité avec son/sa conjoint(e) de moins de 60 ans', condition: 'Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 3 mSv' },
-      conjointe_enceinte: { label: 'Proximité avec une conjointe enceinte', condition: 'Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 1 mSv' },
+      conjoint_plus_60: { label: 'Proximité, y compris la nuit, avec son/sa conjoint(e) de plus de 60 ans', condition: 'Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 15 mSv' },
+      conjoint_moins_60: { label: 'Proximité, y compris la nuit, avec son/sa conjoint(e) de moins de 60 ans', condition: 'Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 3 mSv' },
+      conjointe_enceinte: { label: 'Proximité, y compris la nuit, avec une conjointe enceinte', condition: 'Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 1 mSv' },
       transport_commun: { label: 'Déplacement en transports en commun', condition: 'Exposition : 3 h à 0,5 m · limite de dose : 1 mSv' },
       enfant_moins_3_ans: { label: 'Proximité avec un enfant de moins de 3 ans\nà la maison après la sortie', condition: 'Exposition : 9 h à 1 m · limite de dose : 1 mSv' },
       enfant_3_11_ans: { label: 'Proximité avec un enfant de 3 à 11 ans\nà la maison après la sortie', condition: 'Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv' },

@@ -102,9 +102,9 @@ function scenarios(): array
 {
     $e = static fn (float $hours, float $distance, bool $unit): array => ['hours' => $hours, 'distance' => $distance, 'unit_factor_at_1m' => $unit];
     return [
-        ['audience_code' => 'conjoint_plus_60', 'label' => 'Proximité avec son/sa conjoint(e) de plus de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 15, 'condition' => "Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 15 mSv"],
-        ['audience_code' => 'conjoint_moins_60', 'label' => 'Proximité avec son/sa conjoint(e) de moins de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 3, 'condition' => "Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 3 mSv"],
-        ['audience_code' => 'conjointe_enceinte', 'label' => 'Proximité avec une conjointe enceinte', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 1, 'condition' => "Exposition : 8 h à 0,3 m + 3 h à 1 m · limite de dose : 1 mSv"],
+        ['audience_code' => 'conjoint_plus_60', 'label' => 'Proximité, y compris la nuit, avec son/sa conjoint(e) de plus de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 15, 'condition' => "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 15 mSv"],
+        ['audience_code' => 'conjoint_moins_60', 'label' => 'Proximité, y compris la nuit, avec son/sa conjoint(e) de moins de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 3, 'condition' => "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 3 mSv"],
+        ['audience_code' => 'conjointe_enceinte', 'label' => 'Proximité, y compris la nuit, avec une conjointe enceinte', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 1, 'condition' => "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 1 mSv"],
         ['audience_code' => 'transport_commun', 'label' => 'Déplacement en transports en commun', 'exposures' => [$e(3, 0.5, false)], 'limit' => 1, 'condition' => "Exposition : 3 h à 0,5 m · limite de dose : 1 mSv"],
         ['audience_code' => 'enfant_moins_3_ans', 'label' => 'Proximité avec un enfant de moins de 3 ans, à la maison après la sortie', 'exposures' => [$e(9, 1, true)], 'limit' => 1, 'condition' => "Exposition : 9 h à 1 m · limite de dose : 1 mSv"],
         ['audience_code' => 'enfant_3_11_ans', 'label' => 'Proximité avec un enfant de 3 à 11 ans, à la maison après la sortie', 'exposures' => [$e(2, 0.5, false), $e(2, 1, true)], 'limit' => 1, 'condition' => "Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv"],
