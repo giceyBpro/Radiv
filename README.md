@@ -161,6 +161,8 @@ alignés), sélecteur de mode masqué sur la page d'accueil, exemples de payload
 }
 ```
 
+**Recommandation d'intégration** : identifier un scénario par son `audience_code` (ou sa clé dans `recommendations_days`), **jamais par le texte** de `label` ou de `condition` de `rows`. Ces textes sont destinés à l'affichage et peuvent être reformulés d'une version à l'autre sans changer le sens ni les valeurs ; les codes et les noms de champs, eux, sont stables.
+
 En cas d'erreur : `ok: false` + `error.code`, `error.message`, `error.reason`, `error.expected_payload`.
 
 ## Formulaire de contact
