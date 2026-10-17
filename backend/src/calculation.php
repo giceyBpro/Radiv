@@ -106,8 +106,8 @@ function scenarios(): array
         ['audience_code' => 'conjoint_moins_60', 'label' => 'Proximité, y compris la nuit, avec son/sa conjoint(e) de moins de 60 ans', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 3, 'condition' => "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 3 mSv"],
         ['audience_code' => 'conjointe_enceinte', 'label' => 'Proximité, y compris la nuit, avec une conjointe enceinte', 'exposures' => [$e(8, 0.3, false), $e(3, 1, true)], 'limit' => 1, 'condition' => "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 1 mSv"],
         ['audience_code' => 'transport_commun', 'label' => 'Déplacement en transports en commun', 'exposures' => [$e(3, 0.5, false)], 'limit' => 1, 'condition' => "Exposition : 3 h à 0,5 m · limite de dose : 1 mSv"],
-        ['audience_code' => 'enfant_moins_3_ans', 'label' => 'Proximité avec un enfant de moins de 3 ans, à la maison après la sortie', 'exposures' => [$e(9, 1, true)], 'limit' => 1, 'condition' => "Exposition : 9 h à 1 m · limite de dose : 1 mSv"],
-        ['audience_code' => 'enfant_3_11_ans', 'label' => 'Proximité avec un enfant de 3 à 11 ans, à la maison après la sortie', 'exposures' => [$e(2, 0.5, false), $e(2, 1, true)], 'limit' => 1, 'condition' => "Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv"],
+        ['audience_code' => 'enfant_moins_3_ans', 'label' => 'Proximité avec un enfant de moins de 3 ans, à la maison', 'exposures' => [$e(9, 1, true)], 'limit' => 1, 'condition' => "Exposition : 9 h à 1 m · limite de dose : 1 mSv"],
+        ['audience_code' => 'enfant_3_11_ans', 'label' => 'Proximité avec un enfant de 3 à 11 ans, à la maison', 'exposures' => [$e(2, 0.5, false), $e(2, 1, true)], 'limit' => 1, 'condition' => "Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv"],
         // unit_factor_at_1m corrigé à true (2026-09-02): c'était la seule exposition à 1 m sur les
         // 6 du tableau à avoir false, ce qui appliquait par erreur le facteur géométrique complet
         // (~0,86 pour un patient de 150 cm) au lieu de la référence 1 à cette distance — écart de
