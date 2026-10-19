@@ -1,4 +1,9 @@
+# Pages publiques : accueil et mentions légales (les autres pages sont en « noindex »).
 User-agent: *
-Allow: /$
-Allow: /index.html$
-Disallow: /
+Allow: /
+# L'API n'est pas destinée aux moteurs de recherche ; la configuration lue par la page d'accueil reste accessible (affichage de la page).
+Allow: /api/config$
+Allow: /api/public-config$
+Disallow: /api/
+# Modèles Xplore (fichiers XML) : à télécharger, pas à indexer
+Disallow: /downloads/

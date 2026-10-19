@@ -34,7 +34,7 @@ const DEFAULT_REPO = 'giceyBpro/Radiv';
 $FRONTEND_FILES = array(
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
-    'favicon.ico', 'robots.txt',
+    'favicon.ico', 'og-image.png', 'robots.txt',
 );
 $REQUIRED_FILES = array(
     'public/index.html', 'public/api/.htaccess', 'public/api/index.php',
@@ -401,6 +401,17 @@ function htaccess_blocks($siteUrl, $backendUrlPath)
     foreach ($routes as $route => $target) {
         $blocks[$target] = "# /" . $route . "\nRewriteEngine On\nRewriteRule ^" . $route . "/?$ " . $target . " [L]\n";
     }
+    // Pages indexables, mentions légales et plan du site : servis par l'API PHP, qui complète le HTML des balises propres à l'adresse du
+    // site (canonique absolue, Open Graph, données structurées). « mentions-legales.html » est aussi la cible de l'ancienne règle /legal.
+    $seo = '# /seo (accueil, mentions légales et plan du site par l\'API PHP) v1';
+    $blocks[$seo] = $seo . "\nRewriteEngine On\nRewriteRule ^(index\\.html)?$ api/index.php [L]\nRewriteRule ^mentions-legales\\.html$ api/index.php [L]\nRewriteRule ^sitemap\\.xml$ api/index.php [L]\n";
+    // Compression et cache navigateur (vitesse de chargement) ; sans effet si les modules Apache correspondants manquent.
+    $perf = '# Compression et cache v1';
+    $blocks[$perf] = $perf . "\n<IfModule mod_deflate.c>\nAddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json application/xml image/svg+xml\n</IfModule>\n"
+        . "<IfModule mod_expires.c>\nExpiresActive On\nExpiresByType text/css \"access plus 1 hour\"\nExpiresByType application/javascript \"access plus 1 hour\"\n"
+        . "ExpiresByType text/javascript \"access plus 1 hour\"\nExpiresByType image/png \"access plus 1 month\"\nExpiresByType image/x-icon \"access plus 1 month\"\n"
+        . "ExpiresByType image/vnd.microsoft.icon \"access plus 1 month\"\nExpiresByType font/woff2 \"access plus 1 year\"\nExpiresByType font/woff \"access plus 1 year\"\n"
+        . "ExpiresByType application/font-woff2 \"access plus 1 year\"\n</IfModule>\n";
     $blocks['# /health (API PHP)'] = "# /health (API PHP)\nRewriteEngine On\nRewriteRule ^health/?$ api/index.php [L]\n";
     $blocks['# /auth (API PHP)'] = "# /auth (API PHP)\nRewriteEngine On\nRewriteRule ^auth(/.*)?$ api/index.php [L]\n";
     // Fichiers de configuration éventuellement copiés dans la racine (.env, .runtime.env) : jamais servis.

@@ -336,6 +336,7 @@ async function update(c, ref, token) {
   t('…règle d\'interdiction du backend rétablie dans le .htaccess racine, une seule fois', (read('.htaccess').match(/backend : accès refusé/g) || []).length === 1);
   const toxRes = await fetch(`${BASE}/tox`, { redirect: 'manual' });
   t('…/tox redirigé vers tox.radiv.fr (la règle est passée avant l\'ancienne règle /tox du site)', toxRes.status === 301 && toxRes.headers.get('location') === 'https://tox.radiv.fr/' && (read('.htaccess').match(/# \/tox \(redirection vers tox\.radiv\.fr\) v1/g) || []).length === 1);
+  t('…règles du référencement et du cache réparées dans le .htaccess, accueil avec canonique absolue', /# \/seo \(accueil/.test(read('.htaccess')) && /# Compression et cache v1/.test(read('.htaccess')) && (await (await fetch(`${BASE}/`)).text()).includes(`<link rel="canonical" href="${BASE}/" />`) && /<loc>.*<\/loc>/.test(await (await fetch(`${BASE}/sitemap.xml`)).text()));
   t('…état identique à avant l\'incident (hors ordre des blocs de tête du .htaccess)', treeHash(true) === afterRescue);
   t('…et le site fonctionne', (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
   // Jeton conservé sur le serveur : jamais redemandé

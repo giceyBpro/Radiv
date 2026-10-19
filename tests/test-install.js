@@ -91,7 +91,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   t('.htaccess: /health, /auth et raccourcis ajoutés', ht.includes('RewriteRule ^health/?$ api/index.php') && ht.includes('RewriteRule ^auth(/.*)?$ api/index.php') && ht.includes('RewriteRule ^legal/?$ mentions-legales.html'));
   t('.htaccess: en-têtes de sécurité (une seule fois), pas de HSTS ni de redirection en http local', ht.includes('# En-têtes de sécurité des pages v1') && ht.split('# En-têtes de sécurité').length === 2 && !ht.includes('Strict-Transport-Security') && !ht.includes('R=308'));
   const pageHdr = (await fetch(`${BASE}/index.html`)).headers; const apiHdr = (await fetch(`${BASE}/api/config`)).headers;
-  t('pages: en-têtes de sécurité posés', pageHdr.get('x-content-type-options') === 'nosniff' && pageHdr.get('x-frame-options') === 'DENY' && /strict-origin-when-cross-origin/.test(pageHdr.get('referrer-policy') || '') && /frame-ancestors 'none'/.test(pageHdr.get('content-security-policy') || '') && /camera=\(\)/.test(pageHdr.get('permissions-policy') || ''));
+  t('pages: en-têtes de sécurité posés', pageHdr.get('x-content-type-options') === 'nosniff' && pageHdr.get('x-frame-options') === 'DENY' && /strict-origin-when-cross-origin/.test(pageHdr.get('referrer-policy') || '') && /frame-ancestors 'none'/.test(pageHdr.get('content-security-policy') || '') && /camera=\(\)/.test(pageHdr.get('permissions-policy') || ''), JSON.stringify([...pageHdr.entries()]));
   t('API: ses propres en-têtes restent prioritaires (CSP stricte, pas de doublon)', apiHdr.get('content-security-policy') === "default-src 'none'; frame-ancestors 'none'" && apiHdr.get('referrer-policy') === 'no-referrer' && apiHdr.get('x-frame-options') === 'DENY');
   t('polices et bibliothèques hébergées installées (vendor/)', fs.existsSync(path.join(WWW, 'vendor/fonts.css')) && fs.readFileSync(path.join(WWW, 'vendor/fonts.css'), 'utf8') === fs.readFileSync(path.join(REPO_DIR, 'public/vendor/fonts.css'), 'utf8'));
   const envFile = path.join(WWW, 'backend/config/runtime.env'); const env = fs.readFileSync(envFile, 'utf8');
@@ -111,6 +111,24 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   t('POST /api/calculate fonctionne (valeur de référence 38 j)', calc.ok === true && calc.recommendations_days.collegues_travail === 38);
   { const nk = await fetch(`${BASE}/api/calculate`, { method: 'POST', body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) });
     t('appel extérieur sans clé d\'API accepté par défaut (clé facultative)', nk.status === 200 && (await nk.json()).ok === true); }
+  { // Référencement : balises propres à l'adresse du site, plan du site, robots, cache
+    const hom = await fetch(`${BASE}/`); const html = await hom.text();
+    const ld = (html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/) || [])[1]; let graph = [];
+    try { graph = JSON.parse(ld)['@graph']; } catch (e) { /* signalé ci-dessous */ }
+    t('accueil : canonique absolue, og:url, og:image, nom du site dans le h1', hom.status === 200 && html.includes(`<link rel="canonical" href="${BASE}/" />`) && html.includes(`<meta property="og:url" content="${BASE}/" />`) && html.includes(`<meta property="og:image" content="${BASE}/og-image.png" />`) && /<span id="siteNameBanner">127\.0\.0\.1<\/span>/.test(html) && !html.includes('<!--SEO-HEAD-->'), html.slice(0, 200));
+    t('accueil : données structurées JSON-LD valides (WebSite, Organization, WebApplication)', ['WebSite', 'Organization', 'WebApplication'].every((ty) => graph.some((g) => g['@type'] === ty)) && graph.find((g) => g['@type'] === 'WebApplication').url === `${BASE}/` && graph.find((g) => g['@type'] === 'WebApplication').isAccessibleForFree === true);
+    const etag = hom.headers.get('etag'); const r304 = await fetch(`${BASE}/`, { headers: { 'If-None-Match': etag } }); const head = await fetch(`${BASE}/`, { method: 'HEAD' });
+    t('accueil : ETag, cache public, réponse 304, HEAD sans corps', !!etag && /public/.test(hom.headers.get('cache-control') || '') && r304.status === 304 && head.status === 200 && (await head.text()) === '');
+    t('accueil identique à /index.html', (await (await fetch(`${BASE}/index.html`)).text()) === html);
+    const leg = await (await fetch(`${BASE}/legal`)).text(); const leg2 = await (await fetch(`${BASE}/mentions-legales.html`)).text();
+    t('mentions légales : indexables, canonique absolue /legal', leg === leg2 && leg.includes(`<link rel="canonical" href="${BASE}/legal" />`) && /name="robots" content="index, follow"/.test(leg) && /<meta name="description"/.test(leg));
+    const sm = await fetch(`${BASE}/sitemap.xml`); const smt = await sm.text();
+    t('plan du site : accueil et mentions légales avec date de modification', sm.status === 200 && /xml/.test(sm.headers.get('content-type') || '') && smt.includes(`<loc>${BASE}/</loc>`) && smt.includes(`<loc>${BASE}/legal</loc>`) && (smt.match(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g) || []).length === 2);
+    const rb = await (await fetch(`${BASE}/robots.txt`)).text(); const og = await fetch(`${BASE}/og-image.png`);
+    t('robots.txt : tout autorisé sauf API et modèles, configuration de la page accessible, plan du site déclaré', /^Allow: \/$/m.test(rb) && /^Disallow: \/api\/$/m.test(rb) && /^Allow: \/api\/config\$$/m.test(rb) && /^Disallow: \/downloads\/$/m.test(rb) && /^Sitemap: .*\/sitemap\.xml$/m.test(rb) && !/\/auth/.test(rb));
+    t('image de partage et icône servies', og.status === 200 && /png/.test(og.headers.get('content-type') || '') && (await fetch(`${BASE}/favicon.ico`)).status === 200);
+    t('pages secondaires en « noindex » (aide patient, test API...)', (await (await fetch(`${BASE}/explain`)).text()).includes('noindex') && (await (await fetch(`${BASE}/test-api`)).text()).includes('noindex'));
+  }
   t('GET /health → 200', (await fetch(`${BASE}/health`)).status === 200);
   const au = await fetch(`${BASE}/auth`, { redirect: 'manual' }); t('/auth redirige vers Google', au.status === 302 && /accounts\.google\.com/.test(au.headers.get('location')), `${au.status} ${au.headers.get('location')}`);
   const tox = async (u) => { const x = await fetch(`${BASE}${u}`, { redirect: 'manual' }); return [x.status, x.headers.get('location')]; };
