@@ -23,6 +23,7 @@ Ne jamais laisser des changements commités uniquement sur la branche de travail
 
 - `public/` → racine web ; seule partie PHP publique : la façade `public/api/index.php`.
 - `backend/` → code (`src/`), ressources de l'administration (`assets/`), configuration (`config/`) et données (`data/`), privés.
+- `docs/references/` : articles scientifiques de référence (PDF), conservés dans le dépôt mais **jamais déployés ni publiés** (hors de toutes les listes blanches ; voir son README, droits d'auteur).
 - `install.php` (installation web, seule méthode d'installation), `update.php` (mise à jour de secours autonome), mises à jour courantes par `/auth`
   (`backend/src/lib/updater.php`). `tests/` : outillage de développement, jamais déployé. Il n'y a ni Node ni `deploy.sh`.
 

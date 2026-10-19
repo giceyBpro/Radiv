@@ -33,7 +33,7 @@ const paths = ['public/index.html', 'public/v1.html', 'public/app.js', 'public/r
   'public/vendor/fonts.css', 'public/vendor/fonts/a.woff2', 'public/vendor/evil.php', 'public/vendor/fonts/evil.phtml', 'public/vendor/a/b/c.js', 'public/vendor/.htaccess',
   'backend/.htaccess', 'backend/src/app.php', 'backend/src/calculation.php', 'backend/src/lib/config.php', 'backend/src/lib/sub/x.php', 'backend/src/x.txt', 'backend/src/.hidden.php',
   'backend/assets/leaflet.js', 'backend/assets/leaflet.css', 'backend/assets/LEAFLET-LICENSE.txt', 'backend/assets/a.php', 'backend/assets/sub/a.js', 'backend/config/runtime.env', 'backend/config/local.env',
-  'backend/data/logs/a.jsonl', 'backend/evil.php', 'tests/a.php', 'install.php', 'update.php', 'deploy.sh', '.env', '../x', 'public/../x', '/etc/passwd', 'public//index.html', 'public\\index.html', 'index.html', 'api/index.php', ''];
+  'backend/data/logs/a.jsonl', 'backend/evil.php', 'tests/a.php', 'docs/references/article.pdf', 'public/docs/article.pdf', 'install.php', 'update.php', 'deploy.sh', '.env', '../x', 'public/../x', '/etc/passwd', 'public//index.html', 'public\\index.html', 'index.html', 'api/index.php', ''];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'shared-'));
 try {
   const libAllowed = fn(lib, 'allowed').replace('function allowed(string $rel): bool', 'function allowed($rel)');

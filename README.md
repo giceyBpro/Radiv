@@ -19,6 +19,7 @@ backend/           → copié dans le dossier du backend (privé)
   config/            runtime.env (généré, 600) et local.env (réglages locaux, jamais écrasé)
   data/              logs/ (mesures), var/ (sessions, version installée, sauvegarde, compteurs)
 tests/             outillage de développement (jamais déployé)
+docs/references/   articles scientifiques de référence (PDF) : dans le dépôt, jamais déployés ni publiés (voir leur README)
 install.php, update.php   installation web (seule méthode) et mise à jour de secours (jamais publiés par une mise à jour)
 ```
 
