@@ -52,24 +52,31 @@ de l'administration du site, derrière la connexion Google (voir [Administration
 
 ## Référencement
 
-Seule `index.html` (l'accueil) doit être indexée par les moteurs de recherche. Deux
-niveaux de protection, indépendants l'un de l'autre :
+Deux pages sont indexables : l'accueil (`/`) et les mentions légales (`/legal`). Toutes les autres portent `<meta name="robots" content="noindex, nofollow">`
+(aide patient, contact, impression, documentation de l'API, page de test, modèles Xplore, ancienne version `v1.html`) : cela bloque l'indexation même si un lien
+externe pointait vers elles, et elles ne sont liées depuis aucune page publique.
 
-- `robots.txt` interdit le crawl de tout le reste (`Disallow: /` avec deux exceptions
-  `Allow: /$` et `Allow: /index.html$`). Les noms des pages cachées (`xplore.html`…) n'y sont volontairement pas listés : ce fichier
-  est public, les y nommer reviendrait à les annoncer.
-- Chaque page sauf l'accueil porte `<meta name="robots" content="noindex, nofollow">`,
-  qui bloque l'indexation même si un lien externe venait un jour à pointer vers elle.
+- **Balises dépendant de l'adresse du site, rendues par le backend** : l'adresse du site n'étant connue qu'à l'installation, `index.html` et
+  `mentions-legales.html` contiennent un repère `<!--SEO-HEAD-->` que `backend/src/lib/seo.php` remplace à la volée, d'après `SITE_PUBLIC_URL` : **adresse canonique
+  absolue** (`/` et `/legal`), `og:url`, `og:site_name`, `og:image` / `twitter:image` (`/og-image.png`, 1200×630), **données structurées JSON-LD** (`WebSite`,
+  `Organization`, `WebApplication` pour l'accueil avec `dateModified` = date de la version installée, `WebPage` pour les mentions légales) et **nom du site dans le
+  `h1`** dès le HTML (sans attendre le JavaScript). Réponses avec `ETag`, `Cache-Control: public, max-age=300` et `304`. Si l'adresse du site n'est pas configurée
+  ou si le fichier manque, la page est servie telle quelle (aucune erreur visible).
+- **`sitemap.xml`** est servi par le backend (accueil et mentions légales, avec leur date de dernière modification) ; `install.php` en écrit aussi une version statique
+  de repli.
+- **`robots.txt`** : tout est autorisé sauf `/api/` (les deux adresses `/api/config` et `/api/public-config` restent lisibles pour que les robots puissent afficher la
+  page) et `/downloads/` (modèles XML). L'adresse de l'administration n'y figure volontairement pas : le fichier est public. La ligne `Sitemap:` est ajoutée à
+  l'installation et conservée par les mises à jour.
+- **Vitesse** : le `.htaccess` active la compression (`mod_deflate`) et le cache navigateur (`mod_expires` : polices 1 an, images 1 mois, scripts et styles 1 heure).
+  Les polices et bibliothèques sont hébergées par le site (aucune requête vers un tiers). Une adresse `www` ↔ sans `www` redirige vers l'adresse officielle
+  (301) quand `SITE_PUBLIC_URL` commence par `www.`.
+- **Activation** : ces règles sont des blocs du `.htaccess` racine (`# /seo …`, `# Compression et cache v1`) ajoutés par `install.php`. Sur un site déjà installé,
+  **lancer `update.php` une fois** (réparation idempotente) les ajoute ; sans eux, le site fonctionne comme avant (accueil statique, sans canonique absolue).
 
-`sitemap.xml` est généré par `install.php` (comme `config.js`) car il doit contenir
-une URL absolue (`SITE_PUBLIC_URL`) — inutile de le commiter avec un domaine factice.
-Il ne référence que la page d'accueil.
+**Important** : ces mécanismes agissent sur l'indexation *future*. Ils ne retirent pas une page déjà indexée : en cas de doute, vérifiez la Google Search Console du
+domaine et demandez une suppression manuelle si nécessaire.
 
-**Important** : ces mécanismes empêchent l'indexation *future*. Ils ne retirent pas une
-page déjà indexée. Si une des pages actuellement en `noindex` a pu être trouvée par
-Google avant ce changement, il faut vérifier la Google Search Console du domaine et
-demander une suppression manuelle si nécessaire — `robots.txt`/`noindex` seuls n'y
-suffisent pas rétroactivement.
+Vérifié par `tests/test-install.js` (canonique, Open Graph, JSON-LD, ETag/304, plan du site, robots, `noindex`) et `tests/test-admin-site.js` (réparation par `update.php`).
 
 ## Backend
 

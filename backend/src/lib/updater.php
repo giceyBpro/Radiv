@@ -28,7 +28,7 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 const FRONTEND_FILES = [
     'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
-    'favicon.ico', 'robots.txt',
+    'favicon.ico', 'og-image.png', 'robots.txt',
 ];
 
 // Fichiers retirés du dépôt, à supprimer des sites existants lors de la prochaine mise à jour (sauvegardés d'abord),

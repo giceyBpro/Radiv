@@ -21,6 +21,7 @@ require __DIR__ . '/lib/geo.php';
 require __DIR__ . '/lib/disk.php';
 require __DIR__ . '/lib/measurements.php';
 require __DIR__ . '/lib/providers.php';
+require __DIR__ . '/lib/seo.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
 require __DIR__ . '/lib/session.php';
@@ -41,6 +42,7 @@ use Radiv\Http;
 use Radiv\Json;
 use Radiv\Measurements;
 use Radiv\Providers;
+use Radiv\Seo;
 use Radiv\Sfmn;
 use Radiv\Store;
 use Radiv\Updater;
@@ -57,6 +59,9 @@ if ($method === 'OPTIONS') {
 }
 
 try {
+    // Pages indexables (accueil, mentions légales) et plan du site : HTML du site complété des balises propres à l'adresse du site
+    if (Seo\handle($method, $path)) exit;
+
     if ($method === 'GET' && $path === '/api/config') {
         Http\send_json(200, Frontend\config(Config\sfmn_mode_enabled()));
         exit;
