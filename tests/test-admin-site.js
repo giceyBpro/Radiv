@@ -90,6 +90,13 @@ async function update(c, ref, token) {
   fr = await fetch(`${BASE}/api/config`); t('sans pointeur: backend par défaut <racine>/backend', fr.status === 200);
   t('seule la façade est publique dans api/', fs.readdirSync(path.join(WWW, 'api')).filter((f) => f !== '.htaccess').join() === 'index.php');
 
+  { // Précaution PHP2Shell (octobre 2026) : les envois multipart, qui déclenchent les failles, sont refusés avant PHP
+    const fd = new FormData(); fd.append('a', 'b');
+    const st = async (u, m) => (await fetch(`${BASE}${u}`, { method: m, body: fd })).status;
+    t('envois multipart refusés (403) sur l\'API, jamais traités par PHP', (await st('/api/calculate', 'POST')) === 403 && (await st('/api/contact', 'POST')) === 403 && (await st('/api/config', 'PUT')) === 403);
+    t('…les requêtes normales (JSON, GET) passent', (await fetch(`${BASE}/api/config`)).status === 200 && (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) })).status === 200);
+  }
+
   console.log('\n— Accès sans connexion');
   let c = new Client();
   const entry = await c.req('GET', `${BASE}/auth`);
