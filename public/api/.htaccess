@@ -4,6 +4,11 @@
 Options -Indexes
 <IfModule mod_rewrite.c>
 RewriteEngine On
+# Précaution contre les failles PHP2Shell (CVE-2026-109618 et CVE-2026-109619, octobre 2026), déclenchées par un envoi multipart forgé traité par PHP
+# avant même le code du site : l'API n'a aucun envoi de fichier (JSON et formulaires classiques seulement), les envois multipart sont donc refusés (403).
+# Ne remplace pas la mise à jour de PHP par l'hébergeur.
+RewriteCond %{HTTP:Content-Type} multipart [NC]
+RewriteRule ^ - [F,L]
 # Certains hébergements retirent l'en-tête Authorization avant PHP : on le transmet (la clé d'API se passe de préférence par X-API-Key)
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
