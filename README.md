@@ -134,7 +134,7 @@ En mode `local`, l'arrondi des durées de restriction (en jours) dépend de `RES
 (troncature, reproduit exactement les valeurs de l'outil SFMN de référence — vérifié sur les
 7 scénarios avec Radium-223, 100 µSv/h, 150 cm).
 
-En mode `sfmn`, le backend interroge `SFMN_CALCULATOR_URL` et parse le HTML de résultats.
+En mode `sfmn`, le backend interroge `SFMN_CALCULATOR_URL` et parse le HTML de résultats. Cette même adresse est proposée en lien (« accéder à l'outil de la SFMN ») sur l'accueil, les mentions légales, la version imprimable et la version patient, avec la mention d'indépendance du site ; elle est lue à chaud dans `config/runtime.env` (rendue côté serveur pour l'accueil et les mentions légales, par `/api/public-config` pour les autres pages ; le fichier HTML porte une adresse de repli).
 Ajouter `sfmn_debug: true` dans le payload (ou `SFMN_DEBUG=true` côté serveur) pour des traces détaillées.
 
 `SFMN_MODE_ENABLED=false` désactive entièrement ce mode : absent de `GET /api/config`

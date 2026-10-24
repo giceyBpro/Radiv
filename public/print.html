@@ -103,7 +103,7 @@
         Attention: ce calculateur ne tient compte que de l'exposition externe aux rayonnements ionisants. les risques de contamination (externe et interne) doivent être gérés conformément aux recommandations.
       </div>
     </section>
-    <div class="independence">Site indépendant, s’appuyant sur les publications de la SFMN et de son groupe de travail Radioprotection. Outil en ligne de la SFMN : www.acoramen.org/eviction</div>
+    <div class="independence">Site indépendant, s’appuyant sur les publications de la SFMN et de son groupe de travail Radioprotection. Outil en ligne de la SFMN : <a data-sfmn-link href="https://www.acoramen.net/index.php?option=com_evictionperiod&amp;Itemid=5141&amp;lang=fr" style="color:inherit">acoramen.net</a></div>
     <div class="copyright" id="copyrightText">© -</div>
   </main>
 
@@ -130,7 +130,11 @@
       // Propriétaire lu à chaud côté serveur (backend/config/runtime.env); config.js sert de repli.
       fetch(`${(window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '')}/public-config`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d && typeof d.copyright_owner === 'string' && d.copyright_owner) showCopyright(d.copyright_owner); })
+        .then((d) => {
+          if (d && typeof d.copyright_owner === 'string' && d.copyright_owner) showCopyright(d.copyright_owner);
+          // Adresse de l'outil de la SFMN : celle de la configuration du site (SFMN_CALCULATOR_URL)
+          if (d && /^https?:\/\//.test(d.sfmn_tool_url || '')) document.querySelectorAll('[data-sfmn-link]').forEach((a) => { a.href = d.sfmn_tool_url; a.textContent = new URL(d.sfmn_tool_url).hostname; });
+        })
         .catch(() => {});
       const raw = localStorage.getItem('radioprotection_print_payload') || sessionStorage.getItem('radioprotection_print_payload');
       if (!raw) {

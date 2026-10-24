@@ -87,7 +87,8 @@ SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 1
 RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
 SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
 |false = calcul local seul.
-SFMN_CALCULATOR_URL|Adresse du calculateur SFMN distant (utile seulement si le mode SFMN est actif).
+SFMN_CALCULATOR_URL|Adresse de l'outil en ligne de la SFMN : interrogée par le mode SFMN, et proposée en lien sur les pages du site
+|(accueil, mentions légales, version imprimable). Absente : le lien garde l'adresse par défaut des pages.
 SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
 |à laisser sur false. Défaut : false.
 == Mesures et journaux (RGPD)

@@ -54,9 +54,16 @@
       <div class="muted">Astuce : vous pouvez aussi sélectionner le texte puis copier manuellement (Ctrl/Cmd + C).</div>
     </div>
 
-    <div class="muted">Site indépendant, s’appuyant sur les publications de la SFMN et de son groupe de travail Radioprotection. Outil en ligne de la SFMN : <a href="https://www.acoramen.org/eviction" target="_blank" rel="noopener noreferrer">www.acoramen.org/eviction</a></div>
+    <div class="muted">Site indépendant, s’appuyant sur les publications de la SFMN et de son groupe de travail Radioprotection. Outil en ligne de la SFMN : <a data-sfmn-link href="https://www.acoramen.net/index.php?option=com_evictionperiod&amp;Itemid=5141&amp;lang=fr" target="_blank" rel="noopener noreferrer">acoramen.net</a></div>
   </main>
 
+  <script>
+    // Adresse de l'outil de la SFMN : celle de la configuration du site (SFMN_CALCULATOR_URL)
+    fetch(`${(window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '')}/public-config`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && /^https?:\/\//.test(d.sfmn_tool_url || '')) document.querySelectorAll('[data-sfmn-link]').forEach((a) => { a.href = d.sfmn_tool_url; a.textContent = new URL(d.sfmn_tool_url).hostname; }); })
+      .catch(() => {});
+  </script>
   <script>
     function safe(value) {
       if (value === null || value === undefined || value === '') return '-';

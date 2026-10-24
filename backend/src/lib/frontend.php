@@ -34,6 +34,8 @@ function public_config(): array
         'logs_retention_months' => Config\logs_retention_months(),
         // Affichés par le navigateur (bandeau, copyright): modifiables à chaud dans config/runtime.env.
         'site_name' => Config\site_name(),
+        // Adresse de l'outil en ligne de la SFMN (lien affiché sur les pages) : SFMN_CALCULATOR_URL, vide si non configurée.
+        'sfmn_tool_url' => Config\sfmn_tool_url(),
         'copyright_owner' => Config\copyright_owner(),
         // Date (AAAA-MM-JJ) de la version installée: change à chaque mise à jour ou retour arrière depuis /auth.
         'last_updated' => Updater\installed_date(),
