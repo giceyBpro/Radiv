@@ -23,6 +23,7 @@ Ne jamais laisser des changements commités uniquement sur la branche de travail
 
 - `public/` → racine web ; seule partie PHP publique : la façade `public/api/index.php`.
 - `core/` → moteur de calcul partagé (indépendant du site, destiné à un dépôt open source ; aucun appel à `backend/`, `Radiv\...` ni à une variable d'environnement du site ; installé dans `backend/core/`). Tests : `node core/tests/test-calcul.js` (381 cas figés du moteur) et `node tests/test-core-contract.js` (contrat du site : `tests/core-contract.json` + copie `tests/golden-core-contract.json` ; toute évolution volontaire des résultats du moteur = majeure + mise à jour de ces deux fichiers dans le même commit).
+- Zone de test du moteur : `backend/src/lib/core_lab.php` (logique, testée par `node tests/test-core-lab.js`) et `admin_core.php` (onglet `/auth/moteur`) ; un moteur « épinglé » (`data/var/core-pin.json`) est ignoré par `updater.php` **et** `update.php` (garder les deux alignés).
 - `backend/` → code (`src/`), ressources de l'administration (`assets/`), configuration (`config/`) et données (`data/`), privés.
 - `docs/references/` : articles scientifiques de référence (PDF), conservés dans le dépôt mais **jamais déployés ni publiés** (hors de toutes les listes blanches ; voir son README, droits d'auteur).
 - `install.php` (installation web, seule méthode d'installation), `update.php` (mise à jour de secours autonome), mises à jour courantes par `/auth`

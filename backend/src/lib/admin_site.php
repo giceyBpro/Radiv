@@ -42,6 +42,13 @@ const ROUTES = [
     'POST /auth/fournisseurs/revoquer' => 'provider_revoke',
     'POST /auth/fournisseurs/etat' => 'provider_status',
     'POST /auth/fournisseurs/obligation' => 'provider_required',
+    'GET /auth/moteur' => 'core',
+    'GET /auth/moteur/rapport.md' => 'core_report_md',
+    'POST /auth/moteur/telecharger' => 'core_fetch',
+    'POST /auth/moteur/tester' => 'core_test',
+    'POST /auth/moteur/appliquer' => 'core_apply',
+    'POST /auth/moteur/retablir' => 'core_restore',
+    'POST /auth/moteur/desepingler' => 'core_unpin',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
     'POST /auth/logout' => 'logout',
@@ -519,7 +526,8 @@ button.secondary,.btn.secondary{background:#e6ebf0;color:#14202b}.top button.sec
 .tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem}
 th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{background:#f4f7f9;position:sticky;top:0;white-space:nowrap}tbody tr:nth-child(even){background:#fafbfc}
 .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eaf1fc;margin:2px 4px 2px 0;white-space:nowrap;font-size:.8rem}
-.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:700}.badge.good{background:var(--goodbg);color:var(--good)}.badge.bad{background:var(--badbg);color:var(--bad)}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:700}.badge.good{background:var(--goodbg);color:var(--good)}.badge.bad{background:var(--badbg);color:var(--bad)}.badge.warn{background:#fff4d6;color:#7a5200}.badge.info{background:#eaf1fc;color:#17458a}
+details{margin:8px 0;padding:6px 0;border-top:1px solid var(--line)}summary{cursor:pointer}
 .err{color:var(--bad)}.pager{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
 @media(max-width:640px){.top{padding:10px 12px}.tab{padding:7px 11px}.who span{display:none}}
 CSS;
@@ -532,6 +540,7 @@ function tabs_html(string $active): string
     $tabs = $tab('site', '/auth', 'Site');
     if (Config\admin_measurements_enabled()) $tabs .= $tab('mesures', '/auth/mesures', 'Mesures');
     $tabs .= $tab('fournisseurs', '/auth/fournisseurs', 'Fournisseurs');
+    $tabs .= $tab('moteur', '/auth/moteur', 'Moteur');
     return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN');
 }
 

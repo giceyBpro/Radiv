@@ -351,6 +351,7 @@ Vérifié par `test-client-ip.php`, `test-config-store.php`, `test-recaptcha.js`
 Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et navigateur de test) :
 
 ```bash
+node tests/test-core-lab.js            # zone de test du moteur (/auth/moteur) : scénarios de candidats, application, retour arrière
 node tests/test-core-contract.js       # contrat du site envers le moteur (version + cas figés propres au site)
 node core/tests/test-calcul.js         # calcul: 381 cas figés, deux modes d'arrondi
 node tests/check-runtime-layout.js     # mise en forme de config/runtime.env
@@ -384,6 +385,16 @@ Une seule page d'administration, à l'adresse **`https://<votre-domaine>/auth`**
 Limites : le `.htaccess` racine, `config.js`, `sitemap.xml` et `api/backend.php` restent gérés par `install.php` (et réparés au besoin par `update.php`) ; l'extension PHP `zip` est requise (la page l'indique) ; la première installation se fait par `install.php` (voir plus haut), la connexion Google n'existant pas encore à ce stade ; la lecture d'un mois de mesures charge le fichier en mémoire (d'où l'intérêt de `LOGS_MAX_BYTES` et `LOGS_RETENTION_MONTHS` sur un petit hébergement).
 
 Vérification : `tests/test-admin-site.js` (112 contrôles : connexion refusée/acceptée, PKCE, CSRF, connexion ancienne, mesures et export CSV avec valeurs hostiles, jeton invalide/valide/du `.env`, archives piégées, retour arrière automatique et manuel, fichiers hors liste blanche, jeton jamais écrit ni transmis au téléchargement, anciennes adresses `/api/admin/*` en 404) contre un site déployé sous Apache et `tests/fake-services.js` (faux Google + faux GitHub) ; les archives de test sont fabriquées par `tests/make-fixtures.php`.
+
+### Zone de test du moteur (`/auth/moteur`)
+
+Pour essayer une nouvelle version du moteur partagé (`core/`, typiquement une nouvelle majeure) **sans toucher au site** :
+
+1. **Télécharger un candidat** (dépôt `propriétaire/nom`, tag/branche/commit) : seuls `src/`, `data/` et `VERSION` du moteur sont conservés, dans `data/var/core-lab/candidate/`. Le dépôt peut contenir le moteur dans `core/` ou à sa racine.
+2. **Lancer les tests** : une batterie automatisée (≈ 180 cas × 2 modes d'arrondi) compare le candidat au moteur en service et le contrôle seul : identité et version, analyse statique du code (refus d'exécuter un candidat qui appelle des fonctions système, réseau ou d'écriture), chargement, fonctions utilisées par le site, catalogue (isotopes, scénarios, cures), robustesse (exceptions, avertissements PHP), structure des réponses (champ supprimé ou changé de type = rupture, champ ajouté = compatible), écarts de résultats détaillés par scénario, cohérence physique (monotonie selon le débit, la limite et les cures, arrondis, déterminisme, dose faible) et performance. Le **compte rendu** (verdict *identique* / *compatible* / *évolution* / *bloquant*, explication de chaque test, détails) s'affiche dans la page et se télécharge en Markdown.
+3. **Appliquer au site** (impossible si le verdict est *bloquant* ou *identique*, case de confirmation de lecture) : le moteur en service est sauvegardé (une génération), remplacé par le candidat (le réglage `data/settings.json` du site est conservé), le site est contrôlé et l'ancien moteur rétabli automatiquement s'il ne répond plus. Le nouveau moteur est **épinglé** (`data/var/core-pin.json`) : les mises à jour du site (`/auth` et `update.php`) ne modifient plus `backend/core/` tant que l'épinglage n'est pas retiré (bouton « Retirer l'épinglage »). **Rétablir le moteur précédent** annule l'application.
+
+Tests : `node tests/test-core-lab.js` (candidat identique, évolution, code dangereux, fonction manquante, bug d'arrondi, champ supprimé ; application, épinglage et retour arrière).
 
 ### Non vérifié de bout en bout
 

@@ -416,11 +416,15 @@ function run(string $ref, string $token, string $by): array
         $missing = array_diff(REQUIRED_FILES, $files);
         if ($missing) throw new \RuntimeException('Version cible incomplète ou trop ancienne (' . implode(', ', array_slice($missing, 0, 3)) . ').');
         lint_php($staging, $files);
+        // Moteur épinglé depuis la zone de test (/auth/moteur) : les mises à jour du site n'y touchent pas.
+        $corePinned = is_file(state_dir() . '/core-pin.json');
+        if ($corePinned) $files = array_values(array_filter($files, static fn ($rel) => !str_starts_with($rel, 'core/')));
         if (in_array('public/robots.txt', $files, true)) merge_robots("{$staging}/public/robots.txt", Config\web_root() . '/robots.txt');
         unlink($zipFile); // plus utile: libère l'espace avant le remplacement
 
         // À partir d'ici, le site est modifié: toute erreur déclenche un retour arrière.
         $oldManifest = array_values(array_unique(array_merge(manifest(), RETIRED_FILES)));
+        if ($corePinned) $oldManifest = array_values(array_filter($oldManifest, static fn ($rel) => !str_starts_with($rel, 'core/')));
         make_backup($files, $oldManifest, $before ?? [], $sha);
         $applied = true;
         foreach (install_order($files) as $rel) install_file("{$staging}/{$rel}", dest($rel));

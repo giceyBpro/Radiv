@@ -840,6 +840,13 @@ try {
     $missing = array_diff($REQUIRED_FILES, $files);
     if ($missing) throw new RuntimeException('Version incomplète ou trop ancienne (' . implode(', ', array_slice($missing, 0, 3)) . ').');
     lint_php($staging, $files);
+    // Moteur épinglé depuis la zone de test de /auth (core-pin.json) : la mise à jour n'y touche pas.
+    $corePinned = is_file($varDir . '/core-pin.json');
+    if ($corePinned) {
+        $kept = array();
+        foreach ($files as $f) { if (strpos($f, 'core/') !== 0) $kept[] = $f; }
+        $files = $kept;
+    }
     @unlink($zipFile);
 
     // 3 bis) Migration de l'ancienne structure : la configuration et les données sont DÉPLACÉES (renommées, donc conservées)
@@ -906,7 +913,7 @@ try {
     $oldManifest = array();
     $mf = read_json($varDir . '/manifest.json');
     if ($mf && isset($mf['files']) && is_array($mf['files'])) {
-        foreach ($mf['files'] as $f) { if (is_string($f) && allowed($f)) $oldManifest[] = $f; }
+        foreach ($mf['files'] as $f) { if (is_string($f) && allowed($f) && !($corePinned && strpos($f, 'core/') === 0)) $oldManifest[] = $f; }
     }
     $backupStarted = true;
     rrmdir($backupDir);

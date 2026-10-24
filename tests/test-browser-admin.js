@@ -40,7 +40,7 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   console.log('— Connexion et mise à jour (formulaires cliqués)');
   await page.goto(`${BASE}/auth`);
   t('connexion Google (simulée) puis page d\'administration', (await page.title()) === 'Administration du site' && page.url() === `${BASE}/auth`);
-  t('en-tête: onglets et adresse connectée', (await page.locator('nav.tabs a').allTextContents()).join() === 'Site,Mesures,Fournisseurs,Test SFMN' && /admin@example\.org/.test(await body()));
+  t('en-tête: onglets et adresse connectée', (await page.locator('nav.tabs a').allTextContents()).join() === 'Site,Mesures,Fournisseurs,Moteur,Test SFMN' && /admin@example\.org/.test(await body()));
   await page.fill('input[name=ref]', 'v1.1'); if (await page.$('input[name=token]')) await page.fill('input[name=token]', TOKEN);
   await click('button:has-text("Installer")');
   let txt = await body();
