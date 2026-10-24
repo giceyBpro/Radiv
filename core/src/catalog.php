@@ -26,6 +26,15 @@ function load_data(string $name): array
     return $cache[$name];
 }
 
+// Version du moteur (fichier VERSION à la racine du moteur, format MAJEURE.MINEURE.CORRECTIF) : permet à un site de
+// vérifier qu'il utilise une version compatible avec ce qu'il attend. "0.0.0" si le fichier est absent ou invalide.
+function version(): string
+{
+    $raw = @file_get_contents(dirname(__DIR__) . '/VERSION');
+    $v = $raw === false ? '' : trim($raw);
+    return preg_match('/^\d+\.\d+\.\d+$/', $v) === 1 ? $v : '0.0.0';
+}
+
 // Isotopes : périodes effectives (en heures), références et libellés. Forme historique conservée (clé periodHours).
 function isotopes(): array
 {
