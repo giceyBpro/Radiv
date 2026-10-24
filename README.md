@@ -108,7 +108,6 @@ Payload JSON :
 
 ```json
 {
-  "calculation_mode": "local",
   "isotope_code": "iode131_25_fixation",
   "dose_rate": 20,
   "patient_size_cm": 160,
@@ -125,10 +124,10 @@ Payload JSON :
 ```
 
 - Les champs absents sont traités comme `null`.
-- `calculation_mode` : `local` (défaut) ou `sfmn` (interroge le formulaire SFMN distant).
+- Un ancien paramètre `calculation_mode` (quelle que soit sa valeur) est **ignoré sans erreur** : l'API ne propose qu'un calcul, et la réponse ne contient plus ce champ.
 - Pour `iode131_benin` : `benign_activity_mbq` et `benign_fixation_pct` sont obligatoires ; `dose_rate` est ignoré.
 - Pour `non_defini` : `user_period_days` est obligatoire (> 0).
-- `provider` : optionnel, **origine de la requête** (nom du logiciel ou du service qui appelle l'API, ex. `MonRIS 2.1`). Réduit à 64 caractères (lettres, chiffres, espace et `. _ : / @ + ( ) -`), retiré du calcul et du cache SFMN, il est enregistré dans le journal des mesures (champ `provider`, absent si non déclaré), affiché dans la colonne « Origine » de l'onglet Mesures de `/auth` (recherchable) et exporté en CSV. Les requêtes du site envoient le nom du site (`radiv.fr`). C'est une simple déclaration de l'appelant, non vérifiée : à ne pas utiliser pour une décision de sécurité.
+- `provider` : optionnel, **origine de la requête** (nom du logiciel ou du service qui appelle l'API, ex. `MonRIS 2.1`). Réduit à 64 caractères (lettres, chiffres, espace et `. _ : / @ + ( ) -`), retiré du calcul, il est enregistré dans le journal des mesures (champ `provider`, absent si non déclaré), affiché dans la colonne « Origine » de l'onglet Mesures de `/auth` (recherchable) et exporté en CSV. Les requêtes du site envoient le nom du site (`radiv.fr`). C'est une simple déclaration de l'appelant, non vérifiée : à ne pas utiliser pour une décision de sécurité.
 - `cure_count` : optionnel (défaut `1`). Pris en compte pour `radium223`, `psma_177lu`, `lutetium177_net`.
 
 En mode `local`, l'arrondi des durées de restriction (en jours) dépend de `RESTRICTION_ROUNDING_MODE` :
@@ -136,15 +135,7 @@ En mode `local`, l'arrondi des durées de restriction (en jours) dépend de `RES
 (troncature, reproduit exactement les valeurs de l'outil SFMN de référence — vérifié sur les
 7 scénarios avec Radium-223, 100 µSv/h, 150 cm).
 
-En mode `sfmn`, le backend interroge `SFMN_CALCULATOR_URL` et parse le HTML de résultats. Cette même adresse est proposée en lien (« accéder à l'outil de la SFMN ») sur l'accueil, les mentions légales, la version imprimable et la version patient, avec la mention d'indépendance du site ; elle est lue à chaud dans `config/runtime.env` (rendue côté serveur pour l'accueil et les mentions légales, par `/api/public-config` pour les autres pages ; le fichier HTML porte une adresse de repli).
-Ajouter `sfmn_debug: true` dans le payload (ou `SFMN_DEBUG=true` côté serveur) pour des traces détaillées.
-
-`SFMN_MODE_ENABLED=false` désactive entièrement ce mode : absent de `GET /api/config`
-(`calculation_modes`, `default_calculation_mode` retombe sur `local`), toute requête
-`POST /api/calculate` avec `calculation_mode: "sfmn"` bascule silencieusement sur le calcul
-local (réponse avec `calculation_mode: "local"`, sans erreur — les deux formalismes sont
-alignés), sélecteur de mode masqué sur la page d'accueil, exemples de payload adaptés sur
-`test-api.html` et `api-fonctionnement.html`.
+`SFMN_CALCULATOR_URL` est l'adresse de l'outil en ligne de la SFMN : proposée en lien (« accéder à l'outil de la SFMN ») sur l'accueil, les mentions légales, la version imprimable et la version patient, avec la mention d'indépendance du site ; elle est lue à chaud dans `config/runtime.env` (rendue côté serveur pour l'accueil et les mentions légales, par `/api/public-config` pour les autres pages ; le fichier HTML porte une adresse de repli). Elle sert aussi à la seule page de test de l'administration (voir plus bas) : l'interrogation de cet outil n'est **pas** accessible par l'API publique, qui ne calcule qu'avec le moteur (`core/`).
 
 ### Exemple de réponse
 
@@ -329,7 +320,7 @@ Vérifié par `tests/test-admin-site.js` (création, clé affichée une fois, em
 
 #### Onglet « Test SFMN »
 
-Même si le calcul SFMN est désactivé sur le site (`SFMN_MODE_ENABLED=false`), `https://<votre-domaine>/auth/test-sfmn` permet de l'essayer : c'est la **page d'accueil du site elle-même** (`index.html` + `app.js`, donc toujours à jour avec elle), servie avec une autre feuille de style (fond orangé, bandeau « TEST SFMN », `api/assets/test-sfmn.css`) pour ne pas la confondre avec le site. Le calcul SFMN y est toujours proposé et choisi par défaut ; les appels passent par `/auth/test-sfmn/api/*` (réservés à une session d'administration, même origine exigée, 20 essais par minute), jamais par l'API publique. **Rien n'est enregistré dans les mesures.** Sous le tableau, deux volets repliés (`api/assets/test-sfmn.js`) : la **comparaison avec le calcul local** (écart par scénario) et les **détails techniques SFMN** (échanges avec le site distant, même si `SFMN_DEBUG=false`). La page n'ajoute aucun script tiers : la CSP n'autorise que les scripts du site. Vérifié par `test-admin-site.js` et `test-browser-admin.js`.
+`https://<votre-domaine>/auth/test-sfmn` permet d'essayer le calcul de l'outil SFMN en le comparant au moteur : c'est la **page d'accueil du site elle-même** (`index.html` + `app.js`, donc toujours à jour avec elle), servie avec une autre feuille de style (fond orangé, bandeau « TEST SFMN », `api/assets/test-sfmn.css`) pour ne pas la confondre avec le site. Le calcul SFMN y est proposé et choisi par défaut ; les appels passent par `/auth/test-sfmn/api/*` (réservés à une session d'administration, même origine exigée, 20 essais par minute), jamais par l'API publique. **Rien n'est enregistré dans les mesures.** Sous le tableau, deux volets repliés (`api/assets/test-sfmn.js`) : la **comparaison avec le calcul local** (écart par scénario) et les **détails techniques SFMN** (échanges avec le site distant, même si `SFMN_DEBUG=false`). La page n'ajoute aucun script tiers : la CSP n'autorise que les scripts du site. Vérifié par `test-admin-site.js` et `test-browser-admin.js`.
 
 ### Sécurité et conformité (RGPD)
 
@@ -341,7 +332,6 @@ Même si le calcul SFMN est désactivé sur le site (`SFMN_MODE_ENABLED=false`),
 - **HTTPS et en-têtes** : `install.php` (et `update.php` si besoin) ajoute dans `.htaccess` (si le site est en `https://`) une redirection HTTP → HTTPS en tête de fichier (308 : un POST garde sa méthode et son corps) et, pour les pages, des en-têtes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, une CSP limitée aux directives sans effet sur les scripts en ligne (`frame-ancestors`, `base-uri`, `object-src`, `form-action`) et HSTS (sans `includeSubDomains`, pour ne pas imposer HTTPS à d'éventuels sous-domaines). Ils ne remplacent pas ceux de l'API et de `/auth`, plus stricts (`setifempty`). Nécessite `mod_headers` (sinon ignorés sans erreur).
 - **Envois multipart refusés** (précaution après les failles PHP « PHP2Shell », CVE-2026-109618 et CVE-2026-109619, d'octobre 2026, déclenchées par un envoi multipart forgé que PHP traite avant le code du site) : `public/api/.htaccess` répond 403 à toute requête dont le `Content-Type` est `multipart` ; le site n'a aucun envoi de fichier (JSON et formulaires classiques). C'est une couche de plus, qui **ne remplace pas la mise à jour de PHP par l'hébergeur**. Elle ne couvre pas les fichiers PHP de la racine (`install.php`, `update.php`, supprimés après usage) : si l'un d'eux est présent, ajoutez les trois lignes `RewriteCond %{HTTP:Content-Type} multipart [NC]` / `RewriteRule ^ - [F,L]` en tête du `.htaccess` racine.
 - **Adresse IP derrière un proxy** : `X-Forwarded-For` est lu de droite à gauche en ignorant les proxys déclarés dans `TRUSTED_PROXIES` ; ce qui est à gauche est écrit par le client et n'est jamais cru.
-- **Interrogations du site SFMN** : plafond global `SFMN_GLOBAL_RATE_LIMIT` (120 par minute, tous visiteurs) et résultats identiques réutilisés 10 minutes, pour ne pas servir de relais d'abus vers ce site.
 - **À faire de votre côté** (hors code) : registre des traitements, accords de sous-traitance (hébergeur, messagerie), procédure en cas de violation de données, qualification éventuelle du logiciel au regard du règlement (UE) 2017/745 sur les dispositifs médicaux, et accord du site SFMN pour l'interrogation automatisée de son outil.
 
 Vérifié par `test-client-ip.php`, `test-config-store.php`, `test-recaptcha.js`, `test-browser-contact.js`, `test-install.js` et `test-admin-site.js`.

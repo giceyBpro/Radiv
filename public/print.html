@@ -87,7 +87,6 @@
 
     <section class="block">
       <h2>Résultat du calcul</h2>
-      <div id="methodText" style="margin-bottom:2mm;">-</div>
       <div id="referenceText" style="margin-bottom:4mm;">-</div>
       <div id="effectiveText" style="margin-bottom:4mm;">-</div>
       <table>
@@ -169,11 +168,7 @@
         : '<div class="muted">Aucune donnée de saisie à afficher.</div>';
 
       const result = payload.result || {};
-      const calculationMode = result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local';
-      const sourceRef = result.calculation_mode === 'sfmn'
-        ? (result.sfmn_source?.url || 'https://www.sfmn.org/')
-        : 'Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002';
-      document.getElementById('methodText').innerHTML = `<strong>Méthode de calcul :</strong> ${safe(calculationMode)}`;
+      const sourceRef = 'Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002';
       document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
       const effDays = result.effective_days ?? '-';
       const effHours = result.effective_hours ?? '-';

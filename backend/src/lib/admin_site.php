@@ -124,7 +124,7 @@ function config_groups(): array
         ['Adresse du site', 'liens, contrôle d\'origine des formulaires et retour Google inutilisables', ['SITE_PUBLIC_URL'], true],
         ['Connexion Google (/auth)', 'connexion à cette administration impossible', ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'ADMIN_GOOGLE_EMAILS'], true],
         ['Formulaire de contact', 'envoi des messages refusé', ['RECAPTCHA_SITE_KEY', 'RECAPTCHA_SECRET_KEY', 'SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'CONTACT_DEST'], true],
-        ['Calcul SFMN', 'calcul SFMN indisponible', ['SFMN_CALCULATOR_URL'], Config\sfmn_mode_enabled()],
+        ['Test SFMN', 'test SFMN et lien vers l\'outil indisponibles', ['SFMN_CALCULATOR_URL'], true],
     ];
 }
 
@@ -132,7 +132,7 @@ function config_groups(): array
 function config_optional(): array
 {
     return ['SITE_NAME', 'COPYRIGHT_OWNER', 'API_PUBLIC_URL', 'DISK_QUOTA_MB', 'DISK_MIN_FREE_MB', 'LOGS_RETENTION_MONTHS', 'LOGS_MAX_BYTES', 'MEASUREMENT_LOGGING_LEVEL',
-        'RESTRICTION_ROUNDING_MODE', 'TRUSTED_PROXIES', 'CALCULATE_RATE_LIMIT', 'SFMN_GLOBAL_RATE_LIMIT', 'RECAPTCHA_MIN_SCORE'];
+        'RESTRICTION_ROUNDING_MODE', 'TRUSTED_PROXIES', 'CALCULATE_RATE_LIMIT', 'RECAPTCHA_MIN_SCORE'];
 }
 
 function config_card(): string

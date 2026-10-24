@@ -85,11 +85,9 @@ CONTACT_DEST|Adresse qui reçoit les messages du formulaire.
 SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 15000.
 == Calcul des durées de restriction
 RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
-SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
-|false = calcul local seul.
-SFMN_CALCULATOR_URL|Adresse de l'outil en ligne de la SFMN : interrogée par le mode SFMN, et proposée en lien sur les pages du site
-|(accueil, mentions légales, version imprimable). Absente : le lien garde l'adresse par défaut des pages.
-SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
+SFMN_CALCULATOR_URL|Adresse de l'outil en ligne de la SFMN : proposée en lien sur les pages du site (accueil, mentions légales, version
+|imprimable) et interrogée par la seule page de test de l'administration. Absente : le lien garde l'adresse par défaut des pages.
+SFMN_DEBUG|true ou false. Diagnostic détaillé de la page de test SFMN de l'administration : expose des données distantes dans les réponses,
 |à laisser sur false. Défaut : false.
 == Mesures et journaux (RGPD)
 MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
@@ -102,7 +100,6 @@ DISK_QUOTA_MB|Espace disque de l'hébergement, en Mo (ex. 100). Sert à mesurer 
 DISK_MIN_FREE_MB|Espace libre minimal, en Mo : en dessous, les journaux de mesures les plus anciens sont supprimés. Défaut : 30. 0 = jamais.
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
-SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
 API_KEY_REQUIRED|true ou false. true = les appels extérieurs à /api/calculate exigent une clé d'API (en-tête X-API-Key), créée dans
 |l'onglet Fournisseurs de /auth ; les pages du site en sont dispensées. false = appels sans clé acceptés. Défaut : false.
 |Le choix fait dans l'onglet Fournisseurs de /auth (bouton « Rendre la clé obligatoire / facultative ») l'emporte sur cette ligne.

@@ -168,11 +168,6 @@ function sfmn_tool_url(): string
     return preg_match('#^https?://[^\s"<>]+$#', $url) === 1 ? $url : '';
 }
 
-function sfmn_mode_enabled(): bool
-{
-    return flag('SFMN_MODE_ENABLED');
-}
-
 function admin_measurements_enabled(): bool
 {
     return flag('ADMIN_MEASUREMENTS_ENABLED');

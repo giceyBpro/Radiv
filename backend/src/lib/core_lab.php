@@ -339,8 +339,7 @@ function run_cases(string $ns, array $cases, string $mode): array
     $start = microtime(true);
     foreach ($cases as $i => $case) {
         try {
-            // Comparaison au niveau du site : réponse du moteur mise à la forme de l'API (voir engine.php).
-            $results[$i] = \Radiv\Engine\decorate(($ns . '\\calculate')($case));
+            $results[$i] = ($ns . '\\calculate')($case);
         } catch (\Throwable $e) {
             $results[$i] = null;
             $exceptions[] = 'cas #' . $i . ' : ' . get_class($e) . ' — ' . $e->getMessage();
@@ -588,7 +587,7 @@ function coherence_tests(): array
     $out = [];
     $calc = static function (array $payload, string $mode = 'round'): array {
         \RivEngineLab\set_rounding_mode($mode);
-        $r = \Radiv\Engine\decorate(\RivEngineLab\calculate($payload));
+        $r = \RivEngineLab\calculate($payload);
         \RivEngineLab\set_rounding_mode(null);
         return $r;
     };

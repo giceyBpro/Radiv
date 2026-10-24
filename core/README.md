@@ -49,7 +49,7 @@ radioprotection.
 
 ## Ce que le moteur ne contient pas
 
-Aucun mode de calcul alternatif, aucune interrogation d'un service externe, aucun champ propre à un site. Le moteur ne renvoie que ses propres champs ; un site qui veut ajouter les siens (par exemple un indicateur de mode) le fait dans sa propre passerelle (pour ce dépôt : `backend/src/lib/engine.php`).
+Aucun mode de calcul alternatif, aucune interrogation d'un service externe, aucun champ propre à un site : le moteur ne renvoie que ses propres champs.
 
 ## Compatibilité (contrat entre le moteur et les sites qui l'utilisent)
 

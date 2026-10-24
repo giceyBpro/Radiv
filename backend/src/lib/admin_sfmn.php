@@ -1,7 +1,7 @@
 <?php
 // Onglet « Test SFMN » de l'administration (/auth/test-sfmn) : la page d'accueil du site (index.html + app.js,
-// donc toujours à jour avec elle) servie sous une autre feuille de style, avec le calcul SFMN TOUJOURS actif,
-// même si SFMN_MODE_ENABLED=false. Les appels de la page passent par /auth/test-sfmn/api/* (réservés à une
+// donc toujours à jour avec elle) servie sous une autre feuille de style, avec le calcul SFMN proposé (c'est le seul
+// endroit où il existe). Les appels de la page passent par /auth/test-sfmn/api/* (réservés à une
 // session d'administration), jamais par l'API publique. Rien n'est écrit dans les mesures.
 declare(strict_types=1);
 
@@ -11,7 +11,6 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 
 use RivEngine as Calculation;
 use Radiv\Config;
-use Radiv\Engine;
 use Radiv\Frontend;
 use Radiv\Http;
 use Radiv\Sfmn;
@@ -100,7 +99,7 @@ function do_sfmn_api_calculate(): bool
         return true;
     }
     $mode = ($payload['calculation_mode'] ?? 'sfmn') === 'local' ? 'local' : 'sfmn';
-    $local = Engine\calculate($payload);
+    $local = Calculation\calculate($payload);
     if ($mode === 'local') {
         $result = $local;
         $debug = null;

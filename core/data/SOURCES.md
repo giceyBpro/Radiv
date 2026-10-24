@@ -8,11 +8,9 @@ Les valeurs de `isotopes.json`, `scenarios.json` et `cures.json` proviennent des
   DOI : 10.1016/j.mednuc.2026.03.002 (scénarios, durées, distances, limites, demi-vies effectives du Tableau 1).
 - Carlier et al., Radioprotection 2004;39:481-492, DOI : 10.1051/radiopro:2004012 (modèle de calcul d'origine).
 
-## Écarts assumés par rapport au Tableau 1 de l'article 2026
+## Choix de données
 
-- **MIBG-131I** : 10,6 h (t½,elim des enfants, n = 6, Wafelman et al. 1995, source primaire vérifiée) au lieu de 30,60 h
-  indiquées au Tableau 1, valeur introuvable dans cette source. Le groupe Radioprotection de la SFMN a confirmé que 10,6 h
-  est correct. Ne pas « corriger ».
+- **MIBG-131I** : 10,6 h (t½,elim des enfants, n = 6, Wafelman et al., Nucl. Med. Commun. 1995;16:767-772).
 
 ## Points de vigilance connus
 

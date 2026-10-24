@@ -14,7 +14,7 @@ use Radiv\Config;
 use Radiv\Json;
 
 const LOGGED_INPUT_FIELDS = [
-    'calculation_mode', 'isotope_code', 'dose_rate', 'patient_size_cm',
+    'isotope_code', 'dose_rate', 'patient_size_cm',
     'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit',
     'benign_activity_mbq', 'benign_fixation_pct', 'cure_count',
 ];
@@ -23,7 +23,7 @@ const LOGGED_INPUT_FIELDS = [
 // période effective, erreurs). Les textes identiques à chaque ligne (fiche du radiopharmaceutique « selected », libellés et
 // conditions des scénarios « rows ») et les données de diagnostic distant (« sfmn_debug ») ne sont jamais écrits.
 const LOGGED_RESULT_FIELDS = [
-    'ok', 'calculation_mode', 'cure_count', 'computed_dose_rate', 'effective_days', 'effective_hours', 'errors', 'error', 'recommendations_days',
+    'ok', 'cure_count', 'computed_dose_rate', 'effective_days', 'effective_hours', 'errors', 'error', 'recommendations_days',
 ];
 
 function compact_result(array $result): array

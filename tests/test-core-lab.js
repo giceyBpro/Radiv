@@ -62,9 +62,9 @@ state = php('state');
 t('retour arrière : ancien moteur rétabli, épinglage retiré', restored.ok && state.version === '2.0.0' && state.pin === null && state.previous === false, JSON.stringify([restored, state]));
 t('…dossiers temporaires nettoyés', !fs.existsSync(path.join(site, 'backend/core.new')) && !fs.existsSync(path.join(site, 'backend/core.old')) && !fs.existsSync(path.join(site, 'backend/core.drop')));
 
-// 2 bis. Un moteur qui fournit lui-même l'indicateur de mode reste compatible (la passerelle du site est idempotente)
-r = candidate((d) => edit(d, 'src/calculate.php', "return ['ok' => true] + $common", "return ['ok' => true, 'calculation_mode' => 'local'] + $common"));
-t('moteur fournissant calculation_mode → compatible, aucun écart de résultat', r.verdict === 'compatible' && test(r, 'resultats').status === 'ok', r.headline);
+// 2 bis. Champ ajouté à la réponse : évolution compatible (sans danger), signalée
+r = candidate((d) => edit(d, 'src/calculate.php', "return ['ok' => true] + $common", "return ['ok' => true, 'moteur' => 'x'] + $common"));
+t('champ ajouté → évolution compatible signalée', r.verdict === 'evolution' && test(r, 'structure').status === 'info' && test(r, 'structure').details.some((l) => /Champ ajouté/.test(l)), r.headline);
 
 // 3. Code dangereux : refusé, jamais exécuté
 r = candidate((d) => edit(d, 'src/physics.php', 'function decay_fraction', "function leak() { return shell_exec('id'); }\nfunction decay_fraction"));
