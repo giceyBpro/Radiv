@@ -12,7 +12,7 @@ $arg = $argv[3] ?? null;
 putenv('DATA_DIR=' . $site . '/data');
 putenv('RATE_LIMIT_BACKEND=file');
 define('RADIV_ENTRY', true);
-foreach (['json', 'config', 'store', 'http', 'disk', 'measurements', 'contact', 'updater', 'core_lab'] as $f) require "{$site}/backend/src/lib/{$f}.php";
+foreach (['json', 'config', 'store', 'http', 'disk', 'measurements', 'engine', 'contact', 'updater', 'core_lab'] as $f) require "{$site}/backend/src/lib/{$f}.php";
 require "{$site}/backend/core/src/bootstrap.php";
 
 use Radiv\CoreLab;

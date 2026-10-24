@@ -11,6 +11,7 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 
 use RivEngine as Calculation;
 use Radiv\Config;
+use Radiv\Engine;
 use Radiv\Frontend;
 use Radiv\Http;
 use Radiv\Sfmn;
@@ -99,7 +100,7 @@ function do_sfmn_api_calculate(): bool
         return true;
     }
     $mode = ($payload['calculation_mode'] ?? 'sfmn') === 'local' ? 'local' : 'sfmn';
-    $local = Calculation\calculate($payload);
+    $local = Engine\calculate($payload);
     if ($mode === 'local') {
         $result = $local;
         $debug = null;

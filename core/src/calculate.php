@@ -26,7 +26,7 @@ function normalize_cure_count(array $selected, mixed $rawValue): array
 
 function expected_payload_by_isotope(array $selected): array
 {
-    $common = ['calculation_mode', 'isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'cure_count'];
+    $common = ['isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'cure_count'];
     if ($selected['api_code'] === 'iode131_benin') {
         return [
             'common' => $common,
@@ -107,7 +107,7 @@ function calculate(array $payload): array
         // c'est la même personne qui cumule l'exposition cure après cure, d'où la division.
         // Pour le transport en commun, chaque cure expose des personnes différentes (autres
         // passagers) : il n'y a pas de cumul à répartir, donc pas de division. Volontaire,
-        // conforme à l'outil de référence du groupe Radioprotection de la SFMN.
+        // conforme à l'article de référence.
         $isTransportCommun = $scenario['audience_code'] === 'transport_commun';
         $limitForScenario = $isTransportCommun ? $scenario['limit'] : $scenario['limit'] / $cure['value'];
         $conditionSuffix = $cure['value'] > 1
@@ -151,7 +151,6 @@ function calculate(array $payload): array
     if ($errors) {
         return [
             'ok' => false,
-            'calculation_mode' => 'local',
             'error' => [
                 'code' => 'VALIDATION_ERROR',
                 'message' => $isotopeCodeRecognized
@@ -172,7 +171,7 @@ function calculate(array $payload): array
             'rows' => $allRows,
         ];
     }
-    return ['ok' => true, 'calculation_mode' => 'local'] + $common + [
+    return ['ok' => true] + $common + [
         'errors' => [],
         'recommendations_days' => $recommendationsDays,
         'rows' => $allRows,

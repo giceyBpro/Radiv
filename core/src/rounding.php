@@ -2,7 +2,7 @@
 // ===== ARRONDI DES DURÉES DE RESTRICTION =====
 // Deux conventions possibles, au choix de l'hébergeur du moteur (voir set_rounding_mode) :
 //   "round" (défaut du moteur) : arrondi au plus proche, légèrement plus protecteur (jour supérieur dès que la fraction dépasse 0,5) ;
-//   "floor"          : troncature, reproduit les valeurs de l'outil de référence du groupe Radioprotection de la SFMN.
+//   "floor"          : troncature, reproduit les valeurs de la Fig. 1 de l'article de référence (voir data/SOURCES.md).
 
 declare(strict_types=1);
 
