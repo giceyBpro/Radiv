@@ -217,6 +217,31 @@ async function update(c, ref, token) {
     t('état de nouveau identique à la v1.1', treeHash() === afterGood);
   }
 
+  console.log('\n— Maintenance (accueil seul, puis complète)');
+  { t('POST /auth/maintenance sans session → 404', (await new Client().req('POST', `${BASE}/auth/maintenance`, { form: { mode: 'full' } })).status === 404);
+    const setMode = async (mode) => { resetLimits(); const pg = await c.req('GET', `${BASE}/auth`); const r = await c.req('POST', `${BASE}/auth/maintenance`, { form: { csrf: csrfOf(pg.text), mode }, headers: { Origin: BASE } }); return flash((await c.req('GET', r.loc || `${BASE}/auth`)).text); };
+    const calc = () => fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }) });
+    page = await c.req('GET', `${BASE}/auth`);
+    t('carte Maintenance: état « en service » et boutons', /Maintenance<\/h2>/.test(page.text) && /en service/.test(page.text) && /Activer la maintenance/.test(page.text) && /Maintenance complète/.test(page.text));
+    let home = await fetch(`${BASE}/`); t('hors maintenance: accueil normal (200)', home.status === 200 && !/Site en maintenance/.test(await home.text()));
+    let msg = await setMode('site'); t('maintenance activée', /Maintenance activée/.test(msg), msg);
+    home = await fetch(`${BASE}/`); const html = await home.text();
+    t('accueil: 503, avis de maintenance et lien vers l\'outil de la SFMN', home.status === 503 && /Site en maintenance/.test(html) && /acoramen\.net/.test(html) && home.headers.get('retry-after') === '3600' && !/id="doseRate"/.test(html), `${home.status}`);
+    t('…mentions légales toujours servies', (await fetch(`${BASE}/legal`)).status === 200);
+    let r2 = await calc(); t('maintenance simple: l\'API de calcul continue de fonctionner', r2.status === 200 && (await r2.json()).ok === true);
+    t('…/api/config annonce la maintenance', (await (await fetch(`${BASE}/api/config`)).json()).maintenance === 'site');
+    page = await c.req('GET', `${BASE}/auth`); t('…carte: état maintenance, depuis quand et par qui', /maintenance \(accueil\)/.test(page.text) && /admin@example\.org/.test(page.text));
+    msg = await setMode('full'); t('maintenance complète activée', /Maintenance complète activée/.test(msg), msg);
+    r2 = await calc(); const body2 = await r2.json();
+    t('maintenance complète: calcul → 503 MAINTENANCE avec Retry-After', r2.status === 503 && body2.ok === false && body2.error.code === 'MAINTENANCE' && r2.headers.get('retry-after') === '3600');
+    t('…formulaire de contact → 503', (await fetch(`${BASE}/api/contact`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: '{}' })).status === 503);
+    t('…/health, /api/config et /auth restent disponibles', (await fetch(`${BASE}/health`)).status === 200 && (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
+    t('…accueil toujours en maintenance', (await fetch(`${BASE}/`)).status === 503);
+    msg = await setMode('off'); t('remise en service', /remis en service/.test(msg), msg);
+    r2 = await calc(); home = await fetch(`${BASE}/`);
+    t('en service: calcul 200, accueil 200, plus d\'annonce dans /api/config', r2.status === 200 && home.status === 200 && (await (await fetch(`${BASE}/api/config`)).json()).maintenance === undefined);
+    t('…fichier d\'état supprimé', !exists('backend/data/var/maintenance.json')); }
+
   console.log('\n— Fournisseurs de l\'API et clés d\'API (clé obligatoire)');
   { resetLimits();
     const regFile = path.join(WWW, 'backend/config/providers.json');

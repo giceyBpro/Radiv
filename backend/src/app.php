@@ -25,6 +25,7 @@ require __DIR__ . '/lib/disk.php';
 require __DIR__ . '/lib/measurements.php';
 require __DIR__ . '/lib/providers.php';
 require __DIR__ . '/lib/seo.php';
+require __DIR__ . '/lib/maintenance.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
 require __DIR__ . '/lib/session.php';
@@ -35,6 +36,7 @@ require __DIR__ . '/lib/frontend.php';
 require __DIR__ . '/lib/admin_measures.php';
 require __DIR__ . '/lib/admin_sfmn.php';
 require __DIR__ . '/lib/admin_core.php';
+require __DIR__ . '/lib/admin_maintenance.php';
 require __DIR__ . '/lib/admin_site.php';
 
 use Radiv\AdminSite;
@@ -45,6 +47,7 @@ use Radiv\Frontend;
 use Radiv\Geo;
 use Radiv\Http;
 use Radiv\Json;
+use Radiv\Maintenance;
 use Radiv\Measurements;
 use Radiv\Providers;
 use Radiv\Seo;
@@ -64,6 +67,20 @@ if ($method === 'OPTIONS') {
 }
 
 try {
+    // Maintenance (pilotée depuis /auth) : l'accueil n'affiche que l'avis de maintenance ; en maintenance complète, l'API de
+    // calcul et le contact répondent aussi 503. /auth, /health et la configuration en lecture seule restent disponibles.
+    if (Maintenance\mode() !== 'off') {
+        if (($method === 'GET' || $method === 'HEAD') && Seo\page_for_path($path) === '/') {
+            Maintenance\send_page($method === 'HEAD');
+            exit;
+        }
+        if (Maintenance\mode() === 'full' && $method === 'POST' && ($path === '/api/calculate' || $path === '/api/contact')) {
+            header('Retry-After: 3600');
+            Http\send_json(503, Maintenance\api_stopped());
+            exit;
+        }
+    }
+
     // Pages indexables (accueil, mentions légales) et plan du site : HTML du site complété des balises propres à l'adresse du site
     if (Seo\handle($method, $path)) exit;
 

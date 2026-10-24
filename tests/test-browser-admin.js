@@ -103,6 +103,18 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   t('mode local: tableau affiché + rien à comparer', await page.locator('#resultsSection').isVisible() && (await page.locator('#resultsBody tr').count()) >= 3);
   t('aucune ressource tierce, ni violation CSP, ni erreur JavaScript sur la page de test', requests.filter((u) => !u.startsWith(BASE) && !/tile\.openstreetmap\.org/.test(u) && !u.startsWith('http://127.0.0.1:9201')).length === 0 && (await page.evaluate(() => window.__csp || [])).length === cspBefore && consoleErrors.length === errBefore, consoleErrors.slice(errBefore).join(' | '));
 
+  console.log('\n— Maintenance (avis affiché dans le navigateur)');
+  { const mf = path.join(WWW, 'backend/data/var/maintenance.json');
+    fs.writeFileSync(mf, JSON.stringify({ mode: 'site', since: '2026-01-01T00:00:00Z', by: 'test' })); fs.chmodSync(mf, 0o666);
+    await page.goto(`${BASE}/`);
+    t('accueil servi par PHP: avis de maintenance et lien vers l\'outil de la SFMN', /Site en maintenance/.test(await body()) && (await page.locator('a[href*="acoramen.net"]').count()) === 1 && (await page.locator('#doseRate').count()) === 0);
+    await page.goto(`${BASE}/v1.html`);
+    await page.waitForSelector('[role="alert"]', { timeout: 10000 });
+    t('page statique (sans PHP): avis plein écran injecté par le script, lien SFMN repris de la page', /Site en maintenance/.test(await page.locator('[role="alert"]').innerText()) && (await page.locator('[role="alert"] a[href*="acoramen.net"]').count()) === 1);
+    fs.unlinkSync(mf);
+    await page.goto(`${BASE}/v1.html`); await page.waitForTimeout(1500);
+    t('maintenance levée: plus d\'avis, calculateur visible', (await page.locator('[role="alert"]').count()) === 0 && await page.locator('#calculateBtn').isVisible()); }
+
   console.log('\n— Déconnexion');
   await page.goto(`${BASE}/auth`); await click('button:has-text("Se déconnecter")');
   t('déconnexion par le bouton', /Vous êtes déconnecté/.test(await body()) && !/Requête refusée/.test(await body()));
