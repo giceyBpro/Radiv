@@ -70,7 +70,7 @@ externe pointait vers elles, et elles ne sont liées depuis aucune page publique
 - **`robots.txt`** : tout est autorisé sauf `/api/` (les deux adresses `/api/config` et `/api/public-config` restent lisibles pour que les robots puissent afficher la
   page) et `/downloads/` (modèles XML). L'adresse de l'administration n'y figure volontairement pas : le fichier est public. La ligne `Sitemap:` est ajoutée à
   l'installation et conservée par les mises à jour.
-- **Vitesse** : le `.htaccess` active la compression (`mod_deflate`) et le cache navigateur (`mod_expires` : polices 1 an, images 1 mois, scripts et styles 1 heure).
+- **Vitesse** : le `.htaccess` active la compression (`mod_deflate`) et le cache navigateur (`mod_expires` : polices 1 an, images 1 mois, scripts et styles 1 heure). Les pages HTML sont revalidées à chaque visite (`Cache-Control: no-cache`, bloc `# Pages HTML toujours revalidées v1`), et `app.js` est appelé avec une version (`app.js?v=…`, empreinte de son contenu : `node tests/check-asset-version.js --fix` après toute modification) pour qu'une mise à jour s'applique sans attendre l'expiration du cache.
   Les polices et bibliothèques sont hébergées par le site (aucune requête vers un tiers). Une adresse `www` ↔ sans `www` redirige vers l'adresse officielle
   (301) quand `SITE_PUBLIC_URL` commence par `www.`.
 - **Activation** : ces règles sont des blocs du `.htaccess` racine (`# /seo …`, `# Compression et cache v1`) ajoutés par `install.php`. Sur un site déjà installé,

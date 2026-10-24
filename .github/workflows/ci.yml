@@ -27,6 +27,8 @@ jobs:
         run: node tests/test-core-contract.js
       - name: Zone de test du moteur (candidats, application, retour arrière)
         run: node tests/test-core-lab.js
+      - name: Version d'app.js dans les pages HTML (cache des navigateurs)
+        run: node tests/check-asset-version.js
       - name: Adresse IP derrière un proxy, réglages par défaut et cache
         run: |
           php tests/test-client-ip.php

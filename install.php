@@ -897,6 +897,9 @@ function htaccess_blocks($siteUrl, $backendUrlPath)
         . "ExpiresByType text/javascript \"access plus 1 hour\"\nExpiresByType image/png \"access plus 1 month\"\nExpiresByType image/x-icon \"access plus 1 month\"\n"
         . "ExpiresByType image/vnd.microsoft.icon \"access plus 1 month\"\nExpiresByType font/woff2 \"access plus 1 year\"\nExpiresByType font/woff \"access plus 1 year\"\n"
         . "ExpiresByType application/font-woff2 \"access plus 1 year\"\n</IfModule>\n";
+    // Les pages HTML sont revalidées à chaque visite (sinon les navigateurs en gardent une copie « fraîche » plusieurs jours).
+    $nocache = '# Pages HTML toujours revalidées v1';
+    $blocks[$nocache] = $nocache . "\n<IfModule mod_headers.c>\n<FilesMatch \"\\.html$\">\nHeader set Cache-Control \"no-cache\"\n</FilesMatch>\n</IfModule>\n";
     $blocks['# /health (API PHP)'] = "# /health (API PHP)\nRewriteEngine On\nRewriteRule ^health/?$ api/index.php [L]\n";
     $blocks['# /auth (API PHP)'] = "# /auth (API PHP)\nRewriteEngine On\nRewriteRule ^auth(/.*)?$ api/index.php [L]\n";
     // Fichiers de configuration éventuellement copiés dans la racine (.env, .runtime.env) : jamais servis.

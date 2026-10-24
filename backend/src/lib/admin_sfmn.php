@@ -39,7 +39,7 @@ function do_sfmn_page(): bool
     $html = str_ireplace('</head>', '<link rel="stylesheet" href="/auth/assets/' . $name . '.css"></head>', $html);
     $html = preg_replace('#(<body[^>]*>)#i', '$1' . str_replace('$', '\\$', $nav), $html, 1) ?? $html;
     $html = str_replace('<script src="config.js"></script>', '<script src="' . SFMN_BASE . '/config.js"></script>', $html);
-    $html = str_replace('<script src="app.js"></script>', '<script src="app.js"></script><script src="/auth/assets/' . $name . '.js"></script>', $html);
+    $html = preg_replace('#(<script src="app\.js(?:\?v=[0-9A-Za-z]*)?"></script>)#', '$1<script src="/auth/assets/' . $name . '.js"></script>', $html, 1) ?? $html;
     http_response_code(200);
     header('Content-Type: text/html; charset=utf-8');
     header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'none'; frame-ancestors 'none'; base-uri 'self'");
