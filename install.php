@@ -350,6 +350,14 @@ function allowed($rel)
         }
         return false;
     }
+    if ($parts[0] === 'core') {
+        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json et VERSION.
+        // Jamais api/ ni tests/ (démonstration autonome et outillage de développement).
+        if ($rel === 'core/VERSION') return true;
+        if ($count === 3 && $parts[1] === 'src') return preg_match('/^[A-Za-z0-9_-]+\.php$/', $parts[2]) === 1;
+        if ($count === 3 && $parts[1] === 'data') return preg_match('/^[A-Za-z0-9_-]+\.json$/', $parts[2]) === 1;
+        return false;
+    }
     return false;
 }
 
@@ -358,6 +366,7 @@ function dest_of($rel, $docroot, $backendDir)
 {
     if (strpos($rel, 'public/') === 0) return $docroot . '/' . substr($rel, 7);
     if (strpos($rel, 'backend/') === 0) return $backendDir . '/' . substr($rel, 8);
+    if (strpos($rel, 'core/') === 0) return $backendDir . '/' . $rel;
     throw new RuntimeException('Chemin hors liste blanche : ' . $rel);
 }
 
@@ -1110,7 +1119,7 @@ try {
     // 4) Installation des fichiers (ce qui existait déjà, ex. une page d'attente de l'hébergeur, est sauvegardé)
     //    Le backend d'abord (son .htaccess en premier), la façade publique ensuite.
     usort($files, function ($a, $b) {
-        $rank = function ($rel) { return $rel === 'backend/.htaccess' ? 0 : (strpos($rel, 'backend/') === 0 ? 1 : ($rel === 'public/api/index.php' ? 3 : 2)); };
+        $rank = function ($rel) { return $rel === 'backend/.htaccess' ? 0 : ((strpos($rel, 'backend/') === 0 || strpos($rel, 'core/') === 0) ? 1 : ($rel === 'public/api/index.php' ? 3 : 2)); };
         $ra = $rank($a); $rb = $rank($b);
         return $ra === $rb ? strcmp($a, $b) : $ra - $rb;
     });

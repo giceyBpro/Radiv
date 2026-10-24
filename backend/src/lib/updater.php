@@ -101,6 +101,14 @@ function allowed(string $rel): bool
         }
         return false;
     }
+    if ($parts[0] === 'core') {
+        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json et VERSION.
+        // Jamais api/ ni tests/ (démonstration autonome et outillage de développement).
+        if ($rel === 'core/VERSION') return true;
+        if ($count === 3 && $parts[1] === 'src') return preg_match('/^[A-Za-z0-9_-]+\.php$/', $parts[2]) === 1;
+        if ($count === 3 && $parts[1] === 'data') return preg_match('/^[A-Za-z0-9_-]+\.json$/', $parts[2]) === 1;
+        return false;
+    }
     return false;
 }
 
@@ -109,6 +117,7 @@ function dest(string $rel): string
 {
     if (str_starts_with($rel, 'public/')) return Config\web_root() . '/' . substr($rel, 7);
     if (str_starts_with($rel, 'backend/')) return Config\backend_dir() . '/' . substr($rel, 8);
+    if (str_starts_with($rel, 'core/')) return Config\backend_dir() . '/' . $rel;
     throw new \RuntimeException('Chemin hors liste blanche: ' . $rel);
 }
 
@@ -290,7 +299,7 @@ function install_file(string $src, string $dest): void
 // arrivant pendant le remplacement ne voie pas un index.php neuf avec d'anciennes bibliothèques.
 function install_order(array $files): array
 {
-    $rank = static fn (string $rel): int => str_starts_with($rel, 'backend/src/lib/') || $rel === 'backend/src/calculation.php' ? 0
+    $rank = static fn (string $rel): int => str_starts_with($rel, 'backend/src/lib/') || str_starts_with($rel, 'core/') || $rel === 'backend/src/calculation.php' ? 0
         : ($rel === 'public/api/index.php' ? 2 : (str_starts_with($rel, 'backend/') ? 1 : 3));
     usort($files, static fn ($a, $b) => [$rank($a), $a] <=> [$rank($b), $b]);
     return $files;
