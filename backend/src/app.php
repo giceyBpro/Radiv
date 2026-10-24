@@ -13,9 +13,9 @@ ini_set('log_errors', '1');
 ini_set('default_mimetype', '');
 
 // Moteur de calcul partagé (dossier core/, transférable dans un dépôt indépendant) : installé dans backend/core/,
-// ou à la racine du dépôt en développement. Lecture du mode d'arrondi à chaque calcul (variable RESTRICTION_ROUNDING_MODE).
+// ou à la racine du dépôt en développement. Mode d'arrondi : celui du moteur (core/data/settings.json), sauf surcharge par la variable RESTRICTION_ROUNDING_MODE (lue à chaque calcul).
 require is_file(__DIR__ . '/../core/src/bootstrap.php') ? __DIR__ . '/../core/src/bootstrap.php' : __DIR__ . '/../../core/src/bootstrap.php';
-\RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: 'round');
+\RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: null);
 require __DIR__ . '/lib/json.php';
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/store.php';

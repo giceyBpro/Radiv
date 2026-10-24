@@ -1,7 +1,7 @@
 <?php
 // ===== ARRONDI DES DURÉES DE RESTRICTION =====
 // Deux conventions possibles, au choix de l'hébergeur du moteur (voir set_rounding_mode) :
-//   "round" (défaut) : arrondi au plus proche, légèrement plus protecteur (jour supérieur dès que la fraction dépasse 0,5) ;
+//   "round" (défaut du moteur) : arrondi au plus proche, légèrement plus protecteur (jour supérieur dès que la fraction dépasse 0,5) ;
 //   "floor"          : troncature, reproduit les valeurs de l'outil de référence du groupe Radioprotection de la SFMN.
 
 declare(strict_types=1);
@@ -10,7 +10,9 @@ namespace RivEngine;
 
 if (!defined('RIV_ENGINE')) { http_response_code(404); exit; } // jamais exécutable seul : passer par bootstrap.php
 
-// Réglage courant : une chaîne ("round" / "floor"), ou une fonction renvoyant cette chaîne (lue à CHAQUE calcul,
+// Le mode par défaut est défini par le moteur lui-même (data/settings.json, clé rounding_mode) : c'est un choix de
+// convention scientifique, pas de l'hébergeur. L'hébergeur PEUT le surcharger avec set_rounding_mode().
+// Réglage de surcharge : une chaîne ("round" / "floor"), ou une fonction renvoyant cette chaîne (lue à CHAQUE calcul,
 // ce qui permet de la brancher sur une variable d'environnement ou un fichier de configuration modifiable à chaud).
 function set_rounding_mode(string|callable|null $mode): void
 {
@@ -23,7 +25,8 @@ function rounding_mode(): string
     // Une chaîne est une valeur, jamais un nom de fonction ("round" est aussi une fonction PHP).
     $raw = is_string($setting) ? $setting : (is_callable($setting) ? $setting() : '');
     $raw = is_string($raw) ? $raw : '';
-    $mode = strtolower(trim($raw === '' ? 'round' : $raw));
+    if (trim($raw) === '') $raw = (string) (load_data('settings')['rounding_mode'] ?? 'round'); // pas de surcharge : valeur du moteur
+    $mode = strtolower(trim($raw));
     if ($mode !== 'round' && $mode !== 'floor') {
         static $warned = false;
         if (!$warned) {

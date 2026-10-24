@@ -14,6 +14,7 @@ tel quel par un autre site.
 | `src/catalog.php` | Lecture de `data/*.json` : isotopes, scénarios, cures. |
 | `src/physics.php` | Formules (décroissance, géométrie, durée de restriction). |
 | `src/calculate.php` | `RivEngine\calculate(array $payload)` : validation + résultat. |
+| `data/settings.json` | Réglage du moteur : mode d'arrondi par défaut (`rounding_mode`). |
 | `data/*.json` | **Les données** (à modifier ici, pas dans le code) ; `data/SOURCES.md` : références et choix. |
 | `api/handler.php` | Interface d'API minimale (`GET config`, `POST calculate`) sans état ni dépendance. |
 | `api/index.php` | Exemple autonome : `php -S 127.0.0.1:8080 core/api/index.php`. |
@@ -24,7 +25,7 @@ tel quel par un autre site.
 
 ```php
 require 'core/src/bootstrap.php';
-RivEngine\set_rounding_mode('round');      // optionnel : 'round' (défaut) ou 'floor'
+RivEngine\set_rounding_mode('floor');      // optionnel : surcharge le mode de data/settings.json ('round' ou 'floor')
 $r = RivEngine\calculate(['isotope_code' => 'radium223', 'dose_rate' => 100, 'patient_size_cm' => 170]);
 ```
 
@@ -34,7 +35,7 @@ pour les champs d'entrée et les messages d'erreur.
 ## Règles pour garder le moteur transférable
 
 - Aucun appel au reste du dépôt (`backend/`, `public/`), aucune variable d'environnement lue directement : les réglages
-  passent par des fonctions (`set_rounding_mode`).
+  du moteur sont dans `data/settings.json`, la surcharge par l'hébergeur passe par `set_rounding_mode`.
 - Les fichiers ne s'exécutent pas seuls (garde `RIV_ENGINE`), seul `bootstrap.php` les charge.
 - Toute modification des formules ou des données doit garder `tests/test-calcul.js` vert ; une évolution voulue de résultat
   se fait en regénérant le fichier de référence et en l'expliquant dans `data/SOURCES.md`.

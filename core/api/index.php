@@ -8,8 +8,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/handler.php';
 
-// Mode d'arrondi : variable d'environnement RIV_ROUNDING_MODE ("round" par défaut, ou "floor").
-RivEngine\set_rounding_mode(static fn () => getenv('RIV_ROUNDING_MODE') ?: 'round');
+// Mode d'arrondi : celui de core/data/settings.json (surcharge possible : RivEngine\set_rounding_mode('floor')).
 
 $route = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
 [$status, $data] = RivEngine\Api\handle((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), $route, (string) file_get_contents('php://input'));
