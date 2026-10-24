@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- Fiche imprimable (soignant). Textes dans config.js, section printSheet. -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Fiche</title>
+  <link rel="stylesheet" href="print.css">
+</head>
+<body data-sheet="print">
+  <div class="actions"><button type="button" id="printBtn"></button></div>
+  <main class="sheet">
+    <h1 id="title"></h1>
+    <div id="date"></div>
+    <div class="box" id="patientBox"></div>
+    <div id="content">
+      <section><h2 id="inputsTitle"></h2><div class="grid" id="inputs"></div></section>
+      <section>
+        <h2 id="resultTitle"></h2>
+        <p id="effective"></p><p id="reference"></p>
+        <table><thead><tr><th id="colSituation"></th><th id="colDays"></th></tr></thead><tbody id="rows"></tbody></table>
+        <div class="warning" id="warning"></div>
+      </section>
+    </div>
+    <div class="footer" id="footer"></div>
+  </main>
+  <script src="config.js"></script><script src="sheets.js"></script>
+</body>
+</html>
