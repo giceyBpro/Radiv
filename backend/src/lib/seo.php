@@ -59,6 +59,9 @@ function render(string $publicPath): ?string
     if ($tool !== '') {
         $html = (string) preg_replace_callback('/(data-sfmn-link href=")[^"]*(")/', static fn (array $m): string => $m[1] . esc($tool) . $m[2], $html);
     }
+    // Le navigateur garde app.js en cache (jusqu'à une heure) : la version dans l'adresse change dès que le fichier change.
+    $app = rtrim(Config\web_root(), '/') . '/app.js';
+    if (is_file($app)) $html = preg_replace('#(<script src="app\.js)(?:\?v=[0-9A-Za-z]*)?(")#', '$1?v=' . dechex((int) filemtime($app)) . '$2', $html) ?? $html;
     // Nom du site visible dès le HTML (sans attendre le JavaScript)
     $html = str_replace('<span id="siteNameBanner">[Nom du site]</span>', '<span id="siteNameBanner">' . esc($name) . '</span>', $html);
     return $html;
