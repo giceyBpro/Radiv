@@ -15,7 +15,7 @@ t('description trouvée dans install.php', !!phpLayout);
 const names = (phpLayout || '').split('\n').filter((l) => l && !l.startsWith('== ') && !l.startsWith('|')).map((l) => l.split('|')[0]);
 t('aucune variable en double', new Set(names).size === names.length);
 
-const apiSources = execFileSync('sh', ['-c', `cat ${root}/backend/src/app.php ${root}/backend/src/lib/*.php ${root}/backend/src/calculation.php`]).toString();
+const apiSources = execFileSync('sh', ['-c', `cat ${root}/backend/src/app.php ${root}/backend/src/lib/*.php`]).toString();
 // BACKEND_DIR n'est lu que par install.php et update.php (c'est eux qui déplacent le backend)
 const unread = names.filter((n) => n !== 'BACKEND_DIR' && !apiSources.includes(`'${n}'`));
 t('chaque variable décrite est lue par le code du backend', unread.length === 0, unread.join(', '));

@@ -1,0 +1,113 @@
+[
+  {
+    "audience_code": "conjoint_plus_60",
+    "label": "Proximité, y compris la nuit, avec son/sa conjoint(e) de plus de 60 ans",
+    "exposures": [
+      {
+        "hours": 8,
+        "distance": 0.3,
+        "unit_factor_at_1m": false
+      },
+      {
+        "hours": 3,
+        "distance": 1,
+        "unit_factor_at_1m": true
+      }
+    ],
+    "limit": 15,
+    "condition": "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 15 mSv"
+  },
+  {
+    "audience_code": "conjoint_moins_60",
+    "label": "Proximité, y compris la nuit, avec son/sa conjoint(e) de moins de 60 ans",
+    "exposures": [
+      {
+        "hours": 8,
+        "distance": 0.3,
+        "unit_factor_at_1m": false
+      },
+      {
+        "hours": 3,
+        "distance": 1,
+        "unit_factor_at_1m": true
+      }
+    ],
+    "limit": 3,
+    "condition": "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 3 mSv"
+  },
+  {
+    "audience_code": "conjointe_enceinte",
+    "label": "Proximité, y compris la nuit, avec une conjointe enceinte",
+    "exposures": [
+      {
+        "hours": 8,
+        "distance": 0.3,
+        "unit_factor_at_1m": false
+      },
+      {
+        "hours": 3,
+        "distance": 1,
+        "unit_factor_at_1m": true
+      }
+    ],
+    "limit": 1,
+    "condition": "Exposition : 8 h à 0,3 m (nuit) + 3 h à 1 m · limite de dose : 1 mSv"
+  },
+  {
+    "audience_code": "transport_commun",
+    "label": "Déplacement en transports en commun",
+    "exposures": [
+      {
+        "hours": 3,
+        "distance": 0.5,
+        "unit_factor_at_1m": false
+      }
+    ],
+    "limit": 1,
+    "condition": "Exposition : 3 h à 0,5 m · limite de dose : 1 mSv"
+  },
+  {
+    "audience_code": "enfant_moins_3_ans",
+    "label": "Proximité au domicile avec un enfant de moins de 3 ans",
+    "exposures": [
+      {
+        "hours": 9,
+        "distance": 1,
+        "unit_factor_at_1m": true
+      }
+    ],
+    "limit": 1,
+    "condition": "Exposition : 9 h à 1 m · limite de dose : 1 mSv"
+  },
+  {
+    "audience_code": "enfant_3_11_ans",
+    "label": "Proximité au domicile avec un enfant de 3 à 11 ans",
+    "exposures": [
+      {
+        "hours": 2,
+        "distance": 0.5,
+        "unit_factor_at_1m": false
+      },
+      {
+        "hours": 2,
+        "distance": 1,
+        "unit_factor_at_1m": true
+      }
+    ],
+    "limit": 1,
+    "condition": "Exposition : 2 h à 0,5 m + 2 h à 1 m · limite de dose : 1 mSv"
+  },
+  {
+    "audience_code": "collegues_travail",
+    "label": "Présence auprès de collègues de travail",
+    "exposures": [
+      {
+        "hours": 6,
+        "distance": 1,
+        "unit_factor_at_1m": true
+      }
+    ],
+    "limit": 1,
+    "condition": "Exposition : 6 h à 1 m · limite de dose : 1 mSv"
+  }
+]

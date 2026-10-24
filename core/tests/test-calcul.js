@@ -1,7 +1,7 @@
-// Non-régression du calcul: calculation.php doit redonner exactement les résultats figés dans
+// Non-régression du calcul: le moteur (core/src) doit redonner exactement les résultats figés dans
 // golden-calcul.json (valeurs, ordre des clés, nombres), dans les deux modes d'arrondi.
 // Le fichier a été produit par l'ancienne implémentation de référence (voir gen-golden.js).
-// Usage: node tests/test-calcul.js
+// Usage: node core/tests/test-calcul.js
 const { execFileSync } = require('child_process');
 const path = require('path');
 const golden = require('./golden-calcul.json');
