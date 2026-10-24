@@ -161,6 +161,13 @@ function api_key_required(): bool
     return flag('API_KEY_REQUIRED', 'false');
 }
 
+// Adresse de l'outil en ligne de la SFMN (SFMN_CALCULATOR_URL), affichée en lien sur les pages ; vide si absente ou invalide.
+function sfmn_tool_url(): string
+{
+    $url = trim(env('SFMN_CALCULATOR_URL'));
+    return preg_match('#^https?://[^\s"<>]+$#', $url) === 1 ? $url : '';
+}
+
 function sfmn_mode_enabled(): bool
 {
     return flag('SFMN_MODE_ENABLED');

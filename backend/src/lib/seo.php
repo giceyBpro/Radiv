@@ -54,6 +54,11 @@ function render(string $publicPath): ?string
         . '  <meta name="twitter:image" content="' . esc($image) . '" />' . "\n"
         . '  <script type="application/ld+json">' . json_ld($publicPath, $site, $url, $name) . '</script>';
     $html = str_replace('<!--SEO-HEAD-->', $head, $html, $n);
+    // Lien vers l'outil en ligne de la SFMN : adresse de SFMN_CALCULATOR_URL (celle du fichier HTML sert de repli)
+    $tool = Config\sfmn_tool_url();
+    if ($tool !== '') {
+        $html = (string) preg_replace_callback('/(data-sfmn-link href=")[^"]*(")/', static fn (array $m): string => $m[1] . esc($tool) . $m[2], $html);
+    }
     // Nom du site visible dès le HTML (sans attendre le JavaScript)
     $html = str_replace('<span id="siteNameBanner">[Nom du site]</span>', '<span id="siteNameBanner">' . esc($name) . '</span>', $html);
     return $html;
