@@ -20,6 +20,7 @@ tel quel par un autre site.
 | `api/index.php` | Exemple autonome : `php -S 127.0.0.1:8080 core/api/index.php`. |
 | `web/config.js` | **Titre, textes et libellés de la page** : le seul fichier à modifier pour personnaliser l'affichage. |
 | `web/index.html`, `app.js`, `style.css` | Page minimale (saisie, tableau des résultats), mode de calcul local uniquement. Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
+| `web/print.html`, `patient.html`, `sheets.js`, `print.css` | Fiche imprimable pour le soignant (données saisies, tableau, avertissement) et consignes pour le patient (une phrase simple par situation). Textes dans les sections `printSheet` et `patientSheet` de `config.js`. Le résultat leur est transmis par `sessionStorage` (rien n'est envoyé ailleurs). |
 | `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php`. |
 | `VERSION` | Version du moteur. |
 

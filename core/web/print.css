@@ -1,0 +1,19 @@
+/* Mise en page des fiches (écran : feuille A4 centrée ; impression : pleine page, sans boutons). */
+body { margin: 0; background: #f2f2f2; font: 14px/1.4 Arial, Helvetica, sans-serif; color: #111; }
+.sheet { box-sizing: border-box; width: 210mm; min-height: 297mm; margin: 10mm auto; padding: 12mm; background: #fff; border: 1px solid #ddd; }
+.actions { width: 210mm; margin: 8px auto; }
+button { padding: 8px 14px; font: inherit; border: 1px solid #111; background: #fff; cursor: pointer; }
+h1 { font-size: 20px; margin: 0 0 6mm; }
+h2 { font-size: 15px; margin: 0 0 3mm; border-bottom: 1px solid #333; padding-bottom: 2mm; }
+section { margin-bottom: 6mm; }
+.box { border: 1px solid #333; min-height: 20mm; padding: 4mm; margin-bottom: 6mm; font-weight: 700; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 8mm; }
+.k { font-weight: 700; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #333; padding: 6px; text-align: left; vertical-align: top; }
+th { background: #eee; }
+.warning { margin-top: 4mm; padding: 10px; border: 1px solid #111; font-weight: 700; font-size: 15px; }
+.lead { font-size: 16px; margin-bottom: 6mm; }
+li { margin-bottom: 3mm; font-size: 15px; }
+.footer { margin-top: 6mm; font-size: 11px; color: #555; }
+@media print { body { background: #fff; } .sheet { margin: 0; border: 0; width: auto; min-height: 0; } .actions { display: none; } }
