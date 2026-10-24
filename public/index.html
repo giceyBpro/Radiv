@@ -843,6 +843,40 @@
   </main>
 
     <script src="config.js"></script>
+  <script>
+    // Avis de maintenance indépendant de app.js (que les navigateurs gardent en cache jusqu'à une heure) : si le serveur
+    // annonce la maintenance dans /api/config, il remplace la page ; le lien vers l'outil de la SFMN est repris de la page.
+    (function () {
+      var base = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
+      fetch(base + '/config', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
+        if (!c || !c.maintenance || document.getElementById('maintenanceNotice')) return;
+        var link = document.querySelector('[data-sfmn-link]');
+        var box = document.createElement('div');
+        box.id = 'maintenanceNotice';
+        box.setAttribute('role', 'alert');
+        box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#f5f7fa;color:#1d2733;font:16px/1.5 system-ui,sans-serif;padding:24px;text-align:center';
+        var card = document.createElement('div');
+        card.style.cssText = 'max-width:560px;padding:28px;background:#fff;border:1px solid #d5dde6;border-radius:12px';
+        var title = document.createElement('h1');
+        title.textContent = 'Site en maintenance';
+        var text = document.createElement('p');
+        text.textContent = 'Le site est momentanément en maintenance. Merci de votre compréhension.';
+        card.appendChild(title);
+        card.appendChild(text);
+        if (link && /^https?:/.test(link.href)) {
+          var p = document.createElement('p');
+          p.appendChild(document.createTextNode('En attendant, vous pouvez calculer les durées de restriction avec l\u2019outil en ligne de la SFMN : '));
+          var a = document.createElement('a');
+          a.href = link.href; a.textContent = 'accéder à l\u2019outil de la SFMN'; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          p.appendChild(a);
+          p.appendChild(document.createTextNode('.'));
+          card.appendChild(p);
+        }
+        box.appendChild(card);
+        document.body.appendChild(box);
+      }).catch(function () {});
+    })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

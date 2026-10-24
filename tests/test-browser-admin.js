@@ -111,6 +111,11 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     await page.goto(`${BASE}/v1.html`);
     await page.waitForSelector('[role="alert"]', { timeout: 10000 });
     t('page statique (sans PHP): avis plein écran injecté par le script, lien SFMN repris de la page', /Site en maintenance/.test(await page.locator('[role="alert"]').innerText()) && (await page.locator('[role="alert"] a[href*="acoramen.net"]').count()) === 1);
+    fs.copyFileSync(path.join(WWW, 'index.html'), path.join(WWW, 'accueil-statique.html'));
+    await page.goto(`${BASE}/accueil-statique.html`);
+    await page.waitForSelector('#maintenanceNotice', { timeout: 10000 });
+    t('accueil statique: avis injecté par son propre script (indépendant d\'app.js), un seul avis', (await page.locator('#maintenanceNotice').count()) === 1 && /Site en maintenance/.test(await page.locator('#maintenanceNotice').innerText()) && (await page.locator('#maintenanceNotice a[href*="acoramen.net"]').count()) === 1);
+    fs.unlinkSync(path.join(WWW, 'accueil-statique.html'));
     fs.unlinkSync(mf);
     await page.goto(`${BASE}/v1.html`); await page.waitForTimeout(1500);
     t('maintenance levée: plus d\'avis, calculateur visible', (await page.locator('[role="alert"]').count()) === 0 && await page.locator('#calculateBtn').isVisible()); }

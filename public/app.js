@@ -587,8 +587,10 @@
     // Maintenance annoncée par le serveur (quand la page d'accueil est servie sans passer par PHP) : un avis plein écran
     // remplace le calculateur, avec le lien vers l'outil de la SFMN pris dans la page.
     function showMaintenanceNotice() {
+      if (document.getElementById('maintenanceNotice')) return; // déjà affiché par le script de la page d'accueil
       const href = safeHttpUrl(document.querySelector('[data-sfmn-link]')?.href || '') || '';
       const box = document.createElement('div');
+      box.id = 'maintenanceNotice';
       box.setAttribute('role', 'alert');
       box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#f5f7fa;color:#1d2733;font:16px/1.5 system-ui,sans-serif;padding:24px;text-align:center';
       const card = document.createElement('div');

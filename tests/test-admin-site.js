@@ -223,7 +223,7 @@ async function update(c, ref, token) {
     const calc = () => fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }) });
     page = await c.req('GET', `${BASE}/auth`);
     t('carte Maintenance: état « en service » et boutons', /Maintenance<\/h2>/.test(page.text) && /en service/.test(page.text) && /Activer la maintenance/.test(page.text) && /Maintenance complète/.test(page.text));
-    let home = await fetch(`${BASE}/`); t('hors maintenance: accueil normal (200)', home.status === 200 && !/Site en maintenance/.test(await home.text()));
+    let home = await fetch(`${BASE}/`); t('hors maintenance: accueil normal (200)', home.status === 200 && !/<title>Site en maintenance/.test(await home.text()));
     let msg = await setMode('site'); t('maintenance activée', /Maintenance activée/.test(msg), msg);
     home = await fetch(`${BASE}/`); const html = await home.text();
     t('accueil: 503, avis de maintenance et lien vers l\'outil de la SFMN', home.status === 503 && /Site en maintenance/.test(html) && /acoramen\.net/.test(html) && home.headers.get('retry-after') === '3600' && !/id="doseRate"/.test(html), `${home.status}`);
