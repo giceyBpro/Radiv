@@ -7,16 +7,12 @@
   const base = (C.apiBase || '').replace(/\/$/, '');
   let isotopes = [];
   let cureOptions = {};
-  let lastForm = null;
-  let lastSent = null;
 
   // Textes issus de config.js (textContent : jamais de HTML injecté).
   document.title = C.title;
   document.querySelectorAll('[data-text]').forEach((el) => { el.textContent = C[el.dataset.text] || ''; });
   document.querySelectorAll('[data-label]').forEach((el) => { el.textContent = C.labels[el.dataset.label] || ''; });
   $('submit').textContent = C.labels.calculate;
-  $('printSheetBtn').textContent = C.labels.printSheet;
-  $('patientSheetBtn').textContent = C.labels.patientSheet;
 
   function show(message) {
     const list = $('errors');
@@ -56,8 +52,6 @@
     body.innerHTML = '';
     show(result.ok ? [] : (result.errors && result.errors.length ? result.errors : [result.error && result.error.message]));
     $('results').hidden = !result.ok;
-    $('sheetActions').hidden = !result.ok;
-    lastSent = result.ok ? { generated_at: new Date().toISOString(), form: lastForm, result } : null;
     if (!result.ok) return;
     result.rows.forEach((row) => {
       if (row.audience_code === 'scenario_utilisateur' && row.value === null) return; // scénario personnalisé non demandé
@@ -84,20 +78,11 @@
     } catch (e) { show(C.messages.apiError); }
   }
 
-  // Les fiches (print.html, patient.html) lisent le dernier résultat dans sessionStorage, rien n'est envoyé ailleurs.
-  function openSheet(page) {
-    if (!lastSent) return;
-    try { sessionStorage.setItem('riv_sheet', JSON.stringify(lastSent)); } catch (e) { return; }
-    window.open(page, '_blank');
-  }
-  $('printSheetBtn').addEventListener('click', () => openSheet('print.html'));
-  $('patientSheetBtn').addEventListener('click', () => openSheet('patient.html'));
   $('isotope').addEventListener('change', refreshFields);
   $('form').addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
       const sent = payload();
-      lastForm = Object.assign({ isotope_label: $('isotope').selectedOptions[0].textContent }, sent);
       const response = await fetch(base + '/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sent) });
       render(await response.json());
     } catch (e) { show(C.messages.apiError); $('results').hidden = true; }

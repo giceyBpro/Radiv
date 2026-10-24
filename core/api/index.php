@@ -13,8 +13,7 @@ require __DIR__ . '/handler.php';
 
 $route = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
 // Page minimale (core/web) servie à la racine ; en production, servez plutôt web/ par le serveur web lui-même.
-$static = ['/' => 'index.html', '/index.html' => 'index.html', '/config.js' => 'config.js', '/app.js' => 'app.js', '/style.css' => 'style.css',
-    '/print.html' => 'print.html', '/patient.html' => 'patient.html', '/sheets.js' => 'sheets.js', '/print.css' => 'print.css'];
+$static = ['/' => 'index.html', '/index.html' => 'index.html', '/config.js' => 'config.js', '/app.js' => 'app.js', '/style.css' => 'style.css'];
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && isset($static[$route])) {
     $types = ['html' => 'text/html', 'js' => 'text/javascript', 'css' => 'text/css'];
     header('Content-Type: ' . $types[pathinfo($static[$route], PATHINFO_EXTENSION)] . '; charset=utf-8');
