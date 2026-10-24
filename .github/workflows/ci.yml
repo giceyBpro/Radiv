@@ -25,6 +25,8 @@ jobs:
           php core/tests/test-api.php
       - name: Contrat du site envers le moteur partagé (version et cas figés)
         run: node tests/test-core-contract.js
+      - name: Zone de test du moteur (candidats, application, retour arrière)
+        run: node tests/test-core-lab.js
       - name: Adresse IP derrière un proxy, réglages par défaut et cache
         run: |
           php tests/test-client-ip.php

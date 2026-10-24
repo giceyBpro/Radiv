@@ -184,6 +184,32 @@ async function update(c, ref, token) {
   t('état exactement identique à la v1.1', treeHash() === afterGood); t('version = v1.1', JSON.parse(read('backend/data/var/version.json')).sha === '1'.repeat(40));
   page = await c.req('GET', `${BASE}/auth`); t('plus de retour arrière possible', !/Rétablir la version précédente/.test(page.text));
 
+  console.log('\n— Moteur de calcul : zone de test, épinglage');
+  t('GET /auth/moteur sans session → 404', (await new Client().req('GET', `${BASE}/auth/moteur`)).status === 404);
+  t('POST /auth/moteur/appliquer sans session → 404', (await new Client().req('POST', `${BASE}/auth/moteur/appliquer`, { form: {} })).status === 404);
+  page = await c.req('GET', `${BASE}/auth/moteur`);
+  t('page Moteur: moteur en service, formulaire de téléchargement', page.status === 200 && /Moteur en service/.test(page.text) && /Télécharger un candidat/.test(page.text), page.text.slice(0, 200));
+  t('onglet Moteur dans la navigation', /href="\/auth\/moteur"/.test(page.text));
+  { const versionFile = path.join(WWW, 'backend/core/VERSION'); const pinFile = path.join(WWW, 'backend/data/var/core-pin.json');
+    const original = fs.readFileSync(versionFile, 'utf8');
+    fs.writeFileSync(versionFile, '9.9.9\n'); fs.writeFileSync(pinFile, '{"version":"9.9.9"}');
+    page = await c.req('GET', `${BASE}/auth/moteur`); t('moteur épinglé affiché', /épinglé/.test(page.text) && /Retirer l'épinglage/.test(page.text));
+    resetLimits(); r = await update(c, 'main', TOKEN);
+    t('moteur épinglé: la mise à jour du site ne le touche pas', /2222222/.test(r.msg) && fs.readFileSync(versionFile, 'utf8') === '9.9.9\n' && read('app.js').includes('fixture v1.2'), r.msg);
+    page = await c.req('GET', `${BASE}/auth`);
+    const rb2 = await c.req('POST', `${BASE}/auth/rollback`, { form: { csrf: csrfOf(page.text) }, headers: { Origin: BASE } });
+    t('…ni le retour arrière', fs.readFileSync(versionFile, 'utf8') === '9.9.9\n' && /Version précédente rétablie/.test(flash((await c.req('GET', rb2.loc)).text)));
+    fs.unlinkSync(pinFile); fs.writeFileSync(versionFile, original);
+    t('état revenu à la v1.1', treeHash() === afterGood);
+    fs.writeFileSync(versionFile, '9.9.9\n');
+    resetLimits(); r = await update(c, 'main', TOKEN);
+    t('sans épinglage: la mise à jour réinstalle le moteur de la version', /2222222/.test(r.msg) && fs.readFileSync(versionFile, 'utf8') === original, r.msg);
+    page = await c.req('GET', `${BASE}/auth`);
+    await c.req('POST', `${BASE}/auth/rollback`, { form: { csrf: csrfOf(page.text) }, headers: { Origin: BASE } });
+    fs.writeFileSync(versionFile, original);
+    t('état de nouveau identique à la v1.1', treeHash() === afterGood);
+  }
+
   console.log('\n— Fournisseurs de l\'API et clés d\'API (clé obligatoire)');
   { resetLimits();
     const regFile = path.join(WWW, 'backend/config/providers.json');
