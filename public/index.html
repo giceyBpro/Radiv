@@ -635,8 +635,10 @@
       }
     }
   </style>
+<!--MAINTENANCE-GATE--><style id="rivGate">body>*:not(#maintenanceNotice){display:none!important}#maintenanceNotice{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;text-align:center;background:#f5f7fa;color:#1d2733;font:16px/1.5 system-ui,sans-serif}#maintenanceNotice div{max-width:560px;padding:28px;background:#fff;border:1px solid #d5dde6;border-radius:12px}#maintenanceNotice h1{margin-top:0;font-size:1.5rem}#maintenanceNotice a{color:#0b5cad;font-weight:600}</style><!--/MAINTENANCE-GATE-->
 </head>
 <body data-field-style="v2">
+<!--MAINTENANCE-GATE--><div id="maintenanceNotice" role="status"><div><h1>Site en maintenance</h1><p>Le site est momentanément indisponible. Merci de votre compréhension.</p><p>En attendant, vous pouvez calculer les durées de restriction avec l’outil en ligne de la SFMN : <a data-sfmn-link href="https://www.acoramen.net/index.php?option=com_evictionperiod&amp;Itemid=5141&amp;lang=fr" target="_blank" rel="noopener noreferrer">accéder à l’outil de la SFMN</a>.</p></div></div><!--/MAINTENANCE-GATE-->
   <main class="page">
     <h1><span id="siteNameBanner">[Nom du site]</span> : Calcul de durée de restriction des contacts<br>après radiothérapie interne vectorisée&nbsp;RIV</h1>
     <div class="subtitle independence">Ce site est indépendant. Il s’appuie sur les publications de la SFMN et de son groupe de travail Radioprotection (références ci-dessous).<br>La SFMN met à disposition un outil en ligne pour les calculs : <a class="inline-link" data-sfmn-link href="https://www.acoramen.net/index.php?option=com_evictionperiod&amp;Itemid=5141&amp;lang=fr" target="_blank" rel="noopener noreferrer">accéder à l’outil de la SFMN</a>.</div>
@@ -843,40 +845,26 @@
   </main>
 
     <script src="config.js"></script>
-  <script>
-    // Avis de maintenance indépendant de app.js (que les navigateurs gardent en cache jusqu'à une heure) : si le serveur
-    // annonce la maintenance dans /api/config, il remplace la page ; le lien vers l'outil de la SFMN est repris de la page.
+  <!--MAINTENANCE-GATE--><script>
+    // Page d'attente : tant que le serveur n'a pas confirmé que le site est en service (/api/config sans « maintenance »),
+    // seul l'avis ci-dessus est visible — pas de calculateur qui apparaît puis disparaît. Indépendant d'app.js (gardé en cache).
     (function () {
       var base = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
-      fetch(base + '/config', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
-        if (!c || !c.maintenance || document.getElementById('maintenanceNotice')) return;
-        var link = document.querySelector('[data-sfmn-link]');
-        var box = document.createElement('div');
-        box.id = 'maintenanceNotice';
-        box.setAttribute('role', 'alert');
-        box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#f5f7fa;color:#1d2733;font:16px/1.5 system-ui,sans-serif;padding:24px;text-align:center';
-        var card = document.createElement('div');
-        card.style.cssText = 'max-width:560px;padding:28px;background:#fff;border:1px solid #d5dde6;border-radius:12px';
-        var title = document.createElement('h1');
-        title.textContent = 'Site en maintenance';
-        var text = document.createElement('p');
-        text.textContent = 'Le site est momentanément en maintenance. Merci de votre compréhension.';
-        card.appendChild(title);
-        card.appendChild(text);
-        if (link && /^https?:/.test(link.href)) {
-          var p = document.createElement('p');
-          p.appendChild(document.createTextNode('En attendant, vous pouvez calculer les durées de restriction avec l\u2019outil en ligne de la SFMN : '));
-          var a = document.createElement('a');
-          a.href = link.href; a.textContent = 'accéder à l\u2019outil de la SFMN'; a.target = '_blank'; a.rel = 'noopener noreferrer';
-          p.appendChild(a);
-          p.appendChild(document.createTextNode('.'));
-          card.appendChild(p);
-        }
-        box.appendChild(card);
-        document.body.appendChild(box);
-      }).catch(function () {});
+      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = controller ? setTimeout(function () { controller.abort(); }, 10000) : null;
+      fetch(base + '/config', { cache: 'no-store', signal: controller ? controller.signal : undefined })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (c) {
+          if (timer) clearTimeout(timer);
+          if (!c || !Array.isArray(c.isotopes) || c.maintenance) return; // reste sur l'avis de maintenance
+          var gate = document.getElementById('rivGate');
+          var notice = document.getElementById('maintenanceNotice');
+          if (gate) gate.remove();
+          if (notice) notice.remove();
+        })
+        .catch(function () { /* injoignable : l'avis reste affiché */ });
     })();
-  </script>
+  </script><!--/MAINTENANCE-GATE-->
   <script src="app.js?v=1dee74d7"></script>
 </body>
 </html>
