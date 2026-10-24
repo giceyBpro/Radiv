@@ -17,6 +17,7 @@ ini_set('default_mimetype', '');
 require is_file(__DIR__ . '/../core/src/bootstrap.php') ? __DIR__ . '/../core/src/bootstrap.php' : __DIR__ . '/../../core/src/bootstrap.php';
 \RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: null);
 require __DIR__ . '/lib/json.php';
+require __DIR__ . '/lib/engine.php';
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/store.php';
 require __DIR__ . '/lib/http.php';
@@ -41,6 +42,7 @@ use Radiv\AdminSite;
 use RivEngine as Calculation;
 use Radiv\Config;
 use Radiv\Contact;
+use Radiv\Engine;
 use Radiv\Frontend;
 use Radiv\Geo;
 use Radiv\Http;
@@ -131,7 +133,7 @@ try {
                 if (($result['ok'] ?? false) === true) Store\result_set($cacheKey, $result);
             }
         } else {
-            $result = Calculation\calculate($payload);
+            $result = Engine\calculate($payload);
         }
         $timestamp = Measurements\now_iso();
         Http\send_json(200, $result);

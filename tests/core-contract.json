@@ -1,5 +1,5 @@
 {
   "_commentaire": "Contrat attendu du moteur partagé (core/). Le site n'accepte que les versions >= min_version et de même majeure. Pour adopter une nouvelle majeure : relire le journal du moteur, regénérer golden-core-contract.json depuis le moteur validé, puis changer supported_major ici, dans le même commit.",
-  "supported_major": 1,
-  "min_version": "1.0.0"
+  "supported_major": 2,
+  "min_version": "2.0.0"
 }

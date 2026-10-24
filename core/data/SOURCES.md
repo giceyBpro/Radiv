@@ -22,4 +22,4 @@ Les valeurs de `isotopes.json`, `scenarios.json` et `cures.json` proviennent des
   (un `false` appliquait par erreur ~0,86 pour 150 cm et décalait le résultat de 2 jours).
 - **Cures multiples** : la limite de chaque scénario est divisée par le nombre de cures, sauf `transport_commun` (chaque
   cure expose d'autres passagers, aucun cumul).
-- **Arrondi** : `round` (au plus proche) ou `floor` (troncature, reproduit l'outil de référence). Voir `src/rounding.php`.
+- **Arrondi** : `round` (au plus proche) ou `floor` (troncature, reproduit la Fig. 1 de l'article de référence). Voir `src/rounding.php`.
