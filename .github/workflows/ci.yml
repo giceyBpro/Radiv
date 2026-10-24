@@ -18,9 +18,11 @@ jobs:
       # PHP (public/api et backend/): syntaxe de chaque fichier, puis non-régression du calcul
       # (cas figés, modes d'arrondi round et floor). PHP est préinstallé sur ubuntu-latest.
       - name: Lint PHP
-        run: find public backend install.php update.php -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find public backend core install.php update.php -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Non-régression du calcul
-        run: node tests/test-calcul.js
+        run: |
+          node core/tests/test-calcul.js
+          php core/tests/test-api.php
       - name: Adresse IP derrière un proxy, réglages par défaut et cache
         run: |
           php tests/test-client-ip.php

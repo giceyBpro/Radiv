@@ -9,7 +9,7 @@ namespace Radiv\Measurements;
 
 if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécutable hors de l'API
 
-use Radiv\Calculation;
+use RivEngine as Calculation;
 use Radiv\Config;
 use Radiv\Json;
 

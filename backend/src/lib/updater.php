@@ -39,7 +39,7 @@ const RETIRED_FILES = [];
 // (cible trop ancienne, archive tronquée): refusé avant toute écriture.
 const REQUIRED_FILES = [
     'public/index.html', 'public/api/.htaccess', 'public/api/index.php',
-    'backend/src/app.php', 'backend/src/calculation.php', 'backend/src/lib/config.php',
+    'backend/src/app.php', 'core/src/bootstrap.php', 'core/src/calculate.php', 'core/data/isotopes.json', 'backend/src/lib/config.php',
     'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 ];
 
@@ -299,7 +299,7 @@ function install_file(string $src, string $dest): void
 // arrivant pendant le remplacement ne voie pas un index.php neuf avec d'anciennes bibliothèques.
 function install_order(array $files): array
 {
-    $rank = static fn (string $rel): int => str_starts_with($rel, 'backend/src/lib/') || str_starts_with($rel, 'core/') || $rel === 'backend/src/calculation.php' ? 0
+    $rank = static fn (string $rel): int => str_starts_with($rel, 'backend/src/lib/') || str_starts_with($rel, 'core/') ? 0
         : ($rel === 'public/api/index.php' ? 2 : (str_starts_with($rel, 'backend/') ? 1 : 3));
     usort($files, static fn ($a, $b) => [$rank($a), $a] <=> [$rank($b), $b]);
     return $files;

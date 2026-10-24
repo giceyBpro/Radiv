@@ -12,7 +12,10 @@ ini_set('log_errors', '1');
 // Pas de Content-Type automatique (text/html) sur les réponses sans corps, ex. OPTIONS → 204.
 ini_set('default_mimetype', '');
 
-require __DIR__ . '/calculation.php';
+// Moteur de calcul partagé (dossier core/, transférable dans un dépôt indépendant) : installé dans backend/core/,
+// ou à la racine du dépôt en développement. Lecture du mode d'arrondi à chaque calcul (variable RESTRICTION_ROUNDING_MODE).
+require is_file(__DIR__ . '/../core/src/bootstrap.php') ? __DIR__ . '/../core/src/bootstrap.php' : __DIR__ . '/../../core/src/bootstrap.php';
+\RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: 'round');
 require __DIR__ . '/lib/json.php';
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/store.php';
@@ -33,7 +36,7 @@ require __DIR__ . '/lib/admin_sfmn.php';
 require __DIR__ . '/lib/admin_site.php';
 
 use Radiv\AdminSite;
-use Radiv\Calculation;
+use RivEngine as Calculation;
 use Radiv\Config;
 use Radiv\Contact;
 use Radiv\Frontend;

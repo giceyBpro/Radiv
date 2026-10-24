@@ -38,7 +38,7 @@ $FRONTEND_FILES = array(
 );
 $REQUIRED_FILES = array(
     'public/index.html', 'public/api/.htaccess', 'public/api/index.php',
-    'backend/src/app.php', 'backend/src/calculation.php', 'backend/src/lib/config.php',
+    'backend/src/app.php', 'core/src/bootstrap.php', 'core/src/calculate.php', 'core/data/isotopes.json', 'backend/src/lib/config.php',
     'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 );
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -927,7 +927,7 @@ try {
     // 5) Remplacement : le backend d'abord (bibliothèques, puis application), la façade publique ensuite
     $applied = true;
     $rank = function ($rel) {
-        return (strpos($rel, 'backend/src/lib/') === 0 || strpos($rel, 'core/') === 0 || $rel === 'backend/src/calculation.php') ? 0
+        return (strpos($rel, 'backend/src/lib/') === 0 || strpos($rel, 'core/') === 0) ? 0
             : ($rel === 'public/api/index.php' ? 2 : (strpos($rel, 'backend/') === 0 ? 1 : 3));
     };
     $ordered = $files;

@@ -12,9 +12,11 @@ public/            → copié dans la racine web (front-end)
   api/index.php      façade publique : la SEULE partie PHP servie (≈ 25 lignes)
   api/.htaccess      réécrit /api/* vers index.php
   api/backend.php    (généré) emplacement du backend
+core/              → copié dans backend/core/ (moteur de calcul partagé, privé ; voir core/README.md)
+  src/ data/ VERSION  moteur (src/*.php), données (data/*.json), version ; api/ et tests/ ne sont jamais déployés
 backend/           → copié dans le dossier du backend (privé)
   .htaccess          « Require all denied » (toujours, même hors de la racine web)
-  src/               code PHP (app.php, calculation.php, lib/*.php)
+  src/               code PHP (app.php, lib/*.php)
   assets/            ressources de l'administration (Leaflet, mesures.js, test-sfmn.*), servies par PHP derrière la session
   config/            runtime.env (généré, 600) et local.env (réglages locaux, jamais écrasé)
   data/              logs/ (mesures), var/ (sessions, version installée, sauvegarde, compteurs)
@@ -85,7 +87,7 @@ Vérifié par `tests/test-install.js` (canonique, Open Graph, JSON-LD, ETag/304,
 |---|---|
 | `public/api/index.php` | Façade publique de l'API : trouve le backend et lui passe la requête. |
 | `backend/src/app.php` | Application de l'API PHP : routage HTTP, sécurité. |
-| `backend/src/calculation.php` | Mode de calcul « local » : données (isotopes, scénarios), formalisme et validation. Fichier autonome (aucune dépendance au reste du serveur), pensé pour être audité ou testé isolément. |
+| `core/` | Moteur de calcul partagé (mode « local ») : données JSON, formules, validation, API minimale et tests. Sans dépendance au reste du site, destiné à être transféré tel quel dans un dépôt indépendant (open source) ; installé dans `backend/core/`. |
 | `backend/src/lib/*.php` | Configuration, état partagé, HTTP, journal des mesures, géoIP, proxy SFMN, contact/SMTP, administration `/auth`, mises à jour. |
 | `update.php` | Mise à jour de secours autonome et idempotente (voir [Mise à jour de secours](#mise-à-jour-de-secours-updatephp)). |
 | `install.php` | Première installation sans SSH (voir [Première installation](#première-installation-sans-ssh-installphp-ex-hébergement-mutualisé-ovh)). |
@@ -257,7 +259,7 @@ relancer ni à surveiller.
 | `public/api/index.php` | Façade publique (la seule partie PHP servie) : localise le backend. |
 | `public/api/.htaccess` | Réécrit tout `/api/*` vers la façade. |
 | `backend/src/app.php` | Routage et sécurité de l'API. |
-| `backend/src/calculation.php` | Calcul local (données, formules, validation). |
+| `core/src/*.php`, `core/data/*.json` | Moteur de calcul (formules, validation, données). |
 | `backend/src/lib/*.php` | Config, état partagé (rate-limit, cache géoIP), HTTP, journal des mesures, géoIP, SFMN, contact/SMTP, accès admin. |
 | `tests/` | Outillage de développement (jamais déployé) : tests, faux services (Google, GitHub, SMTP), routeur de dev. |
 
@@ -349,11 +351,11 @@ Vérifié par `test-client-ip.php`, `test-config-store.php`, `test-recaptcha.js`
 Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et navigateur de test) :
 
 ```bash
-node tests/test-calcul.js              # calcul: 381 cas figés, deux modes d'arrondi
+node core/tests/test-calcul.js         # calcul: 381 cas figés, deux modes d'arrondi
 node tests/check-runtime-layout.js     # mise en forme de config/runtime.env
 ```
 
-`test-calcul.js` compare `calculation.php` à `tests/golden-calcul.json`. Les autres tests
+`test-calcul.js` compare le moteur (`core/`) à `core/tests/golden-calcul.json`. Les autres tests
 (`test-install.js`, `test-admin-site.js`, `test-browser-admin.js`) ont besoin d'un Apache avec
 mod_php et des faux services `fake-services.js` / `fake-smtp.js`.
 
