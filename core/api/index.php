@@ -7,11 +7,15 @@
 // En production, placez ce dossier derrière votre propre routage et ajoutez vos protections (limitation de débit...).
 declare(strict_types=1);
 
-require __DIR__ . '/handler.php';
+// Dépôt : handler.php est à côté ; site installé par install-core.php : engine/api/handler.php.
+require is_file(__DIR__ . '/handler.php') ? __DIR__ . '/handler.php' : __DIR__ . '/../engine/api/handler.php';
 
 // Mode d'arrondi : celui de core/data/settings.json (surcharge possible : RivEngine\set_rounding_mode('floor')).
 
 $route = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+// Installé dans un sous-dossier (ex. /riv/api/config) : on ne garde que la partie après le dossier de ce script.
+$dir = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? ''))), '/');
+if ($dir !== '' && strpos($route, $dir . '/') === 0) $route = substr($route, strlen($dir));
 // Page minimale (core/web) servie à la racine ; en production, servez plutôt web/ par le serveur web lui-même.
 $static = ['/' => 'index.html', '/index.html' => 'index.html', '/config.js' => 'config.js', '/app.js' => 'app.js', '/style.css' => 'style.css'];
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && isset($static[$route])) {
