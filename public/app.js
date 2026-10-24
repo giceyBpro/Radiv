@@ -28,7 +28,7 @@
     let isotopes = [];
     let cureOptionsByIsotope = {};
     let selectedCureCount = 1;
-    let selectedCalculationMode = 'sfmn';
+    let selectedCalculationMode = null; // null = un seul calcul (site public) ; renseigné seulement sur la page de test de l'administration
     let sfmnCalculatorUrl = '';
     let lastResult = null;
     let latestRequestId = 0;
@@ -262,7 +262,7 @@
       }
       return {
         provider: window.RADIOPROTECTION_SITE_NAME || window.location.hostname, // origine de la requête : le site lui-même
-        calculation_mode: selectedCalculationMode || 'sfmn',
+        ...(selectedCalculationMode ? { calculation_mode: selectedCalculationMode } : {}),
         isotope_code: isotopeCode,
         dose_rate: isotopeCode === 'iode131_benin' ? null : getNumberOrNull('doseRate'),
         patient_size_cm: getNumberOrNull('patientSize'),
@@ -347,7 +347,7 @@
       const printBtn = $('printBtn');
       if (printBtn.hasAttribute('data-show-after-calc')) printBtn.hidden = false;
       const selected = result.selected;
-      selectedCalculationMode = result.calculation_mode || selectedCalculationMode || 'sfmn';
+      if (selectedCalculationMode) selectedCalculationMode = result.calculation_mode || selectedCalculationMode;
       renderCalculationModeSelector();
       const isBenign = selected.api_code === 'iode131_benin';
       toggleBenignRows(isBenign);
@@ -598,13 +598,10 @@
         isotopes = config.isotopes || [];
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
-        const availableModes = config.calculation_modes || ['local', 'sfmn'];
-        selectedCalculationMode = config.default_calculation_mode || 'sfmn';
-        // Un seul mode de calcul disponible (SFMN désactivé côté serveur, SFMN_MODE_ENABLED=
-        // false): le sélecteur n'a plus lieu d'être affiché plutôt que de montrer un choix
-        // impossible. Sur les pages qui construisent leurs boutons dynamiquement (voir
-        // ensureCalculationModeButtons), le DOM ne contient alors aucune mention du mode
-        // non disponible, pas seulement un style masqué.
+        // Le site public ne propose qu'un calcul : sa configuration ne contient aucun mode. Seule la page de test de
+        // l'administration en annonce plusieurs (sélecteur construit alors dynamiquement, voir ensureCalculationModeButtons).
+        const availableModes = config.calculation_modes || [];
+        selectedCalculationMode = availableModes.length > 1 ? (config.default_calculation_mode || 'local') : null;
         if (availableModes.length > 1) {
           ensureCalculationModeButtons(availableModes);
           $('calculationModeField').hidden = false;

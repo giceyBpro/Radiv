@@ -28,7 +28,6 @@ const INSTALL_KEY = 'CHANGEZ-MOI';
 const ENV_FILE = '../.env';
 const GITHUB_API = 'https://api.github.com';   // modifié uniquement par les tests (faux GitHub local)
 const DEFAULT_REPO = 'giceyBpro/Radiv';
-const DEFAULT_SFMN_URL = 'https://www.acoramen.net/index.php?option=com_evictionperiod&Itemid=5142&lang=fr';
 
 // Même liste blanche que backend/src/lib/updater.php et update.php (tests/check-shared-code.js vérifie
 // qu'elles restent identiques). Chemins du DÉPÔT : « public/... » va dans la racine web, « backend/... » dans le
@@ -44,9 +43,9 @@ $REQUIRED_FILES = array(
     'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 );
 $TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir', 'disk_mb');
-$BOOL_FIELDS = array('update_enabled', 'smtp_secure', 'sfmn');
+$BOOL_FIELDS = array('update_enabled', 'smtp_secure');
 // Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'SFMN_GLOBAL_RATE_LIMIT', 'DISK_MIN_FREE_MB', 'API_KEY_REQUIRED', 'PROVIDER_RATE_LIMIT');
+$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'DISK_MIN_FREE_MB', 'API_KEY_REQUIRED', 'PROVIDER_RATE_LIMIT');
 // Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Seul install.php la produit (tests/check-runtime-layout.js vérifie qu'elle est lisible par le backend).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -93,11 +92,9 @@ CONTACT_DEST|Adresse qui reçoit les messages du formulaire.
 SMTP_TIMEOUT_MS|Délai maximal des échanges SMTP, en millisecondes. Défaut : 15000.
 == Calcul des durées de restriction
 RESTRICTION_ROUNDING_MODE|round = jour le plus proche (défaut) ; floor = troncature, identique à l'outil SFMN de référence.
-SFMN_MODE_ENABLED|true ou false. Active le mode « calcul SFMN » (interroge un site distant). Défaut : true.
-|false = calcul local seul.
-SFMN_CALCULATOR_URL|Adresse de l'outil en ligne de la SFMN : interrogée par le mode SFMN, et proposée en lien sur les pages du site
-|(accueil, mentions légales, version imprimable). Absente : le lien garde l'adresse par défaut des pages.
-SFMN_DEBUG|true ou false. Diagnostic détaillé du mode SFMN : expose des données distantes dans les réponses,
+SFMN_CALCULATOR_URL|Adresse de l'outil en ligne de la SFMN : proposée en lien sur les pages du site (accueil, mentions légales, version
+|imprimable) et interrogée par la seule page de test de l'administration. Absente : le lien garde l'adresse par défaut des pages.
+SFMN_DEBUG|true ou false. Diagnostic détaillé de la page de test SFMN de l'administration : expose des données distantes dans les réponses,
 |à laisser sur false. Défaut : false.
 == Mesures et journaux (RGPD)
 MEASUREMENT_LOGGING_LEVEL|full = tout (IP, géolocalisation, données saisies, résultat) ; user = date, IP et lieu
@@ -110,7 +107,6 @@ DISK_QUOTA_MB|Espace disque de l'hébergement, en Mo (ex. 100). Sert à mesurer 
 DISK_MIN_FREE_MB|Espace libre minimal, en Mo : en dessous, les journaux de mesures les plus anciens sont supprimés. Défaut : 30. 0 = jamais.
 == Protection contre les abus
 CALCULATE_RATE_LIMIT|Nombre maximal de calculs par minute et par adresse IP. Défaut : 60.
-SFMN_GLOBAL_RATE_LIMIT|Nombre maximal d'interrogations du site SFMN par minute, tous visiteurs confondus. Défaut : 120.
 API_KEY_REQUIRED|true ou false. true = les appels extérieurs à /api/calculate exigent une clé d'API (en-tête X-API-Key), créée dans
 |l'onglet Fournisseurs de /auth ; les pages du site en sont dispensées. false = appels sans clé acceptés. Défaut : false.
 |Le choix fait dans l'onglet Fournisseurs de /auth (bouton « Rendre la clé obligatoire / facultative ») l'emporte sur cette ligne.
@@ -512,8 +508,7 @@ function render_form($key, $values, $errors)
         . '<option value="full">Complète</option><option value="user"' . ((isset($values['logging']) && $values['logging'] === 'user') ? ' selected' : '') . '>Qui et quand uniquement</option><option value="none"' . ((isset($values['logging']) && $values['logging'] === 'none') ? ' selected' : '') . '>Aucune</option></select>'
         . '<label>Conservation des journaux (mois ; vide = 12 ; 0 = illimitée)</label><input type="text" name="retention" value="' . $v('retention', '12') . '">'
         . '<label>Taille maximale d\'un journal mensuel (Mo)</label><input type="text" name="logs_mb" value="' . $v('logs_mb', '5') . '">'
-        . '<label>Espace disque de l\'hébergement (Mo ; vide = mesure du disque du serveur). Au-delà de 85 % d\'occupation, les journaux les plus anciens sont supprimés.</label><input type="text" name="disk_mb" value="' . $v('disk_mb', '100') . '">'
-        . '<label class="inline"><input type="checkbox" name="sfmn" value="1"' . (isset($values['sfmn']) ? ' checked' : '') . '> Activer le mode « calcul SFMN » (appelle un site distant)</label>';
+        . '<label>Espace disque de l\'hébergement (Mo ; vide = mesure du disque du serveur). Au-delà de 85 % d\'occupation, les journaux les plus anciens sont supprimés.</label><input type="text" name="disk_mb" value="' . $v('disk_mb', '100') . '">';
     $out .= '<button type="submit">Installer</button></form>';
     return $out;
 }
@@ -595,7 +590,6 @@ function render_env_summary($key, $d, $extras, $errors, $needToken, $inside)
         array('Mises à jour depuis /auth', $d['update_enabled'] ? 'autorisées' : 'désactivées'),
         array('Contact (SMTP)', $d['smtp_host'] !== '' ? $d['smtp_host'] . ':' . $d['smtp_port'] . ($d['smtp_secure'] ? ' (TLS direct)' : ' (STARTTLS)') . ', utilisateur ' . $d['smtp_user'] . ', mot de passe ' . mask($d['smtp_pass']) . ', vers ' . $d['contact_dest'] : '—'),
         array('reCAPTCHA', $d['recaptcha_site'] !== '' ? 'clé du site ' . $d['recaptcha_site'] . ', clé secrète ' . mask($d['recaptcha_secret']) : '—'),
-        array('Mode SFMN', $d['sfmn'] ? 'activé' : 'désactivé'),
         array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] === '' ? '12 mois (défaut)' : ($d['retention'] === '0' ? 'illimitée' : $d['retention'] . ' mois')) . ', journal ' . $d['logs_mb'] . ' Mo'),
         array('Espace disque', $d['disk_mb'] !== '' ? $d['disk_mb'] . ' Mo (purge des journaux anciens à 85 %)' : 'non défini : mesure du disque du serveur'),
         array('Autres variables transmises', $extras ? implode(', ', array_keys($extras)) : '—'),
@@ -803,8 +797,6 @@ function env_to_source($env)
         'rounding' => $get('RESTRICTION_ROUNDING_MODE', 'round'), 'logging' => $get('MEASUREMENT_LOGGING_LEVEL', 'full'),
         'retention' => $get('LOGS_RETENTION_MONTHS'),
         'logs_mb' => preg_match('/^\d+$/', $bytes) ? (string) max(1, (int) ceil((int) $bytes / 1048576)) : '5',
-        // Absent du .env: valeur par défaut de l'application (activé).
-        'sfmn' => strtolower($get('SFMN_MODE_ENABLED', 'true')) !== 'false',
         'sfmn_url' => $get('SFMN_CALCULATOR_URL'),
         'backend_dir' => $get('BACKEND_DIR'),
         'disk_mb' => $get('DISK_QUOTA_MB'),
@@ -1194,7 +1186,7 @@ try {
         'RECAPTCHA_SITE_KEY' => $d['recaptcha_site'], 'RECAPTCHA_SECRET_KEY' => $d['recaptcha_secret'],
         'SMTP_HOST' => $d['smtp_host'], 'SMTP_PORT' => $d['smtp_host'] !== '' ? $d['smtp_port'] : '', 'SMTP_SECURE' => $d['smtp_host'] !== '' ? ($d['smtp_secure'] ? 'true' : 'false') : '',
         'SMTP_USER' => $d['smtp_user'], 'SMTP_PASS' => $d['smtp_pass'], 'SMTP_FROM' => $d['smtp_from'], 'CONTACT_DEST' => $d['contact_dest'],
-        'SFMN_MODE_ENABLED' => $d['sfmn'] ? 'true' : 'false', 'SFMN_CALCULATOR_URL' => $d['sfmn'] ? ($d['sfmn_url'] !== '' ? $d['sfmn_url'] : DEFAULT_SFMN_URL) : '',
+        'SFMN_CALCULATOR_URL' => $d['sfmn_url'],
         'RESTRICTION_ROUNDING_MODE' => $d['rounding'], 'MEASUREMENT_LOGGING_LEVEL' => $d['logging'],
         'LOGS_RETENTION_MONTHS' => $d['retention'], 'LOGS_MAX_BYTES' => (string) ((int) $d['logs_mb'] * 1048576), 'DISK_QUOTA_MB' => $d['disk_mb'],
         'BACKEND_DIR' => $d['backend_dir'],

@@ -12,16 +12,19 @@ use RivEngine as Calculation;
 use Radiv\Config;
 use Radiv\Updater;
 
-// $sfmn : SFMN proposé ou non (la page de test le force).
+// $sfmn : true pour la page de test de l'administration seulement (comparaison avec le calcul distant).
 function config(bool $sfmn): array
 {
     return [
         'isotopes' => Calculation\isotopes(),
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
-        'calculation_modes' => $sfmn ? ['local', 'sfmn'] : ['local'],
-        'default_calculation_mode' => $sfmn ? 'sfmn' : 'local',
-    ] + ($sfmn ? ['sfmn_calculator_url' => Config\env('SFMN_CALCULATOR_URL')] : []); // absent (pas vide) si désactivé
+    ] + ($sfmn ? [
+        // Page de test de l'administration seulement : l'API publique ne connaît qu'un calcul.
+        'calculation_modes' => ['local', 'sfmn'],
+        'default_calculation_mode' => 'sfmn',
+        'sfmn_calculator_url' => Config\env('SFMN_CALCULATOR_URL'),
+    ] : []);
 }
 
 function public_config(): array

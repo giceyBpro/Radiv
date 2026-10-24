@@ -191,7 +191,7 @@
       return 'Aucune durée de conservation automatique n’est actuellement configurée pour ces données.';
     }
 
-    function describeRecipients(level, recaptchaEnabled, sfmnEnabled) {
+    function describeRecipients(level, recaptchaEnabled) {
       const items = [];
       if (level !== 'none') {
         items.push(
@@ -201,11 +201,6 @@
       if (recaptchaEnabled) {
         items.push(
           'Google reCAPTCHA (Google, États-Unis), sur le formulaire de contact uniquement et seulement après votre accord, pour la protection anti-spam : votre adresse IP et des données techniques de votre navigateur lui sont transmises.'
-        );
-      }
-      if (sfmnEnabled) {
-        items.push(
-          'Si vous choisissez le mode de calcul "SFMN" : les paramètres de votre calcul (radiopharmaceutique, débit de dose, taille, nombre de cures — sans autre donnée) sont transmis à l’outil SFMN de référence, hébergé par un tiers, pour effectuer le calcul.'
         );
       }
       items.push('Hébergeur du site (O2SWITCH) et prestataire de messagerie qui achemine les messages du formulaire de contact, en tant que sous-traitants techniques.');
@@ -231,7 +226,6 @@
       let level = 'full';
       let retentionMonths = null;
       let recaptchaEnabled = false;
-      let sfmnEnabled = false;
 
       try {
         const res = await fetch(`${API_BASE}/public-config`);
@@ -245,19 +239,10 @@
         // Config indisponible: les descriptions par défaut (le plus complet) restent affichées.
       }
 
-      try {
-        const res = await fetch(`${API_BASE}/config`);
-        if (res.ok) {
-          const data = await res.json();
-          sfmnEnabled = Array.isArray(data.calculation_modes) && data.calculation_modes.includes('sfmn');
-        }
-      } catch (e) {
-        // idem
-      }
 
       document.getElementById('donneesCollectees').textContent = describeLoggingLevel(level);
       document.getElementById('dureeConservation').textContent = describeRetention(retentionMonths);
-      renderList(document.getElementById('destinataires'), describeRecipients(level, recaptchaEnabled, sfmnEnabled));
+      renderList(document.getElementById('destinataires'), describeRecipients(level, recaptchaEnabled));
     })();
   </script>
 </body>

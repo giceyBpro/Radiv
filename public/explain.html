@@ -105,7 +105,6 @@
 
       const summaryItems = [
         `Type d'exposition : ${safe(form.isotope_label || selected.label)}`,
-        `Mode de calcul : ${result.calculation_mode === 'sfmn' ? 'SFMN' : 'Local'}`,
         `Période effective appliquée au calcul : ${safe(result.effective_days)} jour(s) (${safe(result.effective_hours)} heure(s))`
       ];
       document.getElementById('summaryList').innerHTML = summaryItems.map((text) => `<li>${text}</li>`).join('');

@@ -97,7 +97,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   const envFile = path.join(WWW, 'backend/config/runtime.env'); const env = fs.readFileSync(envFile, 'utf8');
   t('.runtime.env: quota disque (DISK_QUOTA_MB) renseigné', env.includes('DISK_QUOTA_MB="100"') && /^# Espace disque$/m.test(env));
   t('.runtime.env en 600', (fs.statSync(envFile).mode & 0o777) === 0o600);
-  t('.runtime.env: valeurs et guillemets (mot de passe avec ")', env.includes(`SMTP_PASS='${SECRET_SMTP}'`) && env.includes(`GOOGLE_CLIENT_SECRET="${GSECRET}"`) && env.includes('ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"') && env.includes('LOGS_MAX_BYTES="5242880"') && env.includes('SFMN_MODE_ENABLED="false"') && env.includes('ADMIN_UPDATE_ENABLED="true"'));
+  t('.runtime.env: valeurs et guillemets (mot de passe avec ")', env.includes(`SMTP_PASS='${SECRET_SMTP}'`) && env.includes(`GOOGLE_CLIENT_SECRET="${GSECRET}"`) && env.includes('ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"') && env.includes('LOGS_MAX_BYTES="5242880"') && env.includes('ADMIN_UPDATE_ENABLED="true"'));
   t('.runtime.env: pas de jeton GitHub, SFMN sans URL (variables seulement en commentaire « #NOM= »)', !env.includes(TOKEN) && !/^UPDATE_GITHUB_TOKEN=/m.test(env) && !/^SFMN_CALCULATOR_URL=/m.test(env) && /^#UPDATE_GITHUB_TOKEN=$/m.test(env));
   t('.runtime.env lisible: sections et commentaires', /^# Site et API$/m.test(env) && /^# Formulaire de contact$/m.test(env) && /\n\n# Adresses Google autorisées/.test(env) && /^# Généré par install\.php/m.test(env));
   const everything = []; const walk = (d) => { for (const n of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, n.name); n.isDirectory() ? walk(p) : everything.push(p); } }; walk(WWW);
@@ -144,7 +144,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   const baseEnv = (extra = '') => ['# déploiement', 'GIT_REPO=https://github.com/giceyBpro/Radiv.git', 'GIT_BRANCH=v1.1', `SITE_PUBLIC_URL="${BASE}"   # commentaire en fin de ligne`,
     'GOOGLE_CLIENT_ID=cid.apps.googleusercontent.com', `GOOGLE_CLIENT_SECRET=${GSECRET}`, 'ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"', 'ADMIN_UPDATE_ENABLED=true',
     'SMTP_HOST=smtp.example.org', 'SMTP_PORT=587', 'SMTP_USER=contact@example.org', `SMTP_PASS='${SECRET_SMTP}'`, 'SMTP_FROM=Site <no-reply@example.org>', 'CONTACT_DEST=dest@example.org',
-    'RECAPTCHA_SITE_KEY=sitekey', 'RECAPTCHA_SECRET_KEY=recaptchasecret', 'SFMN_MODE_ENABLED=true', 'SFMN_CALCULATOR_URL=https://sfmn.example.org/calc',
+    'RECAPTCHA_SITE_KEY=sitekey', 'RECAPTCHA_SECRET_KEY=recaptchasecret', 'SFMN_CALCULATOR_URL=https://sfmn.example.org/calc',
     'RESTRICTION_ROUNDING_MODE=floor', 'MEASUREMENT_LOGGING_LEVEL=user', 'LOGS_RETENTION_MONTHS=6', 'LOGS_MAX_BYTES=3145728', 'CALCULATE_RATE_LIMIT=33', 'TRUSTED_PROXIES=', 'RATE_LIMIT_BACKEND=file', extra].join('\n') + '\n';
   const writeEnv = (text, file = ENVF) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); require('child_process').execSync(`chown -R www-data:www-data ${path.dirname(file)}; chmod 640 ${file}`); };
   const dropEnv = () => { for (const f of [ENVF, path.join(ENVDIR, 'private')]) fs.rmSync(f, { recursive: true, force: true }); };
@@ -165,12 +165,13 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   t('installation depuis le .env avec le seul jeton saisi', r.status === 200 && /Site installé/.test(html) && /1111111/.test(html), msg(html));
   const env2 = fs.readFileSync(path.join(WWW, 'backend/config/runtime.env'), 'utf8');
   t('champs du formulaire ne peuvent pas écraser le .env (site, Google, SMTP, dépôt)', !/evil/.test(env2) && env2.includes(`SITE_PUBLIC_URL="${BASE}"`) && env2.includes('ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"') && env2.includes('SMTP_HOST="smtp.example.org"'));
-  t('valeurs du .env reportées (arrondi, journal, limites, SFMN, proxies, rate-limit)', ['RESTRICTION_ROUNDING_MODE="floor"', 'MEASUREMENT_LOGGING_LEVEL="user"', 'LOGS_RETENTION_MONTHS="6"', 'LOGS_MAX_BYTES="3145728"', 'CALCULATE_RATE_LIMIT="33"', 'TRUSTED_PROXIES=""', 'RATE_LIMIT_BACKEND="file"', 'SFMN_MODE_ENABLED="true"', 'SFMN_CALCULATOR_URL="https://sfmn.example.org/calc"', 'ADMIN_UPDATE_ENABLED="true"', `SMTP_PASS='${SECRET_SMTP}'`].every((x) => env2.includes(x)), env2);
+  t('valeurs du .env reportées (arrondi, journal, limites, SFMN, proxies, rate-limit)', ['RESTRICTION_ROUNDING_MODE="floor"', 'MEASUREMENT_LOGGING_LEVEL="user"', 'LOGS_RETENTION_MONTHS="6"', 'LOGS_MAX_BYTES="3145728"', 'CALCULATE_RATE_LIMIT="33"', 'TRUSTED_PROXIES=""', 'RATE_LIMIT_BACKEND="file"', 'SFMN_CALCULATOR_URL="https://sfmn.example.org/calc"', 'ADMIN_UPDATE_ENABLED="true"', `SMTP_PASS='${SECRET_SMTP}'`].every((x) => env2.includes(x)), env2);
   { const U = 'https://sfmn.example.org/calc'; const home2 = await (await fetch(`${BASE}/`)).text(); const leg2 = await (await fetch(`${BASE}/legal`)).text(); const pc = await (await fetch(`${BASE}/api/public-config`)).json();
     t('lien vers l\'outil de la SFMN = SFMN_CALCULATOR_URL du .env (accueil, mentions légales, configuration publique)', home2.includes(`data-sfmn-link href="${U}"`) && leg2.includes(`data-sfmn-link href="${U}"`) && pc.sfmn_tool_url === U, `${pc.sfmn_tool_url}`); }
   t('jeton saisi absent du disque', ![...(function* w(d) { for (const n of fs.readdirSync(d, { withFileTypes: true })) { const q = path.join(d, n.name); if (n.isDirectory()) yield* w(q); else yield q; } })(ENVDIR)].some((f) => fs.readFileSync(f).includes(TOKEN)));
   t('.env d\'origine intact (hors dossier public, conservé)', fs.readFileSync(ENVF, 'utf8') === baseEnv() && /n'a pas été modifié/.test(html.replace(/&#039;/g, "'")));
-  t('mode SFMN du .env pris en compte par l\'API', (await (await fetch(`${BASE}/api/config`)).json()).calculation_modes.includes('sfmn'));
+  { const cfg = await (await fetch(`${BASE}/api/config`)).json();
+    t('configuration publique: aucun mode de calcul annoncé (le calcul SFMN n\'est plus proposé)', cfg.calculation_modes === undefined && cfg.default_calculation_mode === undefined && cfg.sfmn_calculator_url === undefined && Array.isArray(cfg.isotopes)); }
   t('version installée = celle du .env (v1.1)', JSON.parse(fs.readFileSync(path.join(WWW, 'backend/data/var/version.json'), 'utf8')).sha === '1'.repeat(40));
 
   console.log('\n— Jetons présents dans le .env');

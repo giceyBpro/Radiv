@@ -51,8 +51,7 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
     </ul>
 
     <h2>Payload — <code>POST /api/calculate</code></h2>
-    <pre><code>{<span id="modeLinePayload" hidden>
-  "calculation_mode": "sfmn",</span>
+    <pre><code>{
   "isotope_code": "iode131_25_fixation",
   "dose_rate": 9.9,
   "patient_size_cm": 150,
@@ -79,8 +78,7 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
 
     <h2>Réponse (succès)</h2>
     <pre><code>{
-  "ok": true,<span id="modeLineResponse" hidden>
-  "calculation_mode": "sfmn",</span>
+  "ok": true,
   "selected": { "api_code": "...", "label": "..." },
   "cure_count": 1,
   "computed_dose_rate": 9.9,
@@ -103,7 +101,6 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
 }</code></pre>
     <p class="muted"><code>rows</code> reprend les valeurs de <code>recommendations_days</code> avec un libellé et un texte de condition prêts à afficher pour chaque scénario.</p>
     <p><strong>Recommandation d'intégration :</strong> identifiez toujours un scénario par son <code>audience_code</code> (ou par sa clé dans <code>recommendations_days</code>), <strong>jamais par le texte</strong> de <code>label</code> ou de <code>condition</code>. Ces textes sont faits pour l'affichage, peuvent être reformulés d'une version à l'autre du site sans changer le sens ni les valeurs, et ne doivent pas servir de clé de recherche. Les codes (<code>conjoint_plus_60</code>, <code>transport_commun</code>...) et les noms des champs de la réponse sont, eux, stables.</p>
-    <p class="muted" id="sfmnNote" hidden>En mode SFMN, <code>rows</code> n'est pas renvoyé au même niveau de fiabilité ; <code>sfmn_source</code> contient alors uniquement <code>url</code> en usage normal.</p>
 
     <h2>Réponse (erreur de validation)</h2>
     <pre><code>{
@@ -140,24 +137,5 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
     </div>
   </main>
   <script src="config.js"></script>
-  <script>
-    // Le paramètre calculation_mode est optionnel (local par défaut) et n'est documenté
-    // que si le serveur a réellement un second mode disponible.
-    (async () => {
-      try {
-        const apiBase = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
-        const resp = await fetch(`${apiBase}/config`);
-        const config = await resp.json();
-        const modes = config.calculation_modes || ['local'];
-        if (modes.includes('sfmn')) {
-          document.getElementById('modeLinePayload').hidden = false;
-          document.getElementById('modeLineResponse').hidden = false;
-          document.getElementById('sfmnNote').hidden = false;
-        }
-      } catch (_) {
-        // Config indisponible au chargement: la page reste dans son état minimal par défaut.
-      }
-    })();
-  </script>
 </body>
 </html>

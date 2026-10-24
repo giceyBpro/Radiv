@@ -17,7 +17,6 @@ ini_set('default_mimetype', '');
 require is_file(__DIR__ . '/../core/src/bootstrap.php') ? __DIR__ . '/../core/src/bootstrap.php' : __DIR__ . '/../../core/src/bootstrap.php';
 \RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: null);
 require __DIR__ . '/lib/json.php';
-require __DIR__ . '/lib/engine.php';
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/store.php';
 require __DIR__ . '/lib/http.php';
@@ -42,7 +41,6 @@ use Radiv\AdminSite;
 use RivEngine as Calculation;
 use Radiv\Config;
 use Radiv\Contact;
-use Radiv\Engine;
 use Radiv\Frontend;
 use Radiv\Geo;
 use Radiv\Http;
@@ -70,7 +68,7 @@ try {
     if (Seo\handle($method, $path)) exit;
 
     if ($method === 'GET' && $path === '/api/config') {
-        Http\send_json(200, Frontend\config(Config\sfmn_mode_enabled()));
+        Http\send_json(200, Frontend\config(false));
         exit;
     }
 
@@ -107,34 +105,12 @@ try {
             }
             $payload = is_array($decoded) ? $decoded : []; // scalaire JSON (5, "x"): aucun champ
         }
-        // Origine de la requête (site ou logiciel appelant) : retirée du payload pour ne pas fausser le cache SFMN ni le calcul
+        // Origine de la requête (site ou logiciel appelant) : retirée du payload pour ne pas fausser le calcul
         $provider = Measurements\clean_provider($payload['provider'] ?? null);
         unset($payload['provider']);
-        $sfmnEnabled = Config\sfmn_mode_enabled();
-        $rawMode = $payload['calculation_mode'] ?? null;
-        $mode = ($rawMode === null || $rawMode === false || $rawMode === '' || $rawMode === 0 || $rawMode === 0.0)
-            ? ($sfmnEnabled ? 'sfmn' : 'local')
-            : mb_strtolower(is_scalar($rawMode) ? Sfmn\js_string($rawMode) : 'object');
-        // SFMN désactivé côté serveur: on ne fait pas échouer la requête, on bascule sur le
-        // calcul local (formalismes alignés) plutôt que d'imposer à chaque client (RIS, scripts
-        // externes) de gérer lui-même ce repli.
-        if ($mode === 'sfmn' && !$sfmnEnabled) $mode = 'local';
-        if ($mode === 'sfmn') {
-            // Chaque calcul SFMN interroge un site tiers : résultats identiques réutilisés 10 min, et plafond
-            // global (tous visiteurs) pour ne pas devenir un relais d'abus vers ce site.
-            $cacheKey = hash('sha256', Json\encode($payload));
-            $result = Store\result_get($cacheKey);
-            if ($result === null) {
-                if (!Store\rate_limit_hit('sfmnglobal', 'all', Config\int_env('SFMN_GLOBAL_RATE_LIMIT', 120))) {
-                    Http\send_json(429, ['ok' => false, 'error' => 'Service SFMN momentanément saturé. Réessayez dans une minute.']);
-                    exit;
-                }
-                $result = Sfmn\calculate($payload);
-                if (($result['ok'] ?? false) === true) Store\result_set($cacheKey, $result);
-            }
-        } else {
-            $result = Engine\calculate($payload);
-        }
+        // Un éventuel « calculation_mode » (ancien paramètre d'API) est ignoré sans erreur : le calcul est toujours celui du moteur.
+        unset($payload['calculation_mode']);
+        $result = Calculation\calculate($payload);
         $timestamp = Measurements\now_iso();
         Http\send_json(200, $result);
 

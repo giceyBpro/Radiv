@@ -108,7 +108,7 @@
     "label": "MIBG-131I",
     "period_hours": 10.6,
     "reference": "Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim enfants, n=6)",
-    "remark": "Le Tableau 1 de Carlier et al. 2026 indique 30,60 h pour cette même source — erreur, signalée à la SFMN",
+    "remark": "Demi vie effective",
     "situation": ""
   },
   {

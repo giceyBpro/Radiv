@@ -1,7 +1,7 @@
 <?php
 // Mode "sfmn": calcul délégué à l'outil SFMN distant (scraping du formulaire). Port de
 // Calcul SFMN distant: mêmes étapes, mêmes codes d'erreur, mêmes formes de réponse.
-// Désactivable entièrement par SFMN_MODE_ENABLED=false (voir Config\sfmn_mode_enabled).
+// Réservé à l'administration (page de test /auth/test-sfmn) : l'API publique ne l'utilise pas.
 declare(strict_types=1);
 
 namespace Radiv\Sfmn;
@@ -141,7 +141,6 @@ function fail(array $selected, array $errors, array $error, bool $debug, array $
 }
 
 // $opts (réservé à l'administration, jamais issu d'une requête publique) :
-//   'force' => true  : calcule même si SFMN_MODE_ENABLED=false ;
 //   'debug' => true  : joint toujours sfmn_debug, sans tenir compte de SFMN_DEBUG.
 function calculate(array $payload, array $opts = []): array
 {
@@ -204,16 +203,6 @@ function calculate_inner(array $payload, array $opts = []): array
                 'message' => "cure_count invalide pour isotope_code={$selected['api_code']}.",
                 'reason' => "Valeurs valides : {$allowed}.",
             ],
-            'recommendations_days' => empty_recommendations(),
-        ];
-    }
-    if (!Config\sfmn_mode_enabled() && empty($opts['force'])) {
-        return [
-            'ok' => false,
-            'calculation_mode' => 'sfmn',
-            'selected' => $selected,
-            'errors' => ['Mode SFMN désactivé sur ce déploiement.'],
-            'error' => ['code' => 'SFMN_MODE_DISABLED', 'message' => 'SFMN_MODE_ENABLED=false côté serveur.'],
             'recommendations_days' => empty_recommendations(),
         ];
     }
