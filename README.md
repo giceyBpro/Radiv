@@ -287,6 +287,8 @@ Ensuite : déclarez dans Google Cloud l'URI de redirection `https://<votre-domai
 
 Vérification : `tests/test-install.js` (140 contrôles sur un Apache vierge : clé absente/courte/fausse/limitée, lecture du `.env` (emplacements parent / public / `~/` / absolu, jetons valides ou périmés, `.env` invalide, secrets jamais renvoyés), diagnostic, 15 saisies invalides, jeton refusé, 6 archives piégées, retour arrière complet sur échec d'écriture, fichiers préexistants de l'hébergeur conservés ou restaurés, version qui ne démarre pas, installation réussie, jeton jamais écrit, listes blanches).
 
+**Passage depuis la version `71e4999` par `/auth`** : l'outil de cette version exige encore `backend/src/calculation.php` (ancienne liste de fichiers requis). Le dépôt en porte donc un fichier de transition vide (aucun code, jamais chargé) pour que la mise à jour depuis `/auth` soit acceptée ; il sera retiré d'une version ultérieure (étape 2), quand tous les sites auront installé une version dont la liste ne l'exige plus. Le retrait se fait alors automatiquement à la mise à jour.
+
 ### Mise à jour de secours (`update.php`)
 
 Pour mettre le site à jour ou le **réparer** quand `/auth` est inutilisable (connexion Google indisponible, code du site endommagé ou incomplet...) :
