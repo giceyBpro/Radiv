@@ -23,6 +23,8 @@ jobs:
         run: |
           node core/tests/test-calcul.js
           php core/tests/test-api.php
+      - name: Contrat du site envers le moteur partagé (version et cas figés)
+        run: node tests/test-core-contract.js
       - name: Adresse IP derrière un proxy, réglages par défaut et cache
         run: |
           php tests/test-client-ip.php

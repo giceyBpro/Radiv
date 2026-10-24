@@ -53,6 +53,7 @@ radioprotection.
   ou une valeur calculée change de façon incompatible. Mineure : ajout compatible. Correctif : sans effet sur les contrats.
 - **Le contrat, ce sont les cas figés** (`tests/golden-calcul.json`) : toute modification du moteur doit les laisser
   inchangés, ou être déclarée comme évolution de majeure avec fichier de référence regénéré et justifié (`data/SOURCES.md`).
+- `RivEngine\version()` renvoie le contenu de `VERSION` : un site peut vérifier la version qu'il utilise.
 - **Un site consommateur épingle une version** (étiquette ou commit, jamais `main`) et ne la change qu'après avoir rejoué
   sa propre copie des cas figés.
 - Les clés du résultat et des entrées ne sont jamais renommées ni supprimées sans changement de majeure.

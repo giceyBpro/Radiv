@@ -351,6 +351,7 @@ Vérifié par `test-client-ip.php`, `test-config-store.php`, `test-recaptcha.js`
 Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et navigateur de test) :
 
 ```bash
+node tests/test-core-contract.js       # contrat du site envers le moteur (version + cas figés propres au site)
 node core/tests/test-calcul.js         # calcul: 381 cas figés, deux modes d'arrondi
 node tests/check-runtime-layout.js     # mise en forme de config/runtime.env
 ```
