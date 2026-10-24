@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- Page minimale du moteur RIV. Tous les textes visibles viennent de config.js ; ici, seulement la structure. -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calcul des durées de restriction</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1 data-text="title"></h1>
+    <p data-text="intro"></p>
+
+    <form id="form" novalidate>
+      <label><span data-label="isotope"></span><select id="isotope"></select></label>
+      <label id="cureField" hidden><span data-label="cures"></span><select id="cures"></select></label>
+      <label id="doseRateField"><span data-label="doseRate"></span><input id="doseRate" type="number" min="0" step="any"></label>
+      <div id="benignFields" hidden>
+        <label><span data-label="benignActivity"></span><input id="benignActivity" type="number" min="0" step="any"></label>
+        <label><span data-label="benignFixation"></span><input id="benignFixation" type="number" min="0" max="100" step="any"></label>
+      </div>
+      <label><span data-label="patientSize"></span><input id="patientSize" type="number" min="1" step="1"></label>
+      <label><span data-label="periodDays"></span><input id="periodDays" type="number" min="0" step="any"></label>
+
+      <fieldset>
+        <legend data-label="customTitle"></legend>
+        <label><span data-label="customHours1"></span><input id="customHours1" type="number" min="0" step="any"></label>
+        <label><span data-label="customDistance1"></span><input id="customDistance1" type="number" min="0" step="any"></label>
+        <label><span data-label="customHours2"></span><input id="customHours2" type="number" min="0" step="any"></label>
+        <label><span data-label="customLimit"></span><input id="customLimit" type="number" min="0" step="any"></label>
+      </fieldset>
+
+      <button type="submit" id="submit"></button>
+    </form>
+
+    <ul id="errors" class="errors" hidden></ul>
+    <table id="results" hidden>
+      <thead><tr><th data-label="colSituation"></th><th data-label="colCondition"></th><th data-label="colDays"></th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <p class="disclaimer" data-text="disclaimer"></p>
+  </main>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
