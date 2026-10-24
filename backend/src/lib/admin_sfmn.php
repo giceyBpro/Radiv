@@ -34,7 +34,7 @@ function do_sfmn_page(): bool
     $html = preg_replace('#<link[^>]*rel="canonical"[^>]*>\s*#i', '', $html) ?? $html;
     $html = preg_replace('#<meta[^>]*name="robots"[^>]*>#i', '<meta name="robots" content="noindex, nofollow" />', $html, 1) ?? $html;
     $html = preg_replace('#<title>#i', '<title>[Test SFMN] ', $html, 1) ?? $html;
-    $html = preg_replace('#<script>\s*// Avis de maintenance.*?</script>\s*#s', '', $html, 1) ?? $html; // script en ligne de l'accueil: refusé par la CSP de cette page, et sans objet pour l'administrateur
+    $html = preg_replace('#<!--MAINTENANCE-GATE-->.*?<!--/MAINTENANCE-GATE-->\s*#s', '', $html) ?? $html; // page d'attente de l'accueil (style, avis, script en ligne): sans objet pour l'administrateur, et le script est refusé par la CSP de cette page
     $html = preg_replace('#<head>#i', '<head><base href="/">', $html, 1) ?? $html;
     $html = str_ireplace('</head>', '<link rel="stylesheet" href="/auth/assets/' . $name . '.css"></head>', $html);
     $html = preg_replace('#(<body[^>]*>)#i', '$1' . str_replace('$', '\\$', $nav), $html, 1) ?? $html;

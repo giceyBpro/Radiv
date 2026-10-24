@@ -224,6 +224,7 @@ async function update(c, ref, token) {
     page = await c.req('GET', `${BASE}/auth`);
     t('carte Maintenance: état « en service » et boutons', /Maintenance<\/h2>/.test(page.text) && /en service/.test(page.text) && /Activer la maintenance/.test(page.text) && /Maintenance complète/.test(page.text));
     let home = await fetch(`${BASE}/`); t('hors maintenance: accueil normal (200)', home.status === 200 && !/<title>Site en maintenance/.test(await home.text()));
+    t('accueil: page d\'attente (avis masquant le calculateur jusqu\'à confirmation du serveur)', /<style id="rivGate">/.test(await (await fetch(`${BASE}/`)).text()) && /id="maintenanceNotice"/.test(await (await fetch(`${BASE}/`)).text()));
     t('accueil servi par PHP: app.js porte une version (cache des navigateurs)', /<script src="app\.js\?v=[0-9a-f]+"><\/script>/.test(await (await fetch(`${BASE}/`)).text()));
     let msg = await setMode('site'); t('maintenance activée', /Maintenance activée/.test(msg), msg);
     home = await fetch(`${BASE}/`); const html = await home.text();

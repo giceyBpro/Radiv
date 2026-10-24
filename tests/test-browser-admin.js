@@ -103,6 +103,19 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   t('mode local: tableau affiché + rien à comparer', await page.locator('#resultsSection').isVisible() && (await page.locator('#resultsBody tr').count()) >= 3);
   t('aucune ressource tierce, ni violation CSP, ni erreur JavaScript sur la page de test', requests.filter((u) => !u.startsWith(BASE) && !/tile\.openstreetmap\.org/.test(u) && !u.startsWith('http://127.0.0.1:9201')).length === 0 && (await page.evaluate(() => window.__csp || [])).length === cspBefore && consoleErrors.length === errBefore, consoleErrors.slice(errBefore).join(' | '));
 
+  console.log('\n— Page d\'attente de l\'accueil (pas de calculateur qui apparaît puis disparaît)');
+  { await page.route('**/api/config', async (route) => { await new Promise((ok) => setTimeout(ok, 1500)); await route.continue(); });
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+    t('pendant la vérification: seul l\'avis de maintenance est visible, calculateur masqué', await page.locator('#maintenanceNotice').isVisible() && !(await page.locator('#calculateBtn').isVisible()) && !(await page.locator('#doseRate').isVisible()));
+    await page.waitForSelector('#maintenanceNotice', { state: 'detached', timeout: 10000 });
+    t('site en service: l\'avis disparaît, le calculateur s\'affiche', await page.locator('#calculateBtn').isVisible());
+    await page.unroute('**/api/config');
+    await page.route('**/api/config', (route) => route.abort());
+    await page.goto(`${BASE}/`);
+    await page.waitForTimeout(1500);
+    t('API injoignable: l\'avis de maintenance reste affiché', await page.locator('#maintenanceNotice').isVisible() && !(await page.locator('#calculateBtn').isVisible()));
+    await page.unroute('**/api/config'); }
+
   console.log('\n— Maintenance (avis affiché dans le navigateur)');
   { const mf = path.join(WWW, 'backend/data/var/maintenance.json');
     fs.writeFileSync(mf, JSON.stringify({ mode: 'site', since: '2026-01-01T00:00:00Z', by: 'test' })); fs.chmodSync(mf, 0o666);

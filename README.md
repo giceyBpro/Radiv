@@ -383,6 +383,8 @@ Deux interrupteurs, mémorisés dans `data/var/maintenance.json` (créer ou supp
 - **Maintenance** : la page d'accueil (`/`) répond 503 (`Retry-After: 3600`, `noindex`) et n'affiche que « Site en maintenance » avec le lien vers l'outil de la SFMN (`SFMN_CALCULATOR_URL`) ; l'API continue de fonctionner. Si l'accueil est servi sans passer par PHP (blocs `.htaccess` SEO absents), `/api/config` annonce `maintenance` et `app.js` affiche le même avis en plein écran.
 - **Maintenance complète** : en plus, `POST /api/calculate` et `POST /api/contact` répondent 503 avec `{"ok":false,"error":{"code":"MAINTENANCE",…}}`.
 
+**Page d'attente de l'accueil** : `index.html` s'ouvre sur un avis de maintenance quasi vide (le calculateur est masqué par une feuille de style en ligne) ; un script en ligne interroge `/api/config` et ne retire l'avis qu'une fois le site confirmé en service. API injoignable ou en maintenance : l'avis reste. Le bloc est balisé `<!--MAINTENANCE-GATE-->` (la page de test SFMN de l'administration le retire).
+
 Restent toujours disponibles : `/auth` (pour lever la maintenance), `/health`, `/api/config` et `/api/public-config` (lecture seule, utilisés par les contrôles des mises à jour). Les changements sont inscrits au journal des mises à jour.
 
 ### Zone de test du moteur (`/auth/moteur`)
