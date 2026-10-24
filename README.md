@@ -376,6 +376,15 @@ Limites : le `.htaccess` racine, `config.js`, `sitemap.xml` et `api/backend.php`
 
 Vérification : `tests/test-admin-site.js` (112 contrôles : connexion refusée/acceptée, PKCE, CSRF, connexion ancienne, mesures et export CSV avec valeurs hostiles, jeton invalide/valide/du `.env`, archives piégées, retour arrière automatique et manuel, fichiers hors liste blanche, jeton jamais écrit ni transmis au téléchargement, anciennes adresses `/api/admin/*` en 404) contre un site déployé sous Apache et `tests/fake-services.js` (faux Google + faux GitHub) ; les archives de test sont fabriquées par `tests/make-fixtures.php`.
 
+### Maintenance (onglet Site de `/auth`)
+
+Deux interrupteurs, mémorisés dans `data/var/maintenance.json` (créer ou supprimer ce fichier par FTP a le même effet si `/auth` est inaccessible ; `{"mode":"site"}` ou `{"mode":"full"}`) :
+
+- **Maintenance** : la page d'accueil (`/`) répond 503 (`Retry-After: 3600`, `noindex`) et n'affiche que « Site en maintenance » avec le lien vers l'outil de la SFMN (`SFMN_CALCULATOR_URL`) ; l'API continue de fonctionner. Si l'accueil est servi sans passer par PHP (blocs `.htaccess` SEO absents), `/api/config` annonce `maintenance` et `app.js` affiche le même avis en plein écran.
+- **Maintenance complète** : en plus, `POST /api/calculate` et `POST /api/contact` répondent 503 avec `{"ok":false,"error":{"code":"MAINTENANCE",…}}`.
+
+Restent toujours disponibles : `/auth` (pour lever la maintenance), `/health`, `/api/config` et `/api/public-config` (lecture seule, utilisés par les contrôles des mises à jour). Les changements sont inscrits au journal des mises à jour.
+
 ### Zone de test du moteur (`/auth/moteur`)
 
 Pour essayer une nouvelle version du moteur partagé (`core/`, typiquement une nouvelle majeure) **sans toucher au site** :

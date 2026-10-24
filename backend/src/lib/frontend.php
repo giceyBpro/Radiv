@@ -10,6 +10,7 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 
 use RivEngine as Calculation;
 use Radiv\Config;
+use Radiv\Maintenance;
 use Radiv\Updater;
 
 // $sfmn : true pour la page de test de l'administration seulement (comparaison avec le calcul distant).
@@ -19,7 +20,8 @@ function config(bool $sfmn): array
         'isotopes' => Calculation\isotopes(),
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
-    ] + ($sfmn ? [
+    ] + (!$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
+    + ($sfmn ? [
         // Page de test de l'administration seulement : l'API publique ne connaît qu'un calcul.
         'calculation_modes' => ['local', 'sfmn'],
         'default_calculation_mode' => 'sfmn',
@@ -42,5 +44,5 @@ function public_config(): array
         'copyright_owner' => Config\copyright_owner(),
         // Date (AAAA-MM-JJ) de la version installée: change à chaque mise à jour ou retour arrière depuis /auth.
         'last_updated' => Updater\installed_date(),
-    ];
+    ] + (Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []);
 }

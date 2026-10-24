@@ -105,7 +105,8 @@
 
       const summaryItems = [
         `Type d'exposition : ${safe(form.isotope_label || selected.label)}`,
-        `Période effective appliquée au calcul : ${safe(result.effective_days)} jour(s) (${safe(result.effective_hours)} heure(s))`
+        `Période effective appliquée au calcul : ${safe(result.effective_days)} jour(s) (${safe(result.effective_hours)} heure(s))`,
+        'Référence : Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002'
       ];
       document.getElementById('summaryList').innerHTML = summaryItems.map((text) => `<li>${text}</li>`).join('');
 

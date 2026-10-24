@@ -49,6 +49,7 @@ const ROUTES = [
     'POST /auth/moteur/appliquer' => 'core_apply',
     'POST /auth/moteur/retablir' => 'core_restore',
     'POST /auth/moteur/desepingler' => 'core_unpin',
+    'POST /auth/maintenance' => 'maintenance',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
     'POST /auth/logout' => 'logout',
@@ -186,6 +187,7 @@ function do_site(): bool
     $out .= '<p class="small">Dépôt : ' . h($status['repo']) . ' · PHP ' . h($status['php']) . ' · extension zip : ' . ($status['zip'] ? 'oui' : 'non') . '</p></section>';
 
     $out .= config_card();
+    $out .= maintenance_card($csrf);
 
     $disk = Disk\usage();
     $minFree = Config\disk_min_free_bytes();

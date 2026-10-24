@@ -584,11 +584,38 @@
       } catch (_) { /* repli: valeurs de config.js */ }
     }
 
+    // Maintenance annoncée par le serveur (quand la page d'accueil est servie sans passer par PHP) : un avis plein écran
+    // remplace le calculateur, avec le lien vers l'outil de la SFMN pris dans la page.
+    function showMaintenanceNotice() {
+      const href = safeHttpUrl(document.querySelector('[data-sfmn-link]')?.href || '') || '';
+      const box = document.createElement('div');
+      box.setAttribute('role', 'alert');
+      box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#f5f7fa;color:#1d2733;font:16px/1.5 system-ui,sans-serif;padding:24px;text-align:center';
+      const card = document.createElement('div');
+      card.style.cssText = 'max-width:560px;padding:28px;background:#fff;border:1px solid #d5dde6;border-radius:12px';
+      const title = document.createElement('h1');
+      title.textContent = 'Site en maintenance';
+      const text = document.createElement('p');
+      text.textContent = 'Le site est momentanément en maintenance. Merci de votre compréhension.';
+      card.append(title, text);
+      if (href) {
+        const p = document.createElement('p');
+        p.append('En attendant, vous pouvez calculer les durées de restriction avec l\u2019outil en ligne de la SFMN : ');
+        const a = document.createElement('a');
+        a.href = href; a.textContent = 'accéder à l\u2019outil de la SFMN'; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        p.append(a, '.');
+        card.append(p);
+      }
+      box.append(card);
+      document.body.append(box);
+    }
+
     async function bootstrap() {
       setFooterMeta();
       applyBranding();
       try {
         const config = await fetchConfig();
+        if (config.maintenance) { showMaintenanceNotice(); return; }
         isotopes = config.isotopes || [];
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
