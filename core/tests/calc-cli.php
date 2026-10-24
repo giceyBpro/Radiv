@@ -8,7 +8,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require __DIR__ . '/../api/handler.php';
 
 // Arrondi : variable RESTRICTION_ROUNDING_MODE positionnée par test-calcul.js.
-RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: 'round');
+RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: null);
 
 $payloads = json_decode((string) stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR);
 $results = [];
