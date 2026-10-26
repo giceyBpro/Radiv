@@ -45,7 +45,7 @@ $REQUIRED_FILES = array(
 $TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir', 'disk_mb');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure');
 // Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'DISK_MIN_FREE_MB', 'API_KEY_REQUIRED', 'PROVIDER_RATE_LIMIT');
+$PASSTHROUGH_VARS = array('CORE_GITHUB_REPO', 'CORE_GITHUB_TOKEN', 'API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'DISK_MIN_FREE_MB', 'API_KEY_REQUIRED', 'PROVIDER_RATE_LIMIT');
 // Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Seul install.php la produit (tests/check-runtime-layout.js vérifie qu'elle est lisible par le backend).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -78,6 +78,9 @@ ADMIN_UPDATE_ENABLED|true ou false. Autorise les mises à jour du site depuis /a
 UPDATE_GITHUB_REPO|Dépôt GitHub à télécharger lors d'une mise à jour (propriétaire/nom).
 UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = /auth en demande un à chaque
 |mise à jour et ne le conserve pas.
+CORE_GITHUB_REPO|Dépôt GitHub du moteur de calcul (propriétaire/nom), proposé par défaut dans /auth/moteur. Défaut : UPDATE_GITHUB_REPO.
+CORE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel) pour télécharger le moteur de calcul depuis un dépôt privé distinct
+|(zone de test /auth/moteur). Non défini = UPDATE_GITHUB_TOKEN, puis la saisie dans la page (non conservée).
 == Formulaire de contact
 RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
 RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.

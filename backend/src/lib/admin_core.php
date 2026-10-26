@@ -33,6 +33,13 @@ function core_done(array $flash): bool
     return true;
 }
 
+// Dépôt du moteur proposé par défaut : CORE_GITHUB_REPO s'il est valide, sinon le dépôt du site.
+function core_default_repo(): string
+{
+    $repo = Config\env('CORE_GITHUB_REPO');
+    return preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $repo) === 1 ? $repo : Updater\repo();
+}
+
 function do_core(): bool
 {
     if (Session\admin() === null) return false;
@@ -61,9 +68,9 @@ function do_core(): bool
     $token = token_state();
     $out .= '<section class="card"><h2>1. Télécharger un candidat</h2><p class="small">Le candidat est seulement téléchargé et mis de côté : le site continue d\'utiliser le moteur en service. Seuls les fichiers du moteur (<code>src/</code>, <code>data/</code>, <code>VERSION</code>) sont conservés. N\'indiquez qu\'un dépôt de confiance : le candidat est du code que le test exécute.</p>'
         . '<form method="post" action="/auth/moteur/telecharger" autocomplete="off" class="stack"><input type="hidden" name="csrf" value="' . $csrf . '">'
-        . '<label>Dépôt (propriétaire/nom)<input name="repo" value="' . h(Updater\repo()) . '" required maxlength="100" pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+"></label>'
+        . '<label>Dépôt (propriétaire/nom)<input name="repo" value="' . h(core_default_repo()) . '" required maxlength="100" pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+"></label>'
         . '<label>Version (tag, branche ou commit)<input name="ref" value="' . h($token['tags'][0] ?? 'main') . '" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\/\-]*"></label>'
-        . '<label>Jeton d\'accès' . ($token['ok'] ? ' (facultatif : celui du site est essayé d\'abord ; à saisir si le dépôt du moteur est privé et distinct)' : '') . '<input type="password" name="token" autocomplete="off"' . ($token['ok'] ? '' : ' required') . ' maxlength="255"></label>'
+        . '<label>Jeton d\'accès' . ($token['ok'] || Config\env('CORE_GITHUB_TOKEN') !== '' ? ' (facultatif : ' . (Config\env('CORE_GITHUB_TOKEN') !== '' ? 'CORE_GITHUB_TOKEN de la configuration' : 'celui du site') . ' est essayé d\'abord)' : '') . '<input type="password" name="token" autocomplete="off"' . ($token['ok'] || Config\env('CORE_GITHUB_TOKEN') !== '' ? '' : ' required') . ' maxlength="255"></label>'
         . '<div><button type="submit">Télécharger</button></div></form></section>';
 
     $meta = CoreLab\read_json(CoreLab\candidate_dir() . '/meta.json');
@@ -116,9 +123,10 @@ function do_core_fetch(): bool
     if ($admin === null) return false;
     $posted = trim((string) ($_POST['token'] ?? ''));
     $repo = trim((string) ($_POST['repo'] ?? ''));
-    // Le jeton du site (UPDATE_GITHUB_TOKEN) sert s'il a accès au dépôt du moteur ; sinon celui saisi (dépôt privé distinct).
+    // Jetons essayés dans l'ordre, le premier qui a accès au dépôt visé sert : CORE_GITHUB_TOKEN (configuration), UPDATE_GITHUB_TOKEN
+    // (celui du site), puis celui saisi dans la page (jamais conservé).
     $token = '';
-    foreach ([Config\env('UPDATE_GITHUB_TOKEN'), $posted] as $candidate) {
+    foreach ([Config\env('CORE_GITHUB_TOKEN'), Config\env('UPDATE_GITHUB_TOKEN'), $posted] as $candidate) {
         if ($candidate !== '' && Updater\token_valid($candidate, $repo)) { $token = $candidate; break; }
     }
     if ($token === '') {
