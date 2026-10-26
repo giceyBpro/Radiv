@@ -150,8 +150,23 @@ async function update(c, ref, token) {
   t('jeton de forme invalide → refus sans appel GitHub', /jeton n'est pas valide/.test(r.msg));
 
   console.log('\n— Mise à jour: succès (v1.1)');
+  // Site resté sur un ancien moteur (1 fichier aujourd'hui retiré, déclaré au manifeste): la mise à jour installe tout le moteur du dépôt.
+  { const { execFileSync } = require('child_process'); const repoRoot = path.resolve(__dirname, '..');
+    fs.rmSync(path.join(WWW, 'backend/core'), { recursive: true, force: true });
+    execFileSync('sh', ['-c', `git -C ${repoRoot} archive 3d31ebc core/src core/data core/VERSION | tar -x -C ${path.join(WWW, 'backend')}`]);
+    try { execFileSync('chown', ['-R', 'www-data:www-data', path.join(WWW, 'backend/core')]); } catch (e) { /* pas root */ }
+    fs.writeFileSync(path.join(WWW, 'backend/data/var/manifest.json'), JSON.stringify({ files: ['core/data/cures.json'] }));
+    try { execFileSync('chown', ['www-data:www-data', path.join(WWW, 'backend/data/var/manifest.json')]); } catch (e) { fs.chmodSync(path.join(WWW, 'backend/data/var/manifest.json'), 0o666); }
+    t('ancien moteur en place (2.0.1, avec cures.json, sans profiles.php)', exists('backend/core/data/cures.json') && !exists('backend/core/src/profiles.php') && read('backend/core/VERSION').trim() === '2.0.1'); }
   await ghLog(); resetLimits();
   r = await update(c, 'v1.1', TOKEN);
+  { const repoCore = path.resolve(__dirname, '..', 'core'); const same = [];
+    for (const sub of ['src', 'data']) for (const f of fs.readdirSync(path.join(repoCore, sub))) if (/\.(php|json)$/.test(f)) same.push(`${sub}/${f}`);
+    same.push('VERSION');
+    t('moteur du dépôt installé en entier par la mise à jour (src, data, VERSION identiques)', same.every((f) => exists(`backend/core/${f}`) && fs.readFileSync(path.join(WWW, 'backend/core', f)).equals(fs.readFileSync(path.join(repoCore, f)))), same.filter((f) => !exists(`backend/core/${f}`)).join());
+    t('fichier retiré du moteur supprimé (cures.json)', !exists('backend/core/data/cures.json'));
+    t('moteur installé, jamais api/, web/, tests/ ni documentation', !exists('backend/core/api') && !exists('backend/core/web') && !exists('backend/core/tests') && !exists('backend/core/AGENTS.md') && !exists('backend/core/install-core.php'));
+    t('l\'API utilise le moteur installé (isotope_inputs annoncé)', !!(await (await fetch(`${BASE}/api/config`)).json()).isotope_inputs); }
   t('installée', /Mise à jour installée : 1111111/.test(r.msg), r.msg);
   t('app.js remplacé', read('app.js').includes('fixture v1.1')); t('nouveau fichier créé', exists('downloads/ajout-v1_1.xml'));
   const version = JSON.parse(read('backend/data/var/version.json'));
