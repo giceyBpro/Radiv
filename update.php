@@ -71,6 +71,9 @@ ADMIN_UPDATE_ENABLED|true ou false. Autorise les mises à jour du site depuis /a
 UPDATE_GITHUB_REPO|Dépôt GitHub à télécharger lors d'une mise à jour (propriétaire/nom).
 UPDATE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel). Non défini = /auth en demande un à chaque
 |mise à jour et ne le conserve pas.
+CORE_GITHUB_REPO|Dépôt GitHub du moteur de calcul (propriétaire/nom), proposé par défaut dans /auth/moteur. Défaut : UPDATE_GITHUB_REPO.
+CORE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel) pour télécharger le moteur de calcul depuis un dépôt privé distinct
+|(zone de test /auth/moteur). Non défini = UPDATE_GITHUB_TOKEN, puis la saisie dans la page (non conservée).
 == Formulaire de contact
 RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
 RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.

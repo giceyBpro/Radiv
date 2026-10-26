@@ -271,6 +271,12 @@ async function update(c, ref, token) {
     msg = await coreAction('tester', {});
     t('…tests lancés: moteur identique à celui en service', /Tests terminés/.test(msg) && /identique/.test(msg), msg);
     t('…le compte rendu se télécharge en Markdown', (await c.req('GET', `${BASE}/auth/moteur/rapport.md`)).text.includes('# Compte rendu de test du moteur'));
+    setEnv('CORE_GITHUB_TOKEN', PRIV_TOKEN); setEnv('CORE_GITHUB_REPO', 'acme/riv-core-prive');
+    const formPage = await c.req('GET', `${BASE}/auth/moteur`);
+    t('CORE_GITHUB_REPO proposé par défaut dans le formulaire, jeton saisi facultatif', formPage.text.includes('value="acme/riv-core-prive"') && /CORE_GITHUB_TOKEN de la configuration/.test(formPage.text) && !/name="token"[^>]*required/.test(formPage.text));
+    msg = await coreAction('telecharger', { repo: 'acme/riv-core-prive', ref: 'main' });
+    t('CORE_GITHUB_TOKEN de la configuration: téléchargement sans rien saisir', /Candidat téléchargé/.test(msg), msg);
+    setEnv('CORE_GITHUB_TOKEN', null); setEnv('CORE_GITHUB_REPO', null);
     msg = await coreAction('telecharger', { repo: 'acme/inexistant', ref: 'main', token: PRIV_TOKEN });
     t('dépôt inconnu ou sans accès → refus clair', /Aucun jeton valide pour ce dépôt/.test(msg), msg);
 
