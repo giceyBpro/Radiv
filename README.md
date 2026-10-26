@@ -169,7 +169,7 @@ En cas d'erreur : `ok: false` + `error.code`, `error.message`, `error.reason`, `
 ## Formulaire de contact
 
 - Page : `contact.html`
-- `GET /api/public-config` : retourne `recaptcha_site_key`
+- `GET /api/public-config` : retourne `recaptcha_site_key` et les réglages d'affichage (nom du site, copyright, date de mise à jour, niveau de journalisation…), dont `core_version` : la version du moteur de calcul (`core/VERSION`) réellement actif, affichée discrètement en bas de la page d'accueil (« Moteur de calcul v2.3.0 »). Elle suit l'épinglage éventuel d'un moteur depuis `/auth/moteur`
 - `POST /api/contact` : envoi email côté backend (destinataire non exposé au frontend)
 
 Variables `.env` requises :

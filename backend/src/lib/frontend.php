@@ -45,5 +45,7 @@ function public_config(): array
         'copyright_owner' => Config\copyright_owner(),
         // Date (AAAA-MM-JJ) de la version installée: change à chaque mise à jour ou retour arrière depuis /auth.
         'last_updated' => Updater\installed_date(),
+        // Version du moteur de calcul (core/) réellement actif, affichée discrètement en bas de la page d'accueil.
+        'core_version' => function_exists('RivEngine\\version') ? Calculation\version() : '',
     ] + (Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []);
 }

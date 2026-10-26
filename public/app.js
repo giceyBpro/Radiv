@@ -61,6 +61,8 @@
       return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(value);
     }
 
+    let CORE_VERSION = ''; // version du moteur de calcul actif (public-config.core_version)
+
     function setFooterMeta() {
       // window.RADIOPROTECTION_LAST_DEPLOYED_AT est la date réelle du dernier déploiement
       // (injectée par le script de déploiement), pas la date du jour de consultation.
@@ -74,6 +76,11 @@
         lastUpdatedRow.style.display = '';
       } else {
         lastUpdatedRow.style.display = 'none';
+      }
+      const coreRow = $('coreVersionRow');
+      if (coreRow) {
+        $('coreVersionLabel').textContent = CORE_VERSION;
+        coreRow.style.display = CORE_VERSION ? '' : 'none';
       }
       $('siteNameBanner').textContent = SITE_NAME;
       $('copyrightText').textContent = `© ${new Date().getFullYear()} ${COPYRIGHT_OWNER}`;
@@ -594,6 +601,7 @@
         if (typeof data.site_name === 'string' && data.site_name) SITE_NAME = data.site_name;
         if (typeof data.copyright_owner === 'string' && data.copyright_owner) COPYRIGHT_OWNER = data.copyright_owner;
         if (typeof data.last_updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.last_updated)) LAST_UPDATED = data.last_updated;
+        if (typeof data.core_version === 'string' && /^\d+\.\d+\.\d+$/.test(data.core_version)) CORE_VERSION = data.core_version;
         setFooterMeta();
       } catch (_) { /* repli: valeurs de config.js */ }
     }
