@@ -90,7 +90,7 @@ function engine_hash(string $dir): string
 function engine_files(string $dir): array
 {
     $files = [];
-    foreach (['src' => '/^[A-Za-z0-9_-]+\.php$/', 'data' => '/^[A-Za-z0-9_-]+\.(?:json|md)$/'] as $sub => $pattern) {
+    foreach (['src' => '/^[A-Za-z0-9_-]+\.php$/', 'data' => '/^[A-Za-z0-9_-]+\.json$/'] as $sub => $pattern) {
         foreach (is_dir("{$dir}/{$sub}") ? (scandir("{$dir}/{$sub}") ?: []) : [] as $name) {
             if (preg_match($pattern, $name) === 1 && is_file("{$dir}/{$sub}/{$name}")) $files[] = "{$sub}/{$name}";
         }
@@ -102,12 +102,12 @@ function engine_files(string $dir): array
 
 // --- Téléchargement du candidat ------------------------------------------------------------
 
-// Fichiers conservés d'une archive (chemin relatif au dossier du moteur) ; null pour tout le reste.
+// Fichiers conservés d'une archive (chemin relatif au dossier du moteur ; les mêmes que la mise à jour du site installe) ; null pour tout le reste.
 function candidate_path(string $rel): ?string
 {
     if ($rel === 'VERSION') return $rel;
     if (preg_match('#^src/[A-Za-z0-9_-]+\.php$#', $rel) === 1) return $rel;
-    if (preg_match('#^data/[A-Za-z0-9_-]+\.(?:json|md)$#', $rel) === 1) return $rel;
+    if (preg_match('#^data/[A-Za-z0-9_-]+\.json$#', $rel) === 1) return $rel;
     return null;
 }
 

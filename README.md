@@ -399,6 +399,8 @@ Pour essayer une nouvelle version du moteur partagé (`core/`, typiquement une n
 
 **Moteur et mises à jour du site** : tant que `core/` est dans ce dépôt, la mise à jour du site (`/auth` ou `update.php`) installe aussi le moteur (`src/`, `data/*.json`, `VERSION` dans `backend/core/`) et supprime les fichiers du moteur retirés entre deux versions. Seul un moteur **épinglé** (voir ci-dessus) échappe à la mise à jour. Vérifié par `tests/test-admin-site.js` (site resté sur un ancien moteur → moteur du dépôt installé octet pour octet, fichier retiré supprimé).
 
+**Moteur dans un dépôt privé distinct** : renseignez `propriétaire/nom` du dépôt du moteur (il peut contenir le moteur à sa racine ou dans `core/`) et un jeton GitHub **en lecture du contenu** ayant accès à ce dépôt. Le jeton du site (`UPDATE_GITHUB_TOKEN`) est essayé d'abord ; s'il n'a pas accès à ce dépôt, saisissez-en un autre (jamais conservé). Une fois un moteur appliqué (donc épinglé), l'archive du site peut ne plus contenir `core/` : la mise à jour (`/auth` et `update.php`) n'exige alors plus les fichiers du moteur et n'y touche pas. Sans moteur épinglé, une archive sans `core/` reste refusée (version incomplète).
+
 Tests : `node tests/test-core-lab.js` (candidat identique, évolution, code dangereux, fonction manquante, bug d'arrondi, champ supprimé ; application, épinglage et retour arrière).
 
 ### Non vérifié de bout en bout

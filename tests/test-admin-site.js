@@ -261,6 +261,33 @@ async function update(c, ref, token) {
     t('en service: calcul 200, accueil 200, plus d\'annonce dans /api/config', r2.status === 200 && home.status === 200 && (await (await fetch(`${BASE}/api/config`)).json()).maintenance === undefined);
     t('…fichier d\'état supprimé', !exists('backend/data/var/maintenance.json')); }
 
+  console.log('\n— Moteur: dépôt privé distinct (jeton propre) et site sans core/');
+  { const PRIV_TOKEN = 'ghp_privatecoretokenprivate12345';
+    const coreAction = async (action, form) => { resetLimits(); const pg = await c.req('GET', `${BASE}/auth/moteur`); const r = await c.req('POST', `${BASE}/auth/moteur/${action}`, { form: { csrf: csrfOf(pg.text), ...form }, headers: { Origin: BASE } }); return flash((await c.req('GET', r.loc || `${BASE}/auth/moteur`)).text); };
+    let msg = await coreAction('telecharger', { repo: 'acme/riv-core-prive', ref: 'main', token: TOKEN });
+    t('dépôt privé du moteur: le jeton du site (sans accès à ce dépôt) est refusé', /Aucun jeton valide pour ce dépôt/.test(msg) && /acme\/riv-core-prive/.test(msg), msg);
+    msg = await coreAction('telecharger', { repo: 'acme/riv-core-prive', ref: 'main', token: PRIV_TOKEN });
+    t('dépôt privé du moteur: téléchargement avec son propre jeton', /Candidat téléchargé : moteur \d+\.\d+\.\d+/.test(msg), msg);
+    msg = await coreAction('tester', {});
+    t('…tests lancés: moteur identique à celui en service', /Tests terminés/.test(msg) && /identique/.test(msg), msg);
+    t('…le compte rendu se télécharge en Markdown', (await c.req('GET', `${BASE}/auth/moteur/rapport.md`)).text.includes('# Compte rendu de test du moteur'));
+    msg = await coreAction('telecharger', { repo: 'acme/inexistant', ref: 'main', token: PRIV_TOKEN });
+    t('dépôt inconnu ou sans accès → refus clair', /Aucun jeton valide pour ce dépôt/.test(msg), msg);
+
+    // Site publié sans core/ (moteur ailleurs) : refusé tant qu'aucun moteur n'est épinglé, accepté sinon, moteur intact
+    const pinFile = path.join(WWW, 'backend/data/var/core-pin.json'); const versionFile = path.join(WWW, 'backend/core/VERSION');
+    const coreVersion = fs.readFileSync(versionFile, 'utf8');
+    resetLimits(); r = await update(c, 't11', TOKEN);
+    t('archive du site sans core/ et sans moteur épinglé → refusée (version incomplète)', /incomplète/.test(r.msg), r.msg);
+    fs.writeFileSync(pinFile, '{"version":"' + coreVersion.trim() + '"}'); try { require('child_process').execFileSync('chown', ['www-data:www-data', pinFile]); } catch (e) { fs.chmodSync(pinFile, 0o666); }
+    resetLimits(); r = await update(c, 't11', TOKEN);
+    t('…avec un moteur épinglé → acceptée, moteur intact', /Mise à jour installée : bbbbbbb/.test(r.msg) && fs.readFileSync(versionFile, 'utf8') === coreVersion && exists('backend/core/src/profiles.php'), r.msg);
+    pg = await c.req('GET', `${BASE}/auth`);
+    const rb3 = await c.req('POST', `${BASE}/auth/rollback`, { form: { csrf: csrfOf(pg.text) }, headers: { Origin: BASE } });
+    t('…retour arrière sans toucher au moteur', /Version précédente rétablie/.test(flash((await c.req('GET', rb3.loc)).text)) && fs.readFileSync(versionFile, 'utf8') === coreVersion);
+    fs.unlinkSync(pinFile);
+    t('état revenu à la v1.1', treeHash() === afterGood); }
+
   console.log('\n— Fournisseurs de l\'API et clés d\'API (clé obligatoire)');
   { resetLimits();
     const regFile = path.join(WWW, 'backend/config/providers.json');
