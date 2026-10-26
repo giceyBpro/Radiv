@@ -837,11 +837,13 @@ try {
     // 3) Validation complète avant toute écriture sur le site
     $staging = $tmp . '/new';
     $files = extract_archive($zipFile, $staging, $sha);
-    $missing = array_diff($REQUIRED_FILES, $files);
+    // Moteur épinglé depuis la zone de test de /auth (core-pin.json) : la mise à jour n'y touche pas, et l'archive n'a pas à le contenir.
+    $corePinned = is_file($varDir . '/core-pin.json');
+    $required = array();
+    foreach ($REQUIRED_FILES as $f) { if (!($corePinned && strpos($f, 'core/') === 0)) $required[] = $f; }
+    $missing = array_diff($required, $files);
     if ($missing) throw new RuntimeException('Version incomplète ou trop ancienne (' . implode(', ', array_slice($missing, 0, 3)) . ').');
     lint_php($staging, $files);
-    // Moteur épinglé depuis la zone de test de /auth (core-pin.json) : la mise à jour n'y touche pas.
-    $corePinned = is_file($varDir . '/core-pin.json');
     if ($corePinned) {
         $kept = array();
         foreach ($files as $f) { if (strpos($f, 'core/') !== 0) $kept[] = $f; }

@@ -70,4 +70,7 @@ $extra['backend/config/runtime.env'] = 'X=1'; $extra['backend/config/local.env']
 $extra['backend/src/lib/sub/x.php'] = '<?php'; $extra['backend/evil.php'] = '<?php'; $extra['backend/src/x.txt'] = 'x';
 $extra['tests/x.php'] = '<?php'; $extra['deploy.sh'] = 'rm -rf /'; $extra['update.php'] = '<?php';
 build("{$out}/10.zip", $root('a'), $extra);
+// 11: version du site SANS core/ (moteur fourni par ailleurs, ex. dépôt privé distinct) : acceptée seulement si un moteur est épinglé
+$nocore = array_filter($good, static fn ($rel) => strpos($rel, 'core/') !== 0, ARRAY_FILTER_USE_KEY);
+build("{$out}/11.zip", $root('b'), $nocore);
 echo "ok\n";

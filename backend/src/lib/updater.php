@@ -194,10 +194,12 @@ function github_get(string $path, string $token, string $accept = 'application/v
     return Http\fetch(api_base() . $path, ['headers' => gh_headers($token, $accept), 'timeout_ms' => 15000]);
 }
 
-function token_valid(string $token): bool
+// $target : dépôt « propriétaire/nom » à contrôler (par défaut, celui du site) — la zone de test du moteur vise un autre dépôt.
+function token_valid(string $token, ?string $target = null): bool
 {
     if ($token === '' || !preg_match('/^[A-Za-z0-9_\-.]{20,255}$/', $token)) return false;
-    $response = github_get('/repos/' . repo(), $token);
+    if ($target !== null && !preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $target)) return false;
+    $response = github_get('/repos/' . ($target ?? repo()), $token);
     return $response !== null && $response['status'] === 200;
 }
 
@@ -413,11 +415,13 @@ function run(string $ref, string $token, string $by): array
 
         $staging = "{$tmp}/new";
         $files = extract_archive($zipFile, $staging, $sha);
-        $missing = array_diff(REQUIRED_FILES, $files);
+        // Moteur épinglé depuis la zone de test (/auth/moteur) : il vient d'ailleurs, l'archive du site n'a pas à contenir core/.
+        $corePinned = is_file(state_dir() . '/core-pin.json');
+        $required = $corePinned ? array_values(array_filter(REQUIRED_FILES, static fn ($rel) => !str_starts_with($rel, 'core/'))) : REQUIRED_FILES;
+        $missing = array_diff($required, $files);
         if ($missing) throw new \RuntimeException('Version cible incomplète ou trop ancienne (' . implode(', ', array_slice($missing, 0, 3)) . ').');
         lint_php($staging, $files);
         // Moteur épinglé depuis la zone de test (/auth/moteur) : les mises à jour du site n'y touchent pas.
-        $corePinned = is_file(state_dir() . '/core-pin.json');
         if ($corePinned) $files = array_values(array_filter($files, static fn ($rel) => !str_starts_with($rel, 'core/')));
         if (in_array('public/robots.txt', $files, true)) merge_robots("{$staging}/public/robots.txt", Config\web_root() . '/robots.txt');
         unlink($zipFile); // plus utile: libère l'espace avant le remplacement

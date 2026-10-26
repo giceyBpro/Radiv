@@ -63,7 +63,7 @@ function do_core(): bool
         . '<form method="post" action="/auth/moteur/telecharger" autocomplete="off" class="stack"><input type="hidden" name="csrf" value="' . $csrf . '">'
         . '<label>Dépôt (propriétaire/nom)<input name="repo" value="' . h(Updater\repo()) . '" required maxlength="100" pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+"></label>'
         . '<label>Version (tag, branche ou commit)<input name="ref" value="' . h($token['tags'][0] ?? 'main') . '" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\/\-]*"></label>'
-        . (!$token['ok'] ? '<label>Jeton d\'accès<input type="password" name="token" autocomplete="off" required maxlength="255"></label>' : '')
+        . '<label>Jeton d\'accès' . ($token['ok'] ? ' (facultatif : celui du site est essayé d\'abord ; à saisir si le dépôt du moteur est privé et distinct)' : '') . '<input type="password" name="token" autocomplete="off"' . ($token['ok'] ? '' : ' required') . ' maxlength="255"></label>'
         . '<div><button type="submit">Télécharger</button></div></form></section>';
 
     $meta = CoreLab\read_json(CoreLab\candidate_dir() . '/meta.json');
@@ -115,13 +115,16 @@ function do_core_fetch(): bool
     $admin = core_guard();
     if ($admin === null) return false;
     $posted = trim((string) ($_POST['token'] ?? ''));
-    $envToken = Config\env('UPDATE_GITHUB_TOKEN');
-    $token = ($envToken !== '' && token_state()['ok']) ? $envToken : $posted;
-    if (!Updater\token_valid($token)) {
-        unset($_SESSION['gh']);
-        return core_done(['ok' => false, 'message' => 'Le jeton n\'est pas valide.']);
+    $repo = trim((string) ($_POST['repo'] ?? ''));
+    // Le jeton du site (UPDATE_GITHUB_TOKEN) sert s'il a accès au dépôt du moteur ; sinon celui saisi (dépôt privé distinct).
+    $token = '';
+    foreach ([Config\env('UPDATE_GITHUB_TOKEN'), $posted] as $candidate) {
+        if ($candidate !== '' && Updater\token_valid($candidate, $repo)) { $token = $candidate; break; }
     }
-    return core_done(CoreLab\fetch_candidate(trim((string) ($_POST['repo'] ?? '')), trim((string) ($_POST['ref'] ?? '')), $token, $admin['email']));
+    if ($token === '') {
+        return core_done(['ok' => false, 'message' => 'Aucun jeton valide pour ce dépôt : saisissez un jeton GitHub (lecture du contenu) ayant accès à ' . ($repo !== '' ? $repo : 'ce dépôt') . '.']);
+    }
+    return core_done(CoreLab\fetch_candidate($repo, trim((string) ($_POST['ref'] ?? '')), $token, $admin['email']));
 }
 
 function do_core_test(): bool

@@ -42,6 +42,9 @@ http.createServer((req, res) => {
 const refs = { main: '2', 'v1.2': '2', 'v1.1': '1', 'v1.0': '7' };
 for (let i = 3; i <= 9; i += 1) refs[`t${i}`] = String(i);
 refs.t10 = 'a';
+refs.t11 = 'b';
+const PRIV = '/repos/acme/riv-core-prive';
+const PRIV_TOKEN = 'ghp_privatecoretokenprivate12345';
 const shaFor = (n) => (n === 'a' ? 'a' : String(n)).repeat(40);
 let log = [];
 http.createServer((req, res) => {
@@ -55,13 +58,22 @@ http.createServer((req, res) => {
     if (!fs.existsSync(f)) return json(404, {});
     res.writeHead(200, { 'Content-Type': 'application/zip' }); return res.end(fs.readFileSync(f));
   }
+  // Second dépôt privé (moteur de calcul seul), accessible avec son propre jeton: mêmes archives que le dépôt du site
+  if (u.pathname.startsWith(PRIV)) {
+    if (auth !== `Bearer ${PRIV_TOKEN}`) return json(auth ? 401 : 404, { message: 'Bad credentials' });
+    if (u.pathname === PRIV) return json(200, { full_name: 'acme/riv-core-prive' });
+    if (u.pathname === `${PRIV}/commits/main`) { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end(shaFor('2')); }
+    const pz = u.pathname.match(new RegExp(`^${PRIV}/zipball/([0-9a-f]{40})$`));
+    if (pz) { res.writeHead(302, { Location: `http://127.0.0.1:${HP}/codeload/${pz[1][0]}.zip` }); return res.end(); }
+    return json(404, {});
+  }
   if (auth !== `Bearer ${VALID_TOKEN}`) return json(auth ? 401 : 404, { message: 'Bad credentials' });
   if (u.pathname === REPO) return json(200, { full_name: 'giceyBpro/Radiv' });
   if (u.pathname === `${REPO}/tags`) return json(200, [{ name: 'v1.2' }, { name: 'v1.1' }]);
   const m = u.pathname.match(new RegExp(`^${REPO}/commits/(.+)$`));
   if (m) { const r = refs[decodeURIComponent(m[1])]; if (!r) return json(404, {}); res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end(shaFor(r)); }
   const z = u.pathname.match(new RegExp(`^${REPO}/zipball/([0-9a-f]{40})$`));
-  if (z) { res.writeHead(302, { Location: `http://127.0.0.1:${HP}/codeload/${z[1][0] === 'a' ? 10 : z[1][0]}.zip` }); return res.end(); }
+  if (z) { res.writeHead(302, { Location: `http://127.0.0.1:${HP}/codeload/${z[1][0] === 'a' ? 10 : z[1][0] === 'b' ? 11 : z[1][0]}.zip` }); return res.end(); }
   json(404, {});
 }).listen(HP, '127.0.0.1');
 console.log('faux google/github prêts');
