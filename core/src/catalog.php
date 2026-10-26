@@ -1,9 +1,9 @@
 <?php
 // ===== CATALOGUE : ISOTOPES, SCÉNARIOS D'EXPOSITION, CURES =====
 // Les valeurs ne sont PAS dans le code mais dans data/*.json (à modifier là, sans toucher à PHP) :
-//   data/isotopes.json   périodes effectives et références (voir data/SOURCES.md)
+//   data/isotopes.json   périodes effectives, références (voir data/SOURCES.md) et, pour les isotopes qui en acceptent plusieurs,
+//                        les nombres de cures autorisés (champ facultatif « cures », ex. [1, 4] ; absent = une seule cure)
 //   data/scenarios.json  durées, distances et limites de dose par situation
-//   data/cures.json      nombres de cures autorisés par isotope
 // Un isotope donne soit "period_hours" (période en heures), soit "period_days" (période en jours, multipliée par 24),
 // soit null (isotope « non défini », période à fournir par l'appelant).
 
@@ -65,9 +65,14 @@ function scenarios(): array
     }, load_data('scenarios'));
 }
 
+// Nombres de cures autorisés, pour les seuls isotopes qui déclarent un champ « cures » (ordre du fichier).
 function cure_options_by_isotope(): array
 {
-    return load_data('cures');
+    $options = [];
+    foreach (load_data('isotopes') as $row) {
+        if (isset($row['cures']) && is_array($row['cures'])) $options[(string) $row['api_code']] = $row['cures'];
+    }
+    return $options;
 }
 
 function get_isotope(mixed $apiCode): array

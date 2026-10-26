@@ -36,6 +36,8 @@ const edit = (dir, file, from, to) => {
 };
 const test = (report, id) => report.tests.find((x) => x.id === id);
 
+const baseVersion = fs.readFileSync(path.join(root, 'core/VERSION'), 'utf8').trim(); // version du moteur du dépôt, installée dans le faux site
+
 // 1. Identique
 let r = candidate(() => {});
 t('candidat identique → verdict « identique »', r.verdict === 'identique' && r.tests.every((x) => x.status === 'ok'), r.headline);
@@ -59,7 +61,7 @@ t('moteur remplacé, épinglé, précédent conservé', state.version === '3.0.0
 t('réglage local (settings.json) conservé', fs.readFileSync(path.join(site, 'backend/core/data/settings.json'), 'utf8').includes('floor'));
 const restored = php('restore');
 state = php('state');
-t('retour arrière : ancien moteur rétabli, épinglage retiré', restored.ok && state.version === '2.0.0' && state.pin === null && state.previous === false, JSON.stringify([restored, state]));
+t('retour arrière : ancien moteur rétabli, épinglage retiré', restored.ok && state.version === baseVersion && state.pin === null && state.previous === false, JSON.stringify([restored, state]));
 t('…dossiers temporaires nettoyés', !fs.existsSync(path.join(site, 'backend/core.new')) && !fs.existsSync(path.join(site, 'backend/core.old')) && !fs.existsSync(path.join(site, 'backend/core.drop')));
 
 // 2 bis. Champ ajouté à la réponse : évolution compatible (sans danger), signalée
