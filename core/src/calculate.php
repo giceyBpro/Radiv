@@ -27,25 +27,7 @@ function normalize_cure_count(array $selected, mixed $rawValue): array
 function expected_payload_by_isotope(array $selected): array
 {
     $common = ['isotope_code', 'patient_size_cm', 'user_period_days', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'cure_count'];
-    if ($selected['api_code'] === 'iode131_benin') {
-        return [
-            'common' => $common,
-            'isotope_specific_required' => ['benign_activity_mbq', 'benign_fixation_pct (en %, ex. 15)'],
-            'isotope_specific_optional' => ['dose_rate (ignore pour iode131_benin)'],
-        ];
-    }
-    if ($selected['api_code'] === 'non_defini') {
-        return [
-            'common' => $common,
-            'isotope_specific_required' => ['dose_rate', 'user_period_days'],
-            'isotope_specific_optional' => ['benign_activity_mbq', 'benign_fixation_pct (ignores hors iode131_benin)'],
-        ];
-    }
-    return [
-        'common' => $common,
-        'isotope_specific_required' => ['dose_rate'],
-        'isotope_specific_optional' => ['benign_activity_mbq', 'benign_fixation_pct (ignores hors iode131_benin)'],
-    ];
+    return profile_of($selected)['expected_payload']((string) $selected['api_code'], $common);
 }
 
 // $payload: tableau associatif issu de json_decode($body, true) (ou tableau vide).
@@ -61,9 +43,8 @@ function calculate(array $payload): array
     $isotopeCodeRecognized = is_string($isotopeCode) && in_array($isotopeCode, $validCodes, true);
     $cure = normalize_cure_count($selected, $payload['cure_count'] ?? null);
     $userPeriodDays = to_number_or_null($payload['user_period_days'] ?? null);
-    $effectiveDays = $userPeriodDays !== null
-        ? $userPeriodDays
-        : ($selected['api_code'] === 'non_defini' ? null : $selected['periodHours'] / 24);
+    $profile = profile_of($selected);
+    $effectiveDays = $userPeriodDays !== null ? $userPeriodDays : $profile['default_period_days']($selected);
     $benignActivityMbq = to_number_or_null($payload['benign_activity_mbq'] ?? null);
     $benignFixationPct = to_number_or_null($payload['benign_fixation_pct'] ?? null);
     $doseRate = compute_dose_rate($selected, $benignActivityMbq, $benignFixationPct, $payload['dose_rate'] ?? null);
@@ -82,15 +63,9 @@ function calculate(array $payload): array
     if (!$isotopeCodeRecognized) {
         $errors[] = 'isotope_code inconnu ou manquant : ' . js_json_stringify($isotopeCode) . '. Codes valides : ' . implode(', ', $validCodes) . '.';
     }
-    if ($selected['api_code'] === 'iode131_benin') {
-        if (!($benignActivityMbq > 0)) $errors[] = 'Pour iode131_benin, benign_activity_mbq doit être strictement positif.';
-        if (!($benignFixationPct > 0 && $benignFixationPct <= 100)) $errors[] = 'Pour iode131_benin, benign_fixation_pct doit être un pourcentage strictement positif et ≤ 100 (ex. 15).';
-        if (($benignActivityMbq > 0) && ($benignFixationPct > 0) && !($doseRate > 0)) $errors[] = 'Le débit calculé automatiquement pour iode131_benin est invalide. Vérifiez benign_activity_mbq et benign_fixation_pct.';
-    } elseif (!($doseRate > 0)) {
-        $errors[] = 'Pour cet isotope, dose_rate doit être strictement positif.';
-    }
+    array_push($errors, ...$profile['dose_rate_errors']((string) $selected['api_code'], $benignActivityMbq, $benignFixationPct, $doseRate));
     if (!($patientSizeCm > 0)) $errors[] = 'patient_size_cm doit être strictement positif.';
-    if ($selected['api_code'] === 'non_defini' && !($effectiveDays > 0)) $errors[] = 'Avec isotope_code=non_defini, user_period_days devient obligatoire et doit être > 0.';
+    array_push($errors, ...$profile['period_errors']((string) $selected['api_code'], $effectiveDays));
     if (!$cure['valid']) $errors[] = "Pour {$selected['api_code']}, cure_count doit être l'une des valeurs suivantes : " . implode(', ', $cure['allowed']) . '.';
     if ($effectiveDays !== null && !($effectiveDays > 0)) $errors[] = 'La période effective retenue doit être strictement positive.';
     if (!$userEmpty && !$userComplete) $errors[] = 'Pour calculer le scénario utilisateur, renseignez les 4 champs bleus du scénario personnalisé, ou laissez-les tous vides.';
@@ -158,11 +133,7 @@ function calculate(array $payload): array
                     : 'isotope_code inconnu ou manquant : ' . js_json_stringify($isotopeCode) . '.',
                 'reason' => !$isotopeCodeRecognized
                     ? 'Codes valides : ' . implode(', ', $validCodes) . '.'
-                    : ($selected['api_code'] === 'iode131_benin'
-                        ? 'Pour iode131_benin, benign_activity_mbq et benign_fixation_pct (en %) sont obligatoires (dose_rate est ignoré).'
-                        : ($selected['api_code'] === 'non_defini'
-                            ? 'Pour non_defini, dose_rate et user_period_days sont obligatoires et strictement positifs.'
-                            : 'Pour cet isotope, dose_rate est obligatoire et doit être strictement positif.')),
+                    : $profile['failure_reason']((string) $selected['api_code']),
                 'expected_payload' => $expectedPayload,
             ],
         ] + $common + [
