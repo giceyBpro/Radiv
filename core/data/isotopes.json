@@ -29,7 +29,8 @@
     "period_hours": 122.4,
     "reference": "Carlier et al., Nuclear Medicine Communications 2006, 27:559–566",
     "remark": "en considérant la période au niveau de la thyroïde",
-    "situation": "Pathologie bénigne"
+    "situation": "Pathologie bénigne",
+    "profile": "benign_iodine"
   },
   {
     "api_code": "radium223",
@@ -120,6 +121,7 @@
     "period_hours": null,
     "reference": "-",
     "remark": "-",
-    "situation": ""
+    "situation": "",
+    "profile": "free_period"
   }
 ]

@@ -12,7 +12,8 @@
 //   rounding.php   mode d'arrondi des durées (« round » ou « floor ») et équivalent de Math.round
 //   compat.php     conversions à l'identique de JavaScript (Number(), affichage des nombres, JSON.stringify)
 //   catalog.php    lecture des données : isotopes, scénarios d'exposition, nombres de cures autorisés
-//   physics.php    formules : décroissance, géométrie, durée de restriction, débit de dose de l'iode bénin
+//   profiles.php   règles propres à certains isotopes (iode bénin, période libre), choisies par le champ « profile » des données
+//   physics.php    formules : décroissance, géométrie, durée de restriction
 //   calculate.php  validation des entrées et assemblage du résultat (calculate())
 //
 // Contrat stable : mêmes données, mêmes formules, mêmes clés JSON. Les écarts de sémantique PHP/JS qui pourraient
@@ -26,4 +27,5 @@ require __DIR__ . '/rounding.php';
 require __DIR__ . '/compat.php';
 require __DIR__ . '/catalog.php';
 require __DIR__ . '/physics.php';
+require __DIR__ . '/profiles.php';
 require __DIR__ . '/calculate.php';

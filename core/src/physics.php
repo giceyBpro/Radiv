@@ -47,10 +47,3 @@ function restriction_days(float $effectiveDays, float $doseRate, float $patientS
     if (!is_finite($day)) return null;
     return max(0.0, round_restriction_days($day));
 }
-
-function compute_dose_rate(array $selected, ?float $benignActivityMbq, ?float $benignFixationPct, mixed $doseRate): ?float
-{
-    if ($selected['api_code'] !== 'iode131_benin') return to_number_or_null($doseRate);
-    if ($benignActivityMbq === null || $benignFixationPct === null) return null;
-    return 2.2 * $benignActivityMbq * ($benignFixationPct / 100) / 37;
-}

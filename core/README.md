@@ -12,6 +12,7 @@ tel quel par un autre site.
 | `src/rounding.php` | Mode d'arrondi (`round` ou `floor`), réglable par `RivEngine\set_rounding_mode()`. |
 | `src/compat.php` | Conversions identiques à JavaScript (garantit des résultats stables pour les clients existants). |
 | `src/catalog.php` | Lecture de `data/*.json` : isotopes, scénarios, cures. |
+| `src/profiles.php` | Règles propres à certains isotopes (iode bénin, période libre), choisies par le champ `profile` de `isotopes.json`. |
 | `src/physics.php` | Formules (décroissance, géométrie, durée de restriction). |
 | `src/calculate.php` | `RivEngine\calculate(array $payload)` : validation + résultat. |
 | `data/settings.json` | Réglage du moteur : mode d'arrondi par défaut (`rounding_mode`). |
@@ -21,7 +22,7 @@ tel quel par un autre site.
 | `web/config.js` | **Titre, textes et libellés de la page** : le seul fichier à modifier pour personnaliser l'affichage. |
 | `web/index.html`, `app.js`, `style.css` | Page minimale (saisie, tableau des résultats), Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
 | `install-core.php` | Installeur autonome du « minisite » (page + API + moteur) : un seul fichier à envoyer par FTP, clé à définir en tête, se supprime après succès, conserve `config.js` et `data/settings.json` aux mises à jour. À épingler sur une étiquette (`REF`). |
-| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php`. |
+| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php`. |
 | `AGENTS.md` | Instructions aux agents et contributeurs : périmètre, règles de rétro-compatibilité, versionnement, tests à lancer. |
 | `VERSION` | Version du moteur. |
 

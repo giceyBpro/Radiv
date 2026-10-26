@@ -42,6 +42,7 @@ Règles :
 ```bash
 node core/tests/test-calcul.js   # 381 cas figés, deux modes d'arrondi : doit afficher 0 écart
 php core/tests/test-api.php      # interface d'API minimale
+php core/tests/test-profiles.php # profils de calcul (isotopes ajoutés dans les données)
 ```
 
 - `core/tests/golden-calcul.json` **est** le contrat chiffré. Il ne se modifie que pour une évolution voulue de résultats (donc une majeure) : régénérer le fichier, relire **chaque** écart, l'expliquer dans `data/SOURCES.md` et dans le message de commit.
@@ -55,6 +56,7 @@ php core/tests/test-api.php      # interface d'API minimale
 - Chaque isotope porte sa référence publiée (`reference`) ; la source doit être une publication vérifiable (DOI ou référence complète), jamais un simple lien vers un site.
 - Une période est donnée soit en `period_hours`, soit en `period_days` (multipliée par 24), soit `null` (« non défini »). Ne pas changer cette représentation : elle fixe les arrondis flottants des résultats historiques.
 - Les nombres de cures d'un isotope se déclarent **dans son entrée de `isotopes.json`** (champ facultatif `cures`, ex. `[1, 4]` ; absent = une seule cure), pas dans un fichier à part.
+- Une règle de calcul propre à un isotope se choisit par le champ facultatif `profile` de son entrée (`standard` par défaut, `benign_iodine`, `free_period`). Un isotope qui suit une règle existante s'ajoute **sans code** ; une règle nouvelle exige un profil dans `src/profiles.php` (évolution du moteur : contrat, version, cas figés). Le profil n'est jamais émis dans la réponse.
 - Les JSON restent valides, UTF-8, sans commentaires ; `settings.json` ne contient que des réglages du moteur.
 
 ## 6. Déploiement
