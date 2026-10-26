@@ -172,6 +172,7 @@ async function update(c, ref, token) {
   const version = JSON.parse(read('backend/data/var/version.json'));
   t('version enregistrée (sha, ref, par)', version.sha === '1'.repeat(40) && version.ref === 'v1.1' && version.by === 'admin@example.org');
   const lu = (await (await fetch(`${BASE}/api/public-config`)).json()).last_updated;
+  { const pcv = (await (await fetch(`${BASE}/api/public-config`)).json()).core_version; t('public-config.core_version = version du moteur actif (backend/core/VERSION)', /^\d+\.\d+\.\d+$/.test(pcv) && pcv === read('backend/core/VERSION').trim(), String(pcv)); }
   t('public-config.last_updated suit la date de la mise à jour', /^\d{4}-\d{2}-\d{2}$/.test(lu) && lu === new Date().toLocaleDateString('sv'), lu);
   const log = await ghLog();
   t("jeton envoyé à l'API GitHub", log.filter((l) => l.path.startsWith('/repos')).every((l) => l.auth === 'present'));

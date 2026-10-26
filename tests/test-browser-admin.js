@@ -119,6 +119,7 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   console.log('\n— Page d\'accueil: champs affichés d\'après la saisie annoncée par le serveur (isotope_inputs)');
   { await page.goto(`${BASE}/`);
     await page.waitForSelector('#calculateBtn', { state: 'visible', timeout: 15000 });
+    t('pied de page: version du moteur affichée discrètement', /^Moteur de calcul v\d+\.\d+\.\d+$/.test((await page.locator('#coreVersionRow').innerText()).trim()) && await page.locator('#coreVersionRow').isVisible());
     await page.selectOption('#isotope', 'iode131_benin');
     t('iode bénin: lignes activité/fixation affichées', await page.locator('#benignInlineBlock').isVisible());
     await page.selectOption('#isotope', 'radium223');
