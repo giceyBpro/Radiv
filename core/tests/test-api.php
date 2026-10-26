@@ -11,6 +11,9 @@ $t = static function (string $name, bool $ok) use (&$fail): void { echo ($ok ? '
 
 [$s, $d] = Api\handle('GET', '/config');
 $t('config : 200 et isotopes', $s === 200 && count($d['isotopes']) === 15 && $d['cure_options_by_isotope']['psma_177lu'] === [1, 4, 6]);
+$t('config : saisie attendue par isotope (iode bénin, période libre, standard)', $d['isotope_inputs']['iode131_benin']['dose_rate'] === 'ignored' && $d['isotope_inputs']['iode131_benin']['benign_activity_mbq'] === 'required'
+    && $d['isotope_inputs']['non_defini']['user_period_days'] === 'required' && $d['isotope_inputs']['radium223'] === ['dose_rate' => 'required', 'benign_activity_mbq' => 'ignored', 'benign_fixation_pct' => 'ignored', 'user_period_days' => 'optional']
+    && count($d['isotope_inputs']) === count($d['isotopes']));
 [$s, $d] = Api\handle('POST', 'calculate', '{"isotope_code":"radium223","dose_rate":100,"patient_size_cm":150}');
 $t('calcul valide : 200 et 7 scénarios + utilisateur', $s === 200 && $d['ok'] === true && count($d['rows']) === 8);
 [$s, $d] = Api\handle('POST', 'calculate', '{"isotope_code":"x"}');

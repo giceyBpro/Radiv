@@ -116,6 +116,28 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     t('API injoignable: l\'avis de maintenance reste affiché', await page.locator('#maintenanceNotice').isVisible() && !(await page.locator('#calculateBtn').isVisible()));
     await page.unroute('**/api/config'); }
 
+  console.log('\n— Page d\'accueil: champs affichés d\'après la saisie annoncée par le serveur (isotope_inputs)');
+  { await page.goto(`${BASE}/`);
+    await page.waitForSelector('#calculateBtn', { state: 'visible', timeout: 15000 });
+    await page.selectOption('#isotope', 'iode131_benin');
+    t('iode bénin: lignes activité/fixation affichées', await page.locator('#benignInlineBlock').isVisible());
+    await page.selectOption('#isotope', 'radium223');
+    t('radium: lignes activité/fixation masquées', !(await page.locator('#benignInlineBlock').isVisible()));
+    await page.selectOption('#isotope', 'non_defini');
+    t('« non défini »: période obligatoire mise en évidence, détails ouverts', await page.locator('#userPeriodDays').evaluate((el) => el.classList.contains('required-field')) && await page.locator('#optionalDetails').evaluate((el) => el.open));
+    // Un isotope ajouté côté serveur avec le profil « iode bénin » : la page l'affiche correctement sans modification
+    await page.route('**/api/config', async (route) => {
+      const res = await route.fetch(); const cfg = await res.json();
+      cfg.isotopes.push({ api_code: 'essai_benin', label: 'Essai bénin', periodHours: 100, reference: 'essai', remark: '-', situation: '' });
+      cfg.isotope_inputs.essai_benin = { dose_rate: 'ignored', benign_activity_mbq: 'required', benign_fixation_pct: 'required', user_period_days: 'optional' };
+      await route.fulfill({ response: res, json: cfg });
+    });
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('#calculateBtn', { state: 'visible', timeout: 15000 });
+    await page.selectOption('#isotope', 'essai_benin');
+    t('isotope ajouté (profil iode bénin): lignes activité/fixation affichées, champs requis signalés', await page.locator('#benignInlineBlock').isVisible() && await page.locator('#benignActivityMbq').evaluate((el) => el.classList.contains('required-field')));
+    await page.unroute('**/api/config'); }
+
   console.log('\n— Maintenance (avis affiché dans le navigateur)');
   { const mf = path.join(WWW, 'backend/data/var/maintenance.json');
     fs.writeFileSync(mf, JSON.stringify({ mode: 'site', since: '2026-01-01T00:00:00Z', by: 'test' })); fs.chmodSync(mf, 0o666);

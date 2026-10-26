@@ -20,7 +20,8 @@ function config(bool $sfmn): array
         'isotopes' => Calculation\isotopes(),
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
-    ] + (!$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
+    ] + (function_exists('RivEngine\\isotope_inputs') ? ['isotope_inputs' => Calculation\isotope_inputs()] : []) // moteur < 2.3.0 (épinglé) : la page retombe sur ses règles intégrées
+     + (!$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
     + ($sfmn ? [
         // Page de test de l'administration seulement : l'API publique ne connaît qu'un calcul.
         'calculation_modes' => ['local', 'sfmn'],
