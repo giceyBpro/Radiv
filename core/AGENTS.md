@@ -16,7 +16,7 @@ Répondre en français. Diff minimal et atomique ; aucun refactor ni formatage h
 
 Le contrat entre le moteur et les sites est constitué de :
 
-1. **les fonctions publiques** utilisées par les sites : `calculate`, `isotopes`, `scenarios`, `cure_options_by_isotope`, `get_isotope`, `normalize_cure_count`, `to_number_or_null`, `js_number_to_string`, `js_json_stringify`, `set_rounding_mode`, `version` (même nom, même signature, même type de retour) ;
+1. **les fonctions publiques** utilisées par les sites : `calculate`, `isotopes`, `scenarios`, `cure_options_by_isotope`, `get_isotope`, `normalize_cure_count`, `to_number_or_null`, `js_number_to_string`, `js_json_stringify`, `set_rounding_mode`, `version`, `isotope_inputs` (même nom, même signature, même type de retour) ;
 2. **les entrées acceptées** par `calculate()` (noms de champs, conversions, valeurs invalides rejetées avec les mêmes messages) ;
 3. **la forme de la réponse** (clés, ordre, types) et **toutes les valeurs calculées** (durées en jours, périodes, textes de conditions, messages d'erreur) ;
 4. **les codes** (`api_code` des isotopes, `audience_code` des scénarios) et les nombres de cures autorisés ;

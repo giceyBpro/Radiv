@@ -26,6 +26,19 @@
     };
 
     let isotopes = [];
+    // Saisie attendue par isotope, annoncée par le serveur (/api/config, isotope_inputs) : "required" / "optional" / "ignored"
+    // pour dose_rate, benign_activity_mbq, benign_fixation_pct, user_period_days. Repli ci-dessous si le serveur n'annonce rien.
+    let isotopeInputs = {};
+    function inputsFor(code) {
+      if (isotopeInputs[code]) return isotopeInputs[code];
+      const standard = { dose_rate: 'required', benign_activity_mbq: 'ignored', benign_fixation_pct: 'ignored', user_period_days: 'optional' };
+      if (code === 'iode131_benin') return { ...standard, dose_rate: 'ignored', benign_activity_mbq: 'required', benign_fixation_pct: 'required' };
+      if (code === 'non_defini') return { ...standard, user_period_days: 'required' };
+      return standard;
+    }
+    // Isotope dont le débit de dose se calcule depuis l'activité et la fixation (le débit n'est alors pas saisi).
+    const usesActivityInputs = (code) => inputsFor(code).dose_rate === 'ignored' && inputsFor(code).benign_activity_mbq !== 'ignored';
+    const periodRequired = (code) => inputsFor(code).user_period_days === 'required';
     let cureOptionsByIsotope = {};
     let selectedCureCount = 1;
     let selectedCalculationMode = null; // null = un seul calcul (site public) ; renseigné seulement sur la page de test de l'administration
@@ -114,7 +127,7 @@
     }
 
     function updateBenignDoseRateField() {
-      if ($('isotope').value !== 'iode131_benin') return;
+      if (!usesActivityInputs($('isotope').value)) return;
       const mbq = getNumberOrNull('benignActivityMbq');
       const fixation = getNumberOrNull('benignFixation');
       if (!(mbq > 0) || !(fixation > 0)) {
@@ -198,13 +211,14 @@
     }
 
     function getRequiredFieldIds(isotopeCode) {
-      if (isotopeCode === 'iode131_benin') {
-        return ['patientSize', 'benignActivityMbq', 'benignFixation'];
-      }
-      if (isotopeCode === 'non_defini') {
-        return ['doseRate', 'patientSize', 'userPeriodDays'];
-      }
-      return ['doseRate', 'patientSize'];
+      const inputs = inputsFor(isotopeCode);
+      return [
+        ...(inputs.dose_rate === 'required' ? ['doseRate'] : []),
+        'patientSize',
+        ...(inputs.benign_activity_mbq === 'required' ? ['benignActivityMbq'] : []),
+        ...(inputs.benign_fixation_pct === 'required' ? ['benignFixation'] : []),
+        ...(inputs.user_period_days === 'required' ? ['userPeriodDays'] : []),
+      ];
     }
 
     function applyRequiredHighlight(isotopeCode) {
@@ -227,7 +241,7 @@
         });
       }
 
-      if (isotopeCode === 'non_defini') {
+      if (periodRequired(isotopeCode)) {
         $('optionalDetails').open = true;
       }
       renderCureSelector(isotopeCode);
@@ -264,7 +278,7 @@
         provider: window.RADIOPROTECTION_SITE_NAME || window.location.hostname, // origine de la requête : le site lui-même
         ...(selectedCalculationMode ? { calculation_mode: selectedCalculationMode } : {}),
         isotope_code: isotopeCode,
-        dose_rate: isotopeCode === 'iode131_benin' ? null : getNumberOrNull('doseRate'),
+        dose_rate: inputsFor(isotopeCode).dose_rate === 'ignored' ? null : getNumberOrNull('doseRate'),
         patient_size_cm: getNumberOrNull('patientSize'),
         user_period_days: getNumberOrNull('userPeriodDays'),
         user_hours_1: getNumberOrNull('userHours1'),
@@ -332,12 +346,12 @@
     function syncUiForSelectedIsotope() {
       const selectedCode = $('isotope').value;
       const selected = isotopes.find((iso) => iso.api_code === selectedCode);
-      const isBenign = selectedCode === 'iode131_benin';
+      const isBenign = usesActivityInputs(selectedCode);
       toggleBenignRows(isBenign);
       applyRequiredHighlight(selectedCode);
       $('referenceText').textContent = selected?.reference || '-';
       $('remarkText').textContent = selected?.remark || '-';
-      $('effectivePeriodLabel').textContent = selectedCode === 'non_defini'
+      $('effectivePeriodLabel').textContent = periodRequired(selectedCode)
         ? 'Période effective à renseigner, en jours (obligatoire dans ce cas)'
         : 'Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)';
     }
@@ -349,10 +363,10 @@
       const selected = result.selected;
       if (selectedCalculationMode) selectedCalculationMode = result.calculation_mode || selectedCalculationMode;
       renderCalculationModeSelector();
-      const isBenign = selected.api_code === 'iode131_benin';
+      const isBenign = usesActivityInputs(selected.api_code);
       toggleBenignRows(isBenign);
       applyRequiredHighlight(selected.api_code);
-      const fallbackDoseRate = selected.api_code === 'iode131_benin' ? null : getNumberOrNull('doseRate');
+      const fallbackDoseRate = inputsFor(selected.api_code).dose_rate === 'ignored' ? null : getNumberOrNull('doseRate');
       const displayDoseRate = result.computed_dose_rate ?? fallbackDoseRate;
       if (isBenign) {
         if (result.computed_dose_rate === null || result.computed_dose_rate === undefined) {
@@ -370,7 +384,7 @@
         ? 'Durée restriction après chaque cure<br>(jours)'
         : 'Durée restriction<br>(jours)';
 
-      $('effectivePeriodLabel').textContent = selected.api_code === 'non_defini'
+      $('effectivePeriodLabel').textContent = periodRequired(selected.api_code)
         ? 'Période effective à renseigner, en jours (obligatoire dans ce cas)'
         : 'Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)';
 
@@ -620,6 +634,7 @@
         if (config.maintenance) { showMaintenanceNotice(); return; }
         isotopes = config.isotopes || [];
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
+        isotopeInputs = config.isotope_inputs || {};
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
         // Le site public ne propose qu'un calcul : sa configuration ne contient aucun mode. Seule la page de test de
         // l'administration en annonce plusieurs (sélecteur construit alors dynamiquement, voir ensureCalculationModeButtons).

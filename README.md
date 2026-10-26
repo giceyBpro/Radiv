@@ -98,7 +98,7 @@ Vérifié par `tests/test-install.js` (canonique, Open Graph, JSON-LD, ETag/304,
 
 ### `GET /api/config`
 
-Retourne les radiopharmaceutiques disponibles et l'isotope par défaut.
+Retourne les radiopharmaceutiques disponibles, l'isotope par défaut, les nombres de cures autorisés par isotope (`cure_options_by_isotope`) et **la saisie attendue pour chaque isotope** (`isotope_inputs`) : pour chacun, `dose_rate`, `benign_activity_mbq`, `benign_fixation_pct` et `user_period_days` valent `required` (à renseigner), `optional` ou `ignored` (inutile : une interface peut le masquer). Ces informations viennent du moteur (profil de calcul de l'isotope) : une interface qui les lit n'a pas à connaître les codes d'isotopes, et un isotope ajouté dans les données s'affiche correctement sans la modifier. Pendant une maintenance, le champ `maintenance` s'ajoute.
 
 ### `POST /api/calculate`
 
@@ -221,6 +221,8 @@ Le dossier `downloads/` contient deux modèles prêts à importer dans Xplore :
 | `MN_Consignes-radioprotection_RadIV.xml` | INSER | Insertion automatique générant la fiche consignes patient. |
 
 Voir `xplore.html` pour les instructions d'installation et les points d'adaptation par centre.
+
+Le modèle générique **reprend automatiquement** de `GET /api/config` la liste des radiopharmaceutiques, les nombres de cures autorisés et la saisie attendue (débit de dose, ou activité et fixation) : un isotope ajouté dans le moteur apparaît et se saisit correctement sans modifier le modèle. Si RadIV est injoignable, le script retombe sur ses règles intégrées (isotopes historiques). Les isotopes qui exigent une période effective (« Non défini ») sont écartés, le modèle n'ayant pas de champ pour la saisir. Test : `node tests/test-xplore.js` (le script est exécuté avec un faux `Tools` branché sur le moteur).
 
 ## Lancement local
 

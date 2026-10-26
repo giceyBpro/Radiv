@@ -12,7 +12,7 @@ tel quel par un autre site.
 | `src/rounding.php` | Mode d'arrondi (`round` ou `floor`), réglable par `RivEngine\set_rounding_mode()`. |
 | `src/compat.php` | Conversions identiques à JavaScript (garantit des résultats stables pour les clients existants). |
 | `src/catalog.php` | Lecture de `data/*.json` : isotopes, scénarios, cures. |
-| `src/profiles.php` | Règles propres à certains isotopes (iode bénin, période libre), choisies par le champ `profile` de `isotopes.json`. |
+| `src/profiles.php` | Règles propres à certains isotopes (iode bénin, période libre), choisies par le champ `profile` de `isotopes.json`. `isotope_inputs()` annonce aux interfaces les champs à saisir pour chaque isotope (`required` / `optional` / `ignored`). |
 | `src/physics.php` | Formules (décroissance, géométrie, durée de restriction). |
 | `src/calculate.php` | `RivEngine\calculate(array $payload)` : validation + résultat. |
 | `data/settings.json` | Réglage du moteur : mode d'arrondi par défaut (`rounding_mode`). |

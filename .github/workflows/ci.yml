@@ -30,6 +30,8 @@ jobs:
         run: node tests/test-core-lab.js
       - name: Version d'app.js dans les pages HTML (cache des navigateurs)
         run: node tests/check-asset-version.js
+      - name: Modèle Xplore (script exécuté avec un faux Tools, sans réseau)
+        run: node tests/test-xplore.js
       - name: Adresse IP derrière un proxy, réglages par défaut et cache
         run: |
           php tests/test-client-ip.php

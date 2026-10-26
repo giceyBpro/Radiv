@@ -26,6 +26,7 @@ function handle(string $method, string $route, string $body = ''): array
             'isotopes' => Engine\isotopes(),
             'default_isotope_code' => 'iode131_25_fixation',
             'cure_options_by_isotope' => Engine\cure_options_by_isotope(),
+            'isotope_inputs' => Engine\isotope_inputs(),
         ]];
     }
     if ($route === 'calculate') {

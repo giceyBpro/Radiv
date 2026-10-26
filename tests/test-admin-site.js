@@ -100,6 +100,7 @@ async function update(c, ref, token) {
       t('calculation_mode ignoré sans erreur (sfmn, local, valeur étrange): même réponse que sans', plain.ok === true && JSON.stringify(plain) === JSON.stringify(sfmn) && JSON.stringify(plain) === JSON.stringify(local) && JSON.stringify(plain) === JSON.stringify(weird));
       t('réponse sans champ calculation_mode ni mention dans les champs attendus', plain.calculation_mode === undefined && !JSON.stringify(await call({ isotope_code: 'x' })).includes('calculation_mode'));
       const cfg = await (await fetch(`${BASE}/api/config`)).json();
+      t('GET /api/config annonce la saisie attendue par isotope', cfg.isotope_inputs && cfg.isotope_inputs.iode131_benin.dose_rate === 'ignored' && cfg.isotope_inputs.iode131_benin.benign_activity_mbq === 'required' && cfg.isotope_inputs.non_defini.user_period_days === 'required' && cfg.isotope_inputs.radium223.dose_rate === 'required');
       t('GET /api/config sans mode de calcul ni adresse de l\'outil SFMN', cfg.calculation_modes === undefined && cfg.default_calculation_mode === undefined && cfg.sfmn_calculator_url === undefined); }
     t('…les requêtes normales (JSON, GET) passent', (await fetch(`${BASE}/api/config`)).status === 200 && (await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, calculation_mode: 'local' }) })).status === 200);
   }

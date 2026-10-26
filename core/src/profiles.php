@@ -9,6 +9,7 @@
 //   default_period_days($selected)              : période par défaut en jours, null si l'appelant doit la fournir
 //   dose_rate_errors(...)                       : messages de validation du débit (ou de ses ingrédients)
 //   period_errors($code, $effectiveDays)        : messages de validation de la période
+//   inputs                                      : champs de saisie de l'isotope, annoncés aux interfaces (isotope_inputs())
 //   expected_payload($code, $common)            : champs attendus, rappelés dans les erreurs
 //   failure_reason($code)                       : phrase d'explication de l'erreur de validation
 //
@@ -33,6 +34,7 @@ function profiles(): array
         'dose_rate_errors' => static fn (string $code, ?float $activityMbq, ?float $fixationPct, ?float $doseRate): array =>
             !($doseRate > 0) ? ['Pour cet isotope, dose_rate doit être strictement positif.'] : [],
         'period_errors' => static fn (string $code, ?float $effectiveDays): array => [],
+        'inputs' => ['dose_rate' => 'required', 'benign_activity_mbq' => 'ignored', 'benign_fixation_pct' => 'ignored', 'user_period_days' => 'optional'],
         'expected_payload' => static fn (string $code, array $common): array => [
             'common' => $common,
             'isotope_specific_required' => ['dose_rate'],
@@ -55,6 +57,7 @@ function profiles(): array
             if (($activityMbq > 0) && ($fixationPct > 0) && !($doseRate > 0)) $errors[] = "Le débit calculé automatiquement pour {$code} est invalide. Vérifiez benign_activity_mbq et benign_fixation_pct.";
             return $errors;
         },
+        'inputs' => ['dose_rate' => 'ignored', 'benign_activity_mbq' => 'required', 'benign_fixation_pct' => 'required', 'user_period_days' => 'optional'],
         'expected_payload' => static fn (string $code, array $common): array => [
             'common' => $common,
             'isotope_specific_required' => ['benign_activity_mbq', 'benign_fixation_pct (en %, ex. 15)'],
@@ -68,6 +71,7 @@ function profiles(): array
         'default_period_days' => static fn (array $selected): ?float => null,
         'period_errors' => static fn (string $code, ?float $effectiveDays): array =>
             !($effectiveDays > 0) ? ["Avec isotope_code={$code}, user_period_days devient obligatoire et doit être > 0."] : [],
+        'inputs' => ['dose_rate' => 'required', 'benign_activity_mbq' => 'ignored', 'benign_fixation_pct' => 'ignored', 'user_period_days' => 'required'],
         'expected_payload' => static fn (string $code, array $common): array => [
             'common' => $common,
             'isotope_specific_required' => ['dose_rate', 'user_period_days'],
@@ -93,4 +97,15 @@ function profile_of(array $selected): array
 function compute_dose_rate(array $selected, ?float $benignActivityMbq, ?float $benignFixationPct, mixed $doseRate): ?float
 {
     return profile_of($selected)['dose_rate']($benignActivityMbq, $benignFixationPct, $doseRate);
+}
+
+// Saisie attendue pour chaque isotope, à l'usage des interfaces : code de l'isotope → champ de l'API → "required"
+// (à renseigner), "optional" (facultatif) ou "ignored" (inutile : l'interface peut le masquer). Une interface construite
+// sur cette table n'a plus besoin de connaître les codes d'isotopes : un isotope ajouté dans les données avec un profil
+// existant s'affiche correctement sans modifier l'interface.
+function isotope_inputs(): array
+{
+    $out = [];
+    foreach (isotopes() as $selected) $out[(string) $selected['api_code']] = profile_of($selected)['inputs'];
+    return $out;
 }
