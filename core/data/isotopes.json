@@ -37,7 +37,8 @@
     "period_days": 11.43,
     "reference": "Période physique du radium-223",
     "remark": "Demi vie physique",
-    "situation": ""
+    "situation": "",
+    "cures": [1]
   },
   {
     "api_code": "psma_177lu",
@@ -45,7 +46,8 @@
     "period_hours": 40,
     "reference": "Kratochwil et al., EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019",
     "remark": "Valeur la plus longue proposée",
-    "situation": ""
+    "situation": "",
+    "cures": [1, 4, 6]
   },
   {
     "api_code": "synovectomie_90y",
@@ -101,7 +103,8 @@
     "period_hours": 100,
     "reference": "Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019",
     "remark": "Demi vie effective",
-    "situation": ""
+    "situation": "",
+    "cures": [1, 4]
   },
   {
     "api_code": "mibg_131i",

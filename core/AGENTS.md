@@ -54,6 +54,7 @@ php core/tests/test-api.php      # interface d'API minimale
 - Les valeurs scientifiques vivent **uniquement** dans les JSON, jamais en dur dans le code.
 - Chaque isotope porte sa référence publiée (`reference`) ; la source doit être une publication vérifiable (DOI ou référence complète), jamais un simple lien vers un site.
 - Une période est donnée soit en `period_hours`, soit en `period_days` (multipliée par 24), soit `null` (« non défini »). Ne pas changer cette représentation : elle fixe les arrondis flottants des résultats historiques.
+- Les nombres de cures d'un isotope se déclarent **dans son entrée de `isotopes.json`** (champ facultatif `cures`, ex. `[1, 4]` ; absent = une seule cure), pas dans un fichier à part.
 - Les JSON restent valides, UTF-8, sans commentaires ; `settings.json` ne contient que des réglages du moteur.
 
 ## 6. Déploiement

@@ -1,6 +1,6 @@
 # Sources et choix des données du moteur
 
-Les valeurs de `isotopes.json`, `scenarios.json` et `cures.json` proviennent des publications citées dans le champ
+Les valeurs de `isotopes.json` (qui porte aussi les nombres de cures autorisés, champ `cures`) et `scenarios.json` proviennent des publications citées dans le champ
 `reference` de chaque isotope, et du formalisme suivant :
 
 - Carlier T, Denizot B, Prevot-Bitot N, Nioche C, Courbon F, Cachin F. *Harmonization of exposure constraints for
