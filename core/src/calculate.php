@@ -77,16 +77,14 @@ function calculate(array $payload): array
 
     $rows = [];
     foreach (scenarios() as $scenario) {
-        // Cures multiples: la limite dosimétrique de chaque scénario est divisée par le nombre
-        // de cures, SAUF transport_commun. Pour les autres scénarios (conjoint, enfant...),
-        // c'est la même personne qui cumule l'exposition cure après cure, d'où la division.
-        // Pour le transport en commun, chaque cure expose des personnes différentes (autres
-        // passagers) : il n'y a pas de cumul à répartir, donc pas de division. Volontaire,
-        // conforme à l'article de référence.
-        $isTransportCommun = $scenario['audience_code'] === 'transport_commun';
-        $limitForScenario = $isTransportCommun ? $scenario['limit'] : $scenario['limit'] / $cure['value'];
+        // Cures multiples : si le scénario déclare shares_limit_across_cures (vrai par défaut), la même personne cumule
+        // l'exposition cure après cure (conjoint, enfant...) : la limite dosimétrique est divisée par le nombre de cures.
+        // Sinon (ex. transports en commun : autres passagers à chaque cure), il n'y a pas de cumul à répartir et la limite
+        // reste entière. Ce choix est une donnée du scénario (data/scenarios.json), conforme à l'article de référence.
+        $sharesLimit = $scenario['shares_limit_across_cures'];
+        $limitForScenario = $sharesLimit ? $scenario['limit'] / $cure['value'] : $scenario['limit'];
         $conditionSuffix = $cure['value'] > 1
-            ? ($isTransportCommun ? ' (par cure, non cumulée)' : " (répartie sur {$cure['value']} cures)")
+            ? ($sharesLimit ? " (répartie sur {$cure['value']} cures)" : ' (par cure, non cumulée)')
             : '';
         $rows[] = [
             'audience_code' => $scenario['audience_code'],

@@ -489,7 +489,7 @@ function catalog_tests(): array
     foreach (array_diff_key($sa, $sb) as $k => $_) $lines[] = "Scénario RETIRÉ : {$k}";
     foreach (array_diff_key($sb, $sa) as $k => $_) $lines[] = "Scénario ajouté : {$k}";
     foreach (array_intersect_key($sa, $sb) as $k => $row) {
-        foreach (['exposures', 'limit', 'label'] as $field) {
+        foreach (['exposures', 'limit', 'label', 'shares_limit_across_cures', 'condition'] as $field) {
             if (canonical($row[$field] ?? null) !== canonical($sb[$k][$field] ?? null)) $lines[] = "{$k} : {$field} passe de " . canonical($row[$field] ?? null) . ' à ' . canonical($sb[$k][$field] ?? null);
         }
     }

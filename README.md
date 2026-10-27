@@ -137,6 +137,8 @@ En mode `local`, l'arrondi des durées de restriction (en jours) dépend de `RES
 
 `SFMN_CALCULATOR_URL` est l'adresse de l'outil en ligne de la SFMN : proposée en lien (« accéder à l'outil de la SFMN ») sur l'accueil, les mentions légales, la version imprimable et la version patient, avec la mention d'indépendance du site ; elle est lue à chaud dans `config/runtime.env` (rendue côté serveur pour l'accueil et les mentions légales, par `/api/public-config` pour les autres pages ; le fichier HTML porte une adresse de repli). Elle sert aussi à la seule page de test de l'administration (voir plus bas) : l'interrogation de cet outil n'est **pas** accessible par l'API publique, qui ne calcule qu'avec le moteur (`core/`).
 
+**Scénarios** : les lignes de résultat (`rows`, `recommendations_days`) correspondent aux scénarios déclarés dans `core/data/scenarios.json` (guide : `core/data/SCENARIOS.md`). Ajouter un scénario dans ce fichier ajoute automatiquement une ligne au tableau de la page d'accueil, à la version imprimable et aux consignes patient (consigne générique) ; le modèle Xplore l'ajoute aussi (consigne générique avec le libellé annoncé). Le moteur ne se limite donc pas à 7 lignes : les interfaces doivent afficher toutes les lignes reçues.
+
 ### Exemple de réponse
 
 ```json
