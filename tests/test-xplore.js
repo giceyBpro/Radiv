@@ -34,7 +34,7 @@ const source = found[0];
 t('le script ne contient plus de référence au mode de calcul', !/calculation_mode|sfmn/i.test(source));
 
 // Copie du moteur (avec un isotope ajouté dans les données) pour vérifier la reprise automatique.
-function engineCopy(extra) {
+function engineCopy(extra, extraScenarios) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xplore-core-'));
   for (const sub of ['src', 'data', 'api', 'VERSION']) fs.cpSync(path.join(root, 'core', sub), path.join(dir, sub), { recursive: true });
   if (extra) {
@@ -42,6 +42,10 @@ function engineCopy(extra) {
     const rows = JSON.parse(fs.readFileSync(f, 'utf8'));
     rows.push(...extra);
     fs.writeFileSync(f, JSON.stringify(rows));
+  }
+  if (extraScenarios) {
+    const f = path.join(dir, 'data/scenarios.json');
+    fs.writeFileSync(f, JSON.stringify([...JSON.parse(fs.readFileSync(f, 'utf8')), ...extraScenarios]));
   }
   return dir;
 }
@@ -78,6 +82,7 @@ async function run(core, trigger, fields, { offline = false } = {}) {
     { api_code: 'essai_standard', label: 'Essai standard', period_hours: 100, reference: 'essai', remark: '-', situation: '', cures: [1, 3] },
   ];
   const withNew = engineCopy(extra);
+  const withScenario = engineCopy(null, [{ audience_code: 'voisin_palier', label: 'Contact régulier avec un voisin de palier', exposures: [{ hours: 1, distance: 1, unit_factor_at_1m: true }], limit: 1 }]);
   const size = 1.7;
 
   let r = await run(base, 'LOAD', { MN_TYPE_MRP: 'radium223' });
@@ -109,13 +114,18 @@ async function run(core, trigger, fields, { offline = false } = {}) {
   r = await run(withNew, 'MN_API_RADIV', { MN_TYPE_MRP: 'essai_standard', TAILLE: size, 'MN_DOSI-1-M': 50, MN_CURE_COUNT: 3 });
   t('nouvel isotope standard avec 3 cures: calcul correct', /Calcul effectué pour 3 cures/.test(r.values.MN_CONSIGNES_RADIOPRO), String(r.values.MN_CONSIGNES_RADIOPRO).slice(0, 220));
 
+  // Scénario ajouté dans les données du moteur : une consigne de plus, sans modifier le modèle
+  r = await run(withScenario, 'MN_API_RADIV', { MN_TYPE_MRP: 'radium223', TAILLE: size, 'MN_DOSI-1-M': 100, MN_CURE_COUNT: 1 });
+  t('scénario ajouté dans le moteur: consigne générique avec son libellé et sa durée, sans modifier le modèle', /Contact régulier avec un voisin de palier, alors pendant \d+ jours?, il faut limiter les contacts/.test(r.values.MN_CONSIGNES_RADIOPRO), String(r.values.MN_CONSIGNES_RADIOPRO).slice(-300));
+  t('…les consignes détaillées des scénarios historiques sont conservées', /Si votre conjoint\(e\) a plus de 60 ans, alors pendant 25 jours/.test(r.values.MN_CONSIGNES_RADIOPRO));
+
   // RadIV injoignable pour la configuration : règles intégrées (isotopes historiques)
   r = await run(base, 'MN_TYPE_MRP', { MN_TYPE_MRP: 'psma_177lu', MN_CURE_COUNT: 1 }, { offline: true });
   t('configuration injoignable: cures du PSMA-177Lu par les règles intégrées', (r.lists.MN_CURE_COUNT || []).map((x) => x.id).join() === '1,4,6');
   r = await run(base, 'LOAD', { MN_TYPE_MRP: 'radium223' }, { offline: true });
   t('configuration injoignable: liste de secours des isotopes', (r.lists.MN_TYPE_MRP || []).length === 14);
 
-  for (const d of [base, withNew]) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of [base, withNew, withScenario]) fs.rmSync(d, { recursive: true, force: true });
   console.log(`\n${pass} réussis, ${fail} échec(s)`);
   process.exit(fail ? 1 : 0);
 })();

@@ -75,6 +75,7 @@ automatiquement en cas d'échec.
 | Je veux… | Je fais… |
 |---|---|
 | Vérifier que tout fonctionne | `node core/tests/test-calcul.js` (doit afficher « 0 écart »), `php core/tests/test-api.php`, `php core/tests/test-profiles.php` |
+| Ajouter ou modifier un scénario d'exposition | `data/scenarios.json` (voir `data/SCENARIOS.md`) : une ligne de résultat de plus partout, sans code |
 | Ajouter un isotope | Une entrée dans `data/isotopes.json` (période, référence publiée, `cures`, `profile` si besoin), un cas de test, `VERSION` +1 mineure — voir `AGENTS.md` |
 | Changer un titre, un libellé de la page | `web/config.js` (ou `riv/config.js` sur le site) |
 | Connaître la version | `RivEngine\version()` ou le fichier `VERSION` |
@@ -92,13 +93,14 @@ automatiquement en cas d'échec.
 | `src/physics.php` | Formules (décroissance, géométrie, durée de restriction). |
 | `src/calculate.php` | `RivEngine\calculate(array $payload)` : validation + résultat. |
 | `data/settings.json` | Réglage du moteur : mode d'arrondi par défaut (`rounding_mode`). |
+| `data/scenarios.json` | **Les scénarios d'exposition** (conjoint, enfant, collègues, transports…) : en ajouter un crée automatiquement une ligne dans les résultats de tous les sites. Guide : `data/SCENARIOS.md`. |
 | `data/*.json` | **Les données** (à modifier ici, pas dans le code) ; `data/SOURCES.md` : références et choix. |
 | `api/handler.php` | Interface d'API minimale (`GET config`, `POST calculate`) sans état ni dépendance. |
 | `api/index.php` | Exemple autonome : `php -S 127.0.0.1:8080 core/api/index.php`. |
 | `web/config.js` | **Titre, textes et libellés de la page** : le seul fichier à modifier pour personnaliser l'affichage. |
 | `web/index.html`, `app.js`, `style.css` | Page minimale (saisie, tableau des résultats). Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
 | `install-core.php` | Installeur autonome du « minisite » (page + API + moteur) : un seul fichier à envoyer par FTP, clé à définir en tête, se supprime après succès, conserve `config.js` et `data/settings.json` aux mises à jour. À épingler sur une étiquette (`REF`). |
-| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php`. |
+| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php` ; `php core/tests/test-scenarios.php`. |
 | `AGENTS.md` | Instructions aux agents et contributeurs : périmètre, règles de rétro-compatibilité, versionnement, tests à lancer. |
 | `VERSION` | Version du moteur. |
 

@@ -47,7 +47,11 @@ t('…et son application est refusée', php('apply').ok === false);
 fs.writeFileSync(path.join(site, 'backend/core/data/settings.json'), '{"rounding_mode":"floor"}\n');
 r = candidate((d) => {
   fs.writeFileSync(path.join(d, 'VERSION'), '3.0.0\n');
-  edit(d, 'data/scenarios.json', '"limit": 1,\n    "condition": "Exposition : 6 h à 1 m', '"limit": 2,\n    "condition": "Exposition : 6 h à 1 m');
+  // Limite du scénario « collègues de travail » portée de 1 à 2 mSv (dernier scénario du fichier)
+  const f = path.join(d, 'data/scenarios.json');
+  const rows = JSON.parse(fs.readFileSync(f, 'utf8'));
+  rows.find((x) => x.audience_code === 'collegues_travail').limit = 2;
+  fs.writeFileSync(f, JSON.stringify(rows));
 });
 t('évolution de données → verdict « evolution »', r.verdict === 'evolution', r.headline);
 t('…résultats : écarts détaillés par scénario', test(r, 'resultats').status === 'info' && test(r, 'resultats').details.some((l) => l.startsWith('collegues_travail')), JSON.stringify(test(r, 'resultats').details));
@@ -67,6 +71,16 @@ t('…dossiers temporaires nettoyés', !fs.existsSync(path.join(site, 'backend/c
 // 2 bis. Champ ajouté à la réponse : évolution compatible (sans danger), signalée
 r = candidate((d) => edit(d, 'src/calculate.php', "return ['ok' => true] + $common", "return ['ok' => true, 'moteur' => 'x'] + $common"));
 t('champ ajouté → évolution compatible signalée', r.verdict === 'evolution' && test(r, 'structure').status === 'info' && test(r, 'structure').details.some((l) => /Champ ajouté/.test(l)), r.headline);
+
+// 2 ter. Scénario d'exposition ajouté dans les données: évolution signalée (ligne de plus), jamais bloquante
+r = candidate((d) => {
+  const f = path.join(d, 'data/scenarios.json');
+  const rows = JSON.parse(fs.readFileSync(f, 'utf8'));
+  rows.push({ audience_code: 'voisin_palier', label: 'Voisin de palier', exposures: [{ hours: 1, distance: 1, unit_factor_at_1m: true }], limit: 1 });
+  fs.writeFileSync(f, JSON.stringify(rows));
+});
+t('scénario ajouté dans les données → évolution, ajout signalé', r.verdict === 'evolution' && test(r, 'scenarios').status === 'info' && test(r, 'scenarios').details.some((l) => /Scénario ajouté : voisin_palier/.test(l)), r.headline);
+t('…la structure des réponses reste compatible (ligne de plus seulement)', test(r, 'structure').status !== 'fail');
 
 // 3. Code dangereux : refusé, jamais exécuté
 r = candidate((d) => edit(d, 'src/physics.php', 'function decay_fraction', "function leak() { return shell_exec('id'); }\nfunction decay_fraction"));

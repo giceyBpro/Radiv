@@ -139,6 +139,31 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     t('isotope ajouté (profil iode bénin): lignes activité/fixation affichées, champs requis signalés', await page.locator('#benignInlineBlock').isVisible() && await page.locator('#benignActivityMbq').evaluate((el) => el.classList.contains('required-field')));
     await page.unroute('**/api/config'); }
 
+  console.log('\n— Scénario ajouté dans le moteur: une ligne de plus dans les tableaux, sans modifier les pages');
+  { const extraRow = { audience_code: 'voisin_palier', label: 'Contact régulier avec un voisin de palier', condition: 'Exposition : 1 h à 1 m · limite de dose : 1 mSv', value: 12 };
+    await page.route('**/api/calculate', async (route) => {
+      const res = await route.fetch(); const body = await res.json();
+      body.rows.splice(body.rows.length - 1, 0, extraRow); body.recommendations_days.voisin_palier = 12;
+      await route.fulfill({ response: res, json: body });
+    });
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('#calculateBtn', { state: 'visible', timeout: 15000 });
+    await page.selectOption('#isotope', 'radium223'); await page.fill('#doseRate', '100'); await page.fill('#patientSize', '170');
+    await page.click('#calculateBtn');
+    await page.waitForSelector('#resultsBody tr', { timeout: 15000 });
+    const rowsText = await page.locator('#resultsBody tr').allInnerTexts();
+    t('page d\'accueil: 8 lignes (7 scénarios + le nouveau), la nouvelle avec libellé, durée et conditions', rowsText.length === 8 && rowsText.some((x) => /voisin de palier/.test(x) && /12/.test(x) && /1 h à 1 m/.test(x)), rowsText.length + ' lignes');
+    await page.unroute('**/api/calculate');
+    // consignes patient et version imprimable: lignes générées d'après result.rows
+    const payload = { generated_at: new Date().toISOString(), form: { isotope_label: 'Radium-223' }, result: { ok: true, selected: { label: 'Radium-223' }, effective_days: 11.43, effective_hours: 274.32, rows: [{ audience_code: 'collegues_travail', label: 'Présence auprès de collègues de travail', value: 38 }, extraRow] } };
+    await page.goto(`${BASE}/`);
+    await page.evaluate((p) => { localStorage.setItem('radioprotection_explain_payload', JSON.stringify(p)); localStorage.setItem('radioprotection_print_payload', JSON.stringify(p)); }, payload);
+    await page.goto(`${BASE}/explain`);
+    t('consignes patient: ligne du nouveau scénario (libellé, durée, consigne générique)', /voisin de palier \(12 jours\)/.test(await page.locator('#rulesList').innerText()) && /gardez une distance raisonnable/.test(await page.locator('#rulesList').innerText()));
+    await page.goto(`${BASE}/print`);
+    t('version imprimable: ligne du nouveau scénario', /voisin de palier/.test(await page.locator('#resultRows').innerText()));
+    await page.evaluate(() => { localStorage.removeItem('radioprotection_explain_payload'); localStorage.removeItem('radioprotection_print_payload'); }); }
+
   console.log('\n— Maintenance (avis affiché dans le navigateur)');
   { const mf = path.join(WWW, 'backend/data/var/maintenance.json');
     fs.writeFileSync(mf, JSON.stringify({ mode: 'site', since: '2026-01-01T00:00:00Z', by: 'test' })); fs.chmodSync(mf, 0o666);
