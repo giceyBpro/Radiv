@@ -205,6 +205,13 @@
       });
     }
 
+    // Période effective : saisissable seulement pour l'isotope qui n'en a pas par défaut (« Non défini »), sous la taille du patient.
+    // (Les pages anciennes sans ce bloc gardent leur champ facultatif.)
+    function togglePeriodRow(required) {
+      const block = $('periodInlineBlock');
+      if (block) block.hidden = !required;
+    }
+
     function toggleBenignRows(isBenign) {
       $('benignInlineBlock').hidden = !isBenign;
       $('doseRate').readOnly = isBenign;
@@ -248,9 +255,6 @@
         });
       }
 
-      if (periodRequired(isotopeCode)) {
-        $('optionalDetails').open = true;
-      }
       renderCureSelector(isotopeCode);
     }
 
@@ -287,7 +291,8 @@
         isotope_code: isotopeCode,
         dose_rate: inputsFor(isotopeCode).dose_rate === 'ignored' ? null : getNumberOrNull('doseRate'),
         patient_size_cm: getNumberOrNull('patientSize'),
-        user_period_days: getNumberOrNull('userPeriodDays'),
+        // Période imposée : seulement pour l'isotope qui l'exige (la page n'affiche le champ que dans ce cas).
+        user_period_days: !$('periodInlineBlock') || periodRequired(isotopeCode) ? getNumberOrNull('userPeriodDays') : null,
         user_hours_1: getNumberOrNull('userHours1'),
         user_distance_1: getNumberOrNull('userDistance1'),
         user_hours_2: getNumberOrNull('userHours2'),
@@ -355,6 +360,7 @@
       const selected = isotopes.find((iso) => iso.api_code === selectedCode);
       const isBenign = usesActivityInputs(selectedCode);
       toggleBenignRows(isBenign);
+      togglePeriodRow(periodRequired(selectedCode));
       applyRequiredHighlight(selectedCode);
       $('referenceText').textContent = selected?.reference || '-';
       $('remarkText').textContent = selected?.remark || '-';
@@ -372,6 +378,7 @@
       renderCalculationModeSelector();
       const isBenign = usesActivityInputs(selected.api_code);
       toggleBenignRows(isBenign);
+      togglePeriodRow(periodRequired(selected.api_code));
       applyRequiredHighlight(selected.api_code);
       const fallbackDoseRate = inputsFor(selected.api_code).dose_rate === 'ignored' ? null : getNumberOrNull('doseRate');
       const displayDoseRate = result.computed_dose_rate ?? fallbackDoseRate;

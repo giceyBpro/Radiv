@@ -125,7 +125,16 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     await page.selectOption('#isotope', 'radium223');
     t('radium: lignes activité/fixation masquées', !(await page.locator('#benignInlineBlock').isVisible()));
     await page.selectOption('#isotope', 'non_defini');
-    t('« non défini »: période obligatoire mise en évidence, détails ouverts', await page.locator('#userPeriodDays').evaluate((el) => el.classList.contains('required-field')) && await page.locator('#optionalDetails').evaluate((el) => el.open));
+    t('« non défini »: période obligatoire affichée sous la taille du patient, mise en évidence', await page.locator('#periodInlineBlock').isVisible() && await page.locator('#userPeriodDays').evaluate((el) => el.classList.contains('required-field')) && await page.locator('#periodInlineBlock').evaluate((el) => el.previousElementSibling && el.previousElementSibling.id === 'benignInlineBlock'));
+    await page.selectOption('#isotope', 'radium223');
+    t('autres isotopes: aucun champ de période (pas de forçage possible)', !(await page.locator('#periodInlineBlock').isVisible()) && (await page.locator('#userPeriodDays').count()) === 1 && (await page.locator('#optionalDetails #userPeriodDays').count()) === 0);
+    await page.selectOption('#isotope', 'non_defini'); await page.fill('#userPeriodDays', '4'); await page.fill('#doseRate', '50'); await page.fill('#patientSize', '170');
+    const sentPeriod = []; page.on('request', (rq) => { if (/\/calculate$/.test(rq.url())) sentPeriod.push(rq.postData()); });
+    await page.click('#calculateBtn'); await page.waitForSelector('#resultsBody tr', { timeout: 15000 });
+    t('« non défini »: la période saisie est envoyée et utilisée (4 jours)', /"user_period_days":4/.test(sentPeriod[sentPeriod.length - 1] || '') && /4 jours|, 4,|\b4\b/.test(await page.locator('#effectiveDaysText').innerText()));
+    await page.selectOption('#isotope', 'radium223'); await page.fill('#doseRate', '100'); await page.click('#calculateBtn');
+    await page.waitForFunction(() => /11[,.]43/.test(document.querySelector('#effectiveDaysText')?.textContent || ''), null, { timeout: 15000 });
+    t('retour à un autre isotope: période vidée et non envoyée (null)', /"user_period_days":null/.test(sentPeriod[sentPeriod.length - 1] || ''));
     // Un isotope ajouté côté serveur avec le profil « iode bénin » : la page l'affiche correctement sans modification
     await page.route('**/api/config', async (route) => {
       const res = await route.fetch(); const cfg = await res.json();
