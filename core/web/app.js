@@ -7,6 +7,17 @@
   const base = (C.apiBase || '').replace(/\/$/, '');
   let isotopes = [];
   let cureOptions = {};
+  // Saisie attendue par isotope, annoncée par le moteur (GET config, isotope_inputs) : "required" / "optional" / "ignored" pour
+  // dose_rate, benign_activity_mbq, benign_fixation_pct, user_period_days. Un isotope ajouté dans les données du moteur avec un
+  // profil existant s'affiche donc correctement sans modifier cette page. Repli si le moteur n'annonce rien (ancien moteur).
+  let inputs = {};
+  function inputsFor(code) {
+    if (inputs[code]) return inputs[code];
+    const standard = { dose_rate: 'required', benign_activity_mbq: 'ignored', benign_fixation_pct: 'ignored', user_period_days: 'optional' };
+    if (code === 'iode131_benin') return Object.assign({}, standard, { dose_rate: 'ignored', benign_activity_mbq: 'required', benign_fixation_pct: 'required' });
+    if (code === 'non_defini') return Object.assign({}, standard, { user_period_days: 'required' });
+    return standard;
+  }
 
   // Textes issus de config.js (textContent : jamais de HTML injecté).
   document.title = C.title;
@@ -32,8 +43,12 @@
     $('cures').innerHTML = '';
     cures.forEach((n) => { const o = document.createElement('option'); o.value = n; o.textContent = n; $('cures').appendChild(o); });
     $('cureField').hidden = cures.length < 2;
-    $('benignFields').hidden = code !== 'iode131_benin';
-    $('doseRateField').hidden = code === 'iode131_benin';
+    const wanted = inputsFor(code);
+    $('benignFields').hidden = wanted.benign_activity_mbq === 'ignored' && wanted.benign_fixation_pct === 'ignored';
+    $('doseRateField').hidden = wanted.dose_rate === 'ignored';
+    // Période effective : libellé « obligatoire » quand le moteur l'exige (isotope sans période par défaut).
+    const periodLabel = document.querySelector('[data-label="periodDays"]');
+    if (periodLabel) periodLabel.textContent = wanted.user_period_days === 'required' ? C.labels.periodDaysRequired : C.labels.periodDays;
   }
 
   function num(id) { return $(id).value.trim() === '' ? null : Number($(id).value); }
@@ -41,8 +56,10 @@
   function payload() {
     const p = { isotope_code: $('isotope').value, patient_size_cm: num('patientSize'), user_period_days: num('periodDays') };
     if (!$('cureField').hidden) p.cure_count = Number($('cures').value);
-    if ($('isotope').value === 'iode131_benin') { p.benign_activity_mbq = num('benignActivity'); p.benign_fixation_pct = num('benignFixation'); }
-    else p.dose_rate = num('doseRate');
+    const wanted = inputsFor($('isotope').value);
+    if (wanted.benign_activity_mbq !== 'ignored') p.benign_activity_mbq = num('benignActivity');
+    if (wanted.benign_fixation_pct !== 'ignored') p.benign_fixation_pct = num('benignFixation');
+    if (wanted.dose_rate !== 'ignored') p.dose_rate = num('doseRate');
     Object.assign(p, { user_hours_1: num('customHours1'), user_distance_1: num('customDistance1'), user_hours_2: num('customHours2'), user_limit: num('customLimit') });
     return p;
   }
@@ -71,6 +88,7 @@
       const config = await (await fetch(base + '/config')).json();
       isotopes = config.isotopes;
       cureOptions = config.cure_options_by_isotope || {};
+      inputs = config.isotope_inputs || {};
       isotopes.forEach((iso) => { const o = document.createElement('option'); o.value = iso.api_code; o.textContent = iso.label; $('isotope').appendChild(o); });
       $('isotope').value = config.default_isotope_code;
       refreshFields();

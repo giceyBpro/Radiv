@@ -49,6 +49,7 @@ php core/tests/test-scenarios.php # scénarios déclarés dans les données (ajo
 - `core/tests/golden-calcul.json` **est** le contrat chiffré. Il ne se modifie que pour une évolution voulue de résultats (donc une majeure) : régénérer le fichier, relire **chaque** écart, l'expliquer dans `data/SOURCES.md` et dans le message de commit.
 - Ajouter un cas figé pour tout nouveau comportement (nouvel isotope, nouveau scénario, nouvelle erreur), en plus du code.
 - Vérifier aussi les tests côté site si le dépôt radiv est présent : `node tests/test-core-contract.js` (copie du contrat propre au site, volontairement distincte) et `node tests/test-core-lab.js` (zone de test des candidats).
+- Si le dépôt radiv est présent : `NODE_PATH=$(npm root -g) node tests/test-minisite.js` vérifie la page minimale (`web/`) dans un navigateur (isotope et scénario ajoutés dans les données, sans modifier la page).
 - Aucun test ne doit être désactivé, ignoré ou assoupli pour obtenir un résultat vert.
 
 ## 5. Données (`data/`)

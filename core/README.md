@@ -98,7 +98,7 @@ automatiquement en cas d'échec.
 | `api/handler.php` | Interface d'API minimale (`GET config`, `POST calculate`) sans état ni dépendance. |
 | `api/index.php` | Exemple autonome : `php -S 127.0.0.1:8080 core/api/index.php`. |
 | `web/config.js` | **Titre, textes et libellés de la page** : le seul fichier à modifier pour personnaliser l'affichage. |
-| `web/index.html`, `app.js`, `style.css` | Page minimale (saisie, tableau des résultats). Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
+| `web/index.html`, `app.js`, `style.css` | Page minimale (saisie, tableau des résultats). Les champs affichés suivent `isotope_inputs` et le tableau affiche toutes les lignes reçues : un isotope ou un scénario ajouté dans `data/` apparaît sans modifier la page. Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
 | `install-core.php` | Installeur autonome du « minisite » (page + API + moteur) : un seul fichier à envoyer par FTP, clé à définir en tête, se supprime après succès, conserve `config.js` et `data/settings.json` aux mises à jour. À épingler sur une étiquette (`REF`). |
 | `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php` ; `php core/tests/test-scenarios.php`. |
 | `AGENTS.md` | Instructions aux agents et contributeurs : périmètre, règles de rétro-compatibilité, versionnement, tests à lancer. |
