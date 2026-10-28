@@ -14,14 +14,15 @@ use Radiv\Maintenance;
 use Radiv\Updater;
 
 // $sfmn : true pour la page de test de l'administration seulement (comparaison avec le calcul distant).
-function config(bool $sfmn): array
+// $announceMaintenance : false pour les pages d'administration (la vue « Radiv » reste utilisable pendant la maintenance).
+function config(bool $sfmn, bool $announceMaintenance = true): array
 {
     return [
         'isotopes' => Calculation\isotopes(),
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
     ] + (function_exists('RivEngine\\isotope_inputs') ? ['isotope_inputs' => Calculation\isotope_inputs()] : []) // moteur < 2.3.0 (épinglé) : la page retombe sur ses règles intégrées
-     + (!$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
+     + ($announceMaintenance && !$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
     + ($sfmn ? [
         // Page de test de l'administration seulement : l'API publique ne connaît qu'un calcul.
         'calculation_modes' => ['local', 'sfmn'],
@@ -30,7 +31,7 @@ function config(bool $sfmn): array
     ] : []);
 }
 
-function public_config(): array
+function public_config(bool $announceMaintenance = true): array
 {
     return [
         'recaptcha_site_key' => Config\env('RECAPTCHA_SITE_KEY'),
@@ -47,5 +48,5 @@ function public_config(): array
         'last_updated' => Updater\installed_date(),
         // Version du moteur de calcul (core/) réellement actif, affichée discrètement en bas de la page d'accueil.
         'core_version' => function_exists('RivEngine\\version') ? Calculation\version() : '',
-    ] + (Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []);
+    ] + ($announceMaintenance && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []);
 }

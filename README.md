@@ -389,6 +389,8 @@ Deux interrupteurs, mémorisés dans `data/var/maintenance.json` (créer ou supp
 
 **Page d'attente de l'accueil** : `index.html` s'ouvre sur un avis de maintenance quasi vide (le calculateur est masqué par une feuille de style en ligne) ; un script en ligne interroge `/api/config` et ne retire l'avis qu'une fois le site confirmé en service. API injoignable ou en maintenance : l'avis reste. Le bloc est balisé `<!--MAINTENANCE-GATE-->` (la page de test SFMN de l'administration le retire).
 
+**Onglet Radiv (`/auth/radiv`)** : le site lui-même (sa page d'accueil, `index.html` + `app.js`, donc toujours à jour sans maintenance propre à cette vue) affiché dans l'administration, derrière la session. Ses appels passent par `/auth/radiv/api/*` (même origine exigée), qui ne dépendent pas de la maintenance : l'administrateur peut donc utiliser le calculateur **même en maintenance complète**, quand l'API publique répond 503. Ni avis de maintenance, ni mesure enregistrée.
+
 Restent toujours disponibles : `/auth` (pour lever la maintenance), `/health`, `/api/config` et `/api/public-config` (lecture seule, utilisés par les contrôles des mises à jour). Les changements sont inscrits au journal des mises à jour.
 
 ### Zone de test du moteur (`/auth/moteur`)

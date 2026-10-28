@@ -40,7 +40,7 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
   console.log('— Connexion et mise à jour (formulaires cliqués)');
   await page.goto(`${BASE}/auth`);
   t('connexion Google (simulée) puis page d\'administration', (await page.title()) === 'Administration du site' && page.url() === `${BASE}/auth`);
-  t('en-tête: onglets et adresse connectée', (await page.locator('nav.tabs a').allTextContents()).join() === 'Site,Mesures,Fournisseurs,Moteur,Test SFMN' && /admin@example\.org/.test(await body()));
+  t('en-tête: onglets et adresse connectée', (await page.locator('nav.tabs a').allTextContents()).join() === 'Site,Radiv,Mesures,Fournisseurs,Moteur,Test SFMN' && /admin@example\.org/.test(await body()));
   await page.fill('input[name=ref]', 'v1.1'); if (await page.$('input[name=token]')) await page.fill('input[name=token]', TOKEN);
   await click('button:has-text("Installer")');
   let txt = await body();
@@ -163,6 +163,21 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     await page.goto(`${BASE}/print`);
     t('version imprimable: ligne du nouveau scénario', /voisin de palier/.test(await page.locator('#resultRows').innerText()));
     await page.evaluate(() => { localStorage.removeItem('radioprotection_explain_payload'); localStorage.removeItem('radioprotection_print_payload'); }); }
+
+  console.log('\n— Onglet Radiv: le site reste utilisable depuis l\'administration en maintenance complète');
+  { const mf = path.join(WWW, 'backend/data/var/maintenance.json');
+    fs.writeFileSync(mf, JSON.stringify({ mode: 'full', since: '2026-01-01T00:00:00Z', by: 'test' })); fs.chmodSync(mf, 0o666);
+    await page.goto(`${BASE}/auth`);
+    await click('nav.tabs a:has-text("Radiv")');
+    await page.waitForSelector('#calculateBtn', { state: 'visible', timeout: 15000 });
+    t('onglet Radiv: la page du site s\'affiche (pas d\'avis de maintenance) avec la navigation d\'administration', page.url() === `${BASE}/auth/radiv` && (await page.locator('#maintenanceNotice').count()) === 0 && (await page.locator('nav.tabs a.on').innerText()) === 'Radiv');
+    await page.selectOption('#isotope', 'radium223'); await page.fill('#doseRate', '100'); await page.fill('#patientSize', '170');
+    await page.click('#calculateBtn');
+    await page.waitForSelector('#resultsBody tr', { timeout: 15000 });
+    t('maintenance complète: le calcul fonctionne dans l\'onglet Radiv (7 lignes, collègues 38 jours)', (await page.locator('#resultsBody tr').count()) === 7 && /38/.test(await page.locator('#resultsBody tr').nth(6).innerText()));
+    const publicStatus = await page.evaluate(async () => (await fetch('/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"isotope_code":"radium223","dose_rate":100,"patient_size_cm":150}' })).status);
+    t('…alors que l\'API publique est bien arrêtée (503)', publicStatus === 503);
+    fs.unlinkSync(mf); }
 
   console.log('\n— Maintenance (avis affiché dans le navigateur)');
   { const mf = path.join(WWW, 'backend/data/var/maintenance.json');
