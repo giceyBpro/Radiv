@@ -261,6 +261,33 @@ async function update(c, ref, token) {
     t('en service: calcul 200, accueil 200, plus d\'annonce dans /api/config', r2.status === 200 && home.status === 200 && (await (await fetch(`${BASE}/api/config`)).json()).maintenance === undefined);
     t('…fichier d\'état supprimé', !exists('backend/data/var/maintenance.json')); }
 
+  console.log('\n— Onglet Radiv (le site, accessible pendant la maintenance)');
+  { t('GET /auth/radiv sans session → 404', (await new Client().req('GET', `${BASE}/auth/radiv`)).status === 404);
+    t('POST /auth/radiv/api/calculate sans session → 404', (await new Client().req('POST', `${BASE}/auth/radiv/api/calculate`, { form: {} })).status === 404);
+    const setMode = async (mode) => { resetLimits(); const pg = await c.req('GET', `${BASE}/auth`); await c.req('POST', `${BASE}/auth/maintenance`, { form: { csrf: csrfOf(pg.text), mode }, headers: { Origin: BASE } }); };
+    const logBytes = () => fs.readdirSync(path.join(WWW, 'backend/data/logs')).filter((f) => f.startsWith('measurements-')).reduce((n, f) => n + fs.statSync(path.join(WWW, 'backend/data/logs', f)).size, 0);
+    const calcAdmin = (extra = {}) => c.reqJson('POST', `${BASE}/auth/radiv/api/calculate`, { isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150, ...extra }, { Origin: BASE });
+    page = await c.req('GET', `${BASE}/auth/radiv`);
+    t('onglet Radiv: la page d\'accueil du site avec les onglets d\'administration', page.status === 200 && /id="calculateBtn"/.test(page.text) && /class="tab on"[^>]*>Radiv</.test(page.text) && /<script src="app\.js\?v=[0-9a-f]+"/.test(page.text) && !/rivGate|maintenanceNotice/.test(page.text), page.text.slice(0, 120));
+    t('…configuration redirigée vers l\'API d\'administration', /\/auth\/radiv\/api/.test((await c.req('GET', `${BASE}/auth/radiv/config.js`)).text));
+    for (const mode of ['site', 'full']) {
+      await setMode(mode);
+      const before = logBytes();
+      const pub = await fetch(`${BASE}/api/calculate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }) });
+      page = await c.req('GET', `${BASE}/auth/radiv`);
+      const cfg = JSON.parse((await c.req('GET', `${BASE}/auth/radiv/api/config`)).text);
+      const res = await calcAdmin();
+      let calc = null; try { calc = JSON.parse(res.text); } catch (e) { /* non JSON */ }
+      t(`maintenance « ${mode} »: la page Radiv reste accessible, sans avis ni annonce de maintenance`, page.status === 200 && cfg.maintenance === undefined && Array.isArray(cfg.isotopes));
+      t(`maintenance « ${mode} »: le calcul de la vue Radiv fonctionne (${mode === 'full' ? 'API publique arrêtée : ' + pub.status : 'API publique : ' + pub.status})`, res.status === 200 && calc && calc.ok === true && calc.recommendations_days.collegues_travail === 38 && (mode === 'full' ? pub.status === 503 : pub.status === 200));
+      t(`maintenance « ${mode} »: aucune mesure enregistrée par la vue Radiv`, mode === 'full' ? logBytes() === before : true);
+    }
+    await setMode('off');
+    const bad = await c.reqJson('POST', `${BASE}/auth/radiv/api/calculate`, { isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }, { Origin: 'https://evil.example' });
+    t('appel d\'une autre origine refusé (403)', bad.status === 403);
+    const odd = JSON.parse((await calcAdmin({ calculation_mode: 'sfmn', provider: 'x' })).text);
+    t('calculation_mode et provider ignorés comme sur l\'API publique', odd.ok === true && odd.calculation_mode === undefined); }
+
   console.log('\n— Moteur: dépôt privé distinct (jeton propre) et site sans core/');
   { const PRIV_TOKEN = 'ghp_privatecoretokenprivate12345';
     const coreAction = async (action, form) => { resetLimits(); const pg = await c.req('GET', `${BASE}/auth/moteur`); const r = await c.req('POST', `${BASE}/auth/moteur/${action}`, { form: { csrf: csrfOf(pg.text), ...form }, headers: { Origin: BASE } }); return flash((await c.req('GET', r.loc || `${BASE}/auth/moteur`)).text); };
