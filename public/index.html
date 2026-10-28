@@ -162,15 +162,6 @@
       color: var(--muted);
     }
 
-    /* Volontairement discret : ce champ doit rester vide dans la plupart des cas, pas
-       ressortir comme les champs à renseigner. Écrasé par .required-field (!important)
-       quand il devient réellement obligatoire (isotope non_defini). */
-    #userPeriodDays {
-      background: var(--border);
-      border-color: var(--border);
-      color: var(--muted);
-    }
-
     /* Largeur réduite et séparateur pour montrer que MBq et mCi sont la même valeur
        exprimée dans deux unités, pas deux champs indépendants. */
     .benign-activity-row {
@@ -332,14 +323,6 @@
     .opt-cell strong.block {
       display: block;
       margin-bottom: 4px;
-    }
-    .opt-cell.opt-period {
-      background: var(--good-soft);
-      border-top: 1px solid var(--good);
-      border-bottom: 1px solid var(--good);
-    }
-    .opt-cell.value.opt-period {
-      background: var(--good-soft);
     }
     .opt-inline-pair {
       width: 100%;
@@ -706,6 +689,10 @@
                 </div>
               </div>
             </div>
+            <div id="periodInlineBlock" hidden>
+              <div class="field-title" id="effectivePeriodLabel">Période effective à renseigner, en jours (obligatoire dans ce cas)</div>
+              <input id="userPeriodDays" type="number" min="0" step="0.01" placeholder="ex. 3,5">
+            </div>
           </div>
         </div>
       </div>
@@ -730,17 +717,6 @@
             <div class="optional-col-header">Paramètre</div>
             <div class="optional-col-header value">Valeur</div>
             <div class="optional-col-header repere">Repère / usage</div>
-
-            <div class="opt-cell opt-period">
-              <div>
-                <strong class="block" id="effectivePeriodLabel">Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)</strong>
-                À remplir uniquement si vous souhaitez imposer manuellement une période effective différente de celle liée au radiopharmaceutique choisi.
-              </div>
-            </div>
-            <div class="opt-cell value opt-period">
-              <input id="userPeriodDays" class="opt-row-value" type="number" min="0" step="0.01" placeholder="à renseigner si besoin">
-            </div>
-            <div class="opt-cell repere opt-period">Laisser vide dans la plupart des cas.</div>
 
             <div class="opt-cell">
               <div>
@@ -866,6 +842,6 @@
         .catch(function () { /* injoignable : l'avis reste affiché */ });
     })();
   </script><!--/MAINTENANCE-GATE-->
-  <script src="app.js?v=8fd3b29e"></script>
+  <script src="app.js?v=42777342"></script>
 </body>
 </html>
