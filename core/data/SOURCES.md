@@ -14,9 +14,6 @@ Les valeurs de `isotopes.json` (qui porte aussi les nombres de cures autorisés,
 
 ## Points de vigilance connus
 
-- **Collègues de travail** : 6 h à 1 m (limite 1 mSv), valeur du modèle 2004, conservée : elle donne les mêmes résultats que
-  le calculateur de la SFMN lors des comparaisons effectuées. À titre d'information, le Tableau 7 de l'article 2026 est
-  reproduit à l'identique avec 5 h pour 76 valeurs sur 77 (71 sur 77 avec 6 h) ; l'écart peut venir d'arrondis.
 - `unit_factor_at_1m` vaut `true` pour toute exposition à 1 m : le facteur géométrique de référence est 1 à cette distance
   (un `false` appliquait par erreur ~0,86 pour 150 cm et décalait le résultat de 2 jours).
 - **Cures multiples** : la limite de chaque scénario est divisée par le nombre de cures, sauf `transport_commun` (chaque
