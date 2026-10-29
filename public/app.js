@@ -205,7 +205,7 @@
       });
     }
 
-    // Période effective : saisissable seulement pour l'isotope qui n'en a pas par défaut (« Non défini »), sous la taille du patient.
+    // Période effective : saisissable seulement pour l'isotope qui n'en a pas par défaut (« Personnalisé »), sous la taille du patient.
     // (Les pages anciennes sans ce bloc gardent leur champ facultatif.)
     function togglePeriodRow(required) {
       const block = $('periodInlineBlock');

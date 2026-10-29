@@ -126,7 +126,7 @@ Payload JSON :
 - Les champs absents sont traités comme `null`.
 - Un ancien paramètre `calculation_mode` (quelle que soit sa valeur) est **ignoré sans erreur** : l'API ne propose qu'un calcul, et la réponse ne contient plus ce champ.
 - Pour `iode131_benin` : `benign_activity_mbq` et `benign_fixation_pct` sont obligatoires ; `dose_rate` est ignoré.
-- Pour `non_defini` : `user_period_days` est obligatoire (> 0). Sur la page du site, ce champ n'est proposé (sous la taille du patient, comme l'activité de l'iode bénin) que pour « Non défini », placé en fin de liste ; l'API, elle, accepte `user_period_days` pour tout isotope.
+- Pour `non_defini` : `user_period_days` est obligatoire (> 0). Sur la page du site, ce champ n'est proposé (sous la taille du patient, comme l'activité de l'iode bénin) que pour « Personnalisé », placé en fin de liste ; l'API, elle, accepte `user_period_days` pour tout isotope.
 - `provider` : optionnel, **origine de la requête** (nom du logiciel ou du service qui appelle l'API, ex. `MonRIS 2.1`). Réduit à 64 caractères (lettres, chiffres, espace et `. _ : / @ + ( ) -`), retiré du calcul, il est enregistré dans le journal des mesures (champ `provider`, absent si non déclaré), affiché dans la colonne « Origine » de l'onglet Mesures de `/auth` (recherchable) et exporté en CSV. Les requêtes du site envoient le nom du site (`radiv.fr`). C'est une simple déclaration de l'appelant, non vérifiée : à ne pas utiliser pour une décision de sécurité.
 - `cure_count` : optionnel (défaut `1`). Pris en compte pour `radium223`, `psma_177lu`, `lutetium177_net`.
 
@@ -224,7 +224,7 @@ Le dossier `downloads/` contient deux modèles prêts à importer dans Xplore :
 
 Voir `xplore.html` pour les instructions d'installation et les points d'adaptation par centre.
 
-Le modèle générique **reprend automatiquement** de `GET /api/config` la liste des radiopharmaceutiques, les nombres de cures autorisés et la saisie attendue (débit de dose, ou activité et fixation) : un isotope ajouté dans le moteur apparaît et se saisit correctement sans modifier le modèle. Si RadIV est injoignable, le script retombe sur ses règles intégrées (isotopes historiques). Les isotopes qui exigent une période effective (« Non défini ») sont écartés, le modèle n'ayant pas de champ pour la saisir. Test : `node tests/test-xplore.js` (le script est exécuté avec un faux `Tools` branché sur le moteur).
+Le modèle générique **reprend automatiquement** de `GET /api/config` la liste des radiopharmaceutiques, les nombres de cures autorisés et la saisie attendue (débit de dose, ou activité et fixation) : un isotope ajouté dans le moteur apparaît et se saisit correctement sans modifier le modèle. Si RadIV est injoignable, le script retombe sur ses règles intégrées (isotopes historiques). Les isotopes qui exigent une période effective (« Personnalisé ») sont écartés, le modèle n'ayant pas de champ pour la saisir. Test : `node tests/test-xplore.js` (le script est exécuté avec un faux `Tools` branché sur le moteur).
 
 ## Lancement local
 
