@@ -34,22 +34,6 @@
       <li><code>GET /health</code> : disponibilité du service.</li>
     </ul>
 
-    <h2>Authentification (clé d'API obligatoire)</h2>
-    <p>
-      Tout appel extérieur à <code>POST /api/calculate</code> doit présenter une <strong>clé d'API</strong> propre à votre logiciel ou service,
-      fournie par l'administrateur du site. Transmettez-la dans l'en-tête HTTP <code>X-API-Key</code> (ou <code>Authorization: Bearer &lt;clé&gt;</code>),
-      <strong>jamais dans l'adresse</strong>, en HTTPS uniquement :
-    </p>
-    <pre><code>POST /api/calculate
-Content-Type: application/json
-X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
-    <ul>
-      <li>Clé absente : <code>401</code>, <code>"code": "API_KEY_REQUIRED"</code>. Clé invalide, expirée, révoquée ou fournisseur suspendu : <code>401</code>, <code>"code": "API_KEY_INVALID"</code>.</li>
-      <li>Chaque fournisseur a son propre plafond de requêtes par minute (<code>429</code> au-delà).</li>
-      <li>Gardez la clé secrète (jamais dans une page web publique ni un dépôt de code) ; en cas de fuite, demandez-en la révocation et une nouvelle clé.</li>
-      <li><code>GET /api/config</code> et <code>GET /health</code> restent publics.</li>
-    </ul>
-
     <h2>Payload — <code>POST /api/calculate</code></h2>
     <pre><code>{
   "isotope_code": "iode131_25_fixation",
@@ -130,6 +114,22 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
         <tr><td>Non défini (local)</td><td><code>non_defini</code></td></tr>
       </tbody>
     </table>
+
+    <h2>Authentification (clé d'API, si l'administrateur l'exige)</h2>
+    <p>
+      Tout appel extérieur à <code>POST /api/calculate</code> peut devoir présenter une <strong>clé d'API</strong> propre à votre logiciel ou service,
+      fournie par l'administrateur du site : elle est <strong>obligatoire uniquement si l'administrateur l'exige</strong> (réglage du site ; sinon les appels sans clé sont acceptés). Transmettez-la dans l'en-tête HTTP <code>X-API-Key</code> (ou <code>Authorization: Bearer &lt;clé&gt;</code>),
+      <strong>jamais dans l'adresse</strong>, en HTTPS uniquement :
+    </p>
+    <pre><code>POST /api/calculate
+Content-Type: application/json
+X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
+    <ul>
+      <li>Clé absente alors qu'elle est exigée : <code>401</code>, <code>"code": "API_KEY_REQUIRED"</code>. Clé invalide, expirée, révoquée ou fournisseur suspendu : <code>401</code>, <code>"code": "API_KEY_INVALID"</code>.</li>
+      <li>Chaque fournisseur a son propre plafond de requêtes par minute (<code>429</code> au-delà).</li>
+      <li>Gardez la clé secrète (jamais dans une page web publique ni un dépôt de code) ; en cas de fuite, demandez-en la révocation et une nouvelle clé.</li>
+      <li><code>GET /api/config</code> et <code>GET /health</code> restent publics.</li>
+    </ul>
 
     <div class="links">
       <a href="/test-api">Ouvrir la page de test API</a>
