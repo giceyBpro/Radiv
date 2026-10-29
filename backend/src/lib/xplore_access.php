@@ -22,6 +22,18 @@ const BEGIN = '# >>> Xplore désactivé (administration) v1';
 const END = '# <<< Xplore désactivé';
 const PUBLIC_PATHS = ['/xplore', '/xplore.html', '/downloads/MN_Radiopro_APIRADIV_generique.xml', '/downloads/MN_Consignes-radioprotection_RadIV.xml'];
 
+// Fichiers XML proposés dans l'administration, même quand l'accès public est coupé (nom => chemin dans la racine web).
+function files(): array
+{
+    $out = [];
+    foreach (PUBLIC_PATHS as $path) {
+        if (!str_ends_with($path, '.xml')) continue;
+        $file = rtrim(Config\web_root(), '/') . $path;
+        if (is_file($file)) $out[basename($path)] = $file;
+    }
+    return $out;
+}
+
 function htaccess_file(): string { return rtrim(Config\web_root(), '/') . '/.htaccess'; }
 function state_file(): string { return Config\var_dir() . '/xplore.json'; }
 

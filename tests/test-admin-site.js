@@ -301,6 +301,8 @@ async function update(c, ref, token) {
     t('accès coupé: message de confirmation', /inaccessibles/.test(msg) && !/Attention/.test(msg), msg);
     t('…page /xplore.html et les deux fichiers XML répondent 404', (await Promise.all(paths.map(status))).every((x) => x === 404));
     t('…le reste du site n\'est pas touché (accueil, API, autre fichier du dossier downloads)', (await status('/')) === 200 && (await status('/api/config')) === 200 && (await status('/legal')) === 200);
+    t('…téléchargement des XML depuis l\'administration malgré tout (session) ; refusé sans session', (await new Client().req('GET', `${BASE}/auth/xplore/MN_Radiopro_APIRADIV_generique.xml`)).status === 404 && (await Promise.all(['MN_Radiopro_APIRADIV_generique.xml', 'MN_Consignes-radioprotection_RadIV.xml'].map(async (n) => { resetLimits(); const r = await c.req('GET', `${BASE}/auth/xplore/${n}`); return r.status === 200 && /^<\?xml/.test(r.text); }))).every(Boolean));
+    t('…nom inconnu → 404', (await c.req('GET', `${BASE}/auth/xplore/inconnu.xml`)).status === 404);
     const during = fs.readFileSync(ht, 'utf8');
     t('….htaccess: bloc balisé en tête, reste du fichier intact, copie de sauvegarde faite', during.startsWith('# >>> Xplore désactivé') && during.endsWith(original) && fs.existsSync(ht + '.bak-xplore'));
     page = await c.req('GET', `${BASE}/auth`);
@@ -745,6 +747,7 @@ async function update(c, ref, token) {
   const afterOut = await c.req('GET', `${BASE}/auth`);
   t('déconnexion: session détruite (retour à la connexion Google, plus de page ni de mesures)', out.status === 200 && afterOut.status === 302 && afterOut.loc.startsWith(G) && (await c.req('GET', `${BASE}/auth/mesures`)).status === 404);
 
+  t('déconnexion: la page propose le lien pour se reconnecter', /<a href="[^"]*\/auth">Se reconnecter<\/a>/.test(out.text));
   console.log('\n— Jeton dans le .env');
   resetLimits(); setEnv('UPDATE_GITHUB_TOKEN', TOKEN); c = new Client(); await c.login(); page = await c.req('GET', `${BASE}/auth`);
   t('jeton valide du .env → champ masqué', !/name="token"/.test(page.text)); t('tags proposés', /<option value="v1.2">/.test(page.text) && /<option value="v1.1">/.test(page.text));
