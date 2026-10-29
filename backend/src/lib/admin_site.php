@@ -82,6 +82,10 @@ function handle(string $method, string $path): bool
     if ($method === 'GET' && preg_match('#^/auth/assets/([A-Za-z0-9._-]+)$#', $path, $m)) {
         return Config\admin_site_enabled() && Session\transport_ok() && do_asset($m[1]);
     }
+    // Modèles Xplore : GET /auth/xplore/<nom>.xml, réservé aux sessions ouvertes (la règle .htaccess ne les concerne pas ici).
+    if ($method === 'GET' && preg_match('#^/auth/xplore/([A-Za-z0-9._-]+\.xml)$#', $path, $m)) {
+        return Config\admin_site_enabled() && Session\transport_ok() && do_xplore_file($m[1]);
+    }
     $action = ROUTES["{$method} {$path}"] ?? null;
     if ($action === null || !Config\admin_site_enabled()) return false;
     if (!Session\transport_ok()) {
@@ -492,7 +496,7 @@ function do_logout(): bool
 {
     if (guard_post(false) === null) return false;
     Session\logout();
-    render('Déconnecté', '<p>Vous êtes déconnecté.</p>');
+    render('Déconnecté', '<p>Vous êtes déconnecté.</p><p><a href="' . h(home_url()) . '">Se reconnecter</a></p>');
     return true;
 }
 

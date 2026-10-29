@@ -369,6 +369,9 @@ Une seule page d'administration, à l'adresse **`https://<votre-domaine>/auth`**
 | `/auth/callback` | Retour de Google (à déclarer comme URI de redirection). |
 | `/auth/mesures`, `/auth/mesures.csv` | Mesures (`?year=2026&month=9`) et export, sur session valide. |
 | `/auth/update`, `/auth/rollback`, `/auth/logout` | Actions (formulaires `POST`). |
+| `/auth/xplore/<fichier>.xml` | Téléchargement des modèles Xplore par un administrateur, même quand l'accès public est coupé. |
+
+Après la déconnexion, la page affiche un lien « Se reconnecter ».
 
 **Mise en place Google** : console Google Cloud → *API et services* → *Identifiants* → client OAuth de type *Application Web*, avec pour URI de redirection `https://<votre-domaine>/auth/callback`. En mode « Test » de l'écran de consentement, ajoutez vos adresses comme utilisateurs de test : aucune validation par Google n'est nécessaire. Renseignez `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_GOOGLE_EMAILS` et `SITE_PUBLIC_URL` (voir `.env.example`). `install.php` ajoute la règle `/auth` au `.htaccess`. `ADMIN_MEASUREMENTS_ENABLED=false` retire la section Mesures ; `ADMIN_SITE_ENABLED=false` coupe toute l'administration. Les mises à jour exigent en plus `ADMIN_UPDATE_ENABLED=true`.
 
