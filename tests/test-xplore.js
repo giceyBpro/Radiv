@@ -87,7 +87,7 @@ async function run(core, trigger, fields, { offline = false } = {}) {
 
   let r = await run(base, 'LOAD', { MN_TYPE_MRP: 'radium223' });
   const ids = (r.lists.MN_TYPE_MRP || []).map((x) => x.id);
-  t('LOAD: liste des radiopharmaceutiques reprise de /api/config (sans « Non défini », qui exige une période)', ids.includes('radium223') && ids.includes('iode131_benin') && !ids.includes('non_defini') && ids.length === 14, ids.join(','));
+  t('LOAD: liste des radiopharmaceutiques reprise de /api/config (sans « Personnalisé », qui exige une période)', ids.includes('radium223') && ids.includes('iode131_benin') && !ids.includes('non_defini') && ids.length === 14, ids.join(','));
 
   r = await run(base, 'MN_TYPE_MRP', { MN_TYPE_MRP: 'psma_177lu', MN_CURE_COUNT: 1 });
   t('choix du PSMA-177Lu: cures 1, 4, 6 (annoncées par RadIV)', (r.lists.MN_CURE_COUNT || []).map((x) => x.id).join() === '1,4,6');
