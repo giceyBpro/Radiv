@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // Lit sur stdin un tableau JSON de payloads, écrit sur stdout le tableau des résultats de
 // calculate(). Sert uniquement à core/tests/test-calcul.js (jamais exposé par le serveur web).
 declare(strict_types=1);

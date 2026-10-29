@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== COMPATIBILITÉ AVEC JAVASCRIPT =====
 // Le moteur reproduit à l'identique l'ancienne implémentation JavaScript (mêmes conversions, mêmes affichages de
 // nombres) pour qu'aucun client existant ne voie de différence.

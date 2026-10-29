@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== EXEMPLE AUTONOME : SERVIR L'API DU MOTEUR =====
 // Pour essayer sans rien installer :  php -S 127.0.0.1:8080 core/api/index.php
 //   http://127.0.0.1:8080/   (page minimale)

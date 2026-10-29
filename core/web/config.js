@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== RÉGLAGES ET TEXTES DE LA PAGE (le seul fichier à modifier pour personnaliser l'affichage) =====
 // Aucun autre fichier de web/ ne contient de texte visible, hormis la structure de la page (index.html).
 window.RIV_CONFIG = {

@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== INTERFACE D'API MINIMALE DU MOTEUR =====
 // Traduit une requête HTTP (méthode, route, corps) en réponse (code, tableau). Sans état, sans accès au serveur web :
 // l'hébergeur branche son propre routage (voir index.php pour un exemple autonome) et ajoute ce qu'il veut autour

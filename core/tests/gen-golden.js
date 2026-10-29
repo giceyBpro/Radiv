@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // Génère golden-calcul.json (cas + résultats attendus) à partir de calculation.js, l'ancienne
 // implémentation Node de référence, récupérable dans l'historique git. Outil ponctuel, conservé
 // pour mémoire; le test courant est test-calcul.js.

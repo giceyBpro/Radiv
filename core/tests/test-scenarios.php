@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // Scénarios déclarés dans data/scenarios.json : un scénario AJOUTÉ DANS LES DONNÉES produit une ligne de résultat sans toucher au code ;
 // contrôle des erreurs de saisie. Le moteur est copié dans un dossier temporaire. Usage : php core/tests/test-scenarios.php
 declare(strict_types=1);

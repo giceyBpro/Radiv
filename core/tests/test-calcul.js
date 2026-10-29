@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // Non-régression du calcul: le moteur (core/src) doit redonner exactement les résultats figés dans
 // golden-calcul.json (valeurs, ordre des clés, nombres), dans les deux modes d'arrondi.
 // Le fichier a été produit par l'ancienne implémentation de référence (voir gen-golden.js).

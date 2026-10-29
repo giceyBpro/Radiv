@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ============================================================================================
 // INSTALLATION DU « MINISITE » RIV (moteur de calcul + API + page de saisie)
 //
