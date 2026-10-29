@@ -55,6 +55,7 @@ const ROUTES = [
     'POST /auth/moteur/retablir' => 'core_restore',
     'POST /auth/moteur/desepingler' => 'core_unpin',
     'POST /auth/maintenance' => 'maintenance',
+    'POST /auth/xplore' => 'xplore',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
     'POST /auth/logout' => 'logout',
@@ -193,6 +194,7 @@ function do_site(): bool
 
     $out .= config_card();
     $out .= maintenance_card($csrf);
+    $out .= xplore_card($csrf);
 
     $disk = Disk\usage();
     $minFree = Config\disk_min_free_bytes();

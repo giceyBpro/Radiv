@@ -26,6 +26,7 @@ require __DIR__ . '/lib/measurements.php';
 require __DIR__ . '/lib/providers.php';
 require __DIR__ . '/lib/seo.php';
 require __DIR__ . '/lib/maintenance.php';
+require __DIR__ . '/lib/xplore_access.php';
 require __DIR__ . '/lib/sfmn.php';
 require __DIR__ . '/lib/contact.php';
 require __DIR__ . '/lib/session.php';
@@ -37,6 +38,7 @@ require __DIR__ . '/lib/admin_measures.php';
 require __DIR__ . '/lib/admin_sfmn.php';
 require __DIR__ . '/lib/admin_core.php';
 require __DIR__ . '/lib/admin_maintenance.php';
+require __DIR__ . '/lib/admin_xplore.php';
 require __DIR__ . '/lib/admin_radiv.php';
 require __DIR__ . '/lib/admin_site.php';
 

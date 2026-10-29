@@ -380,6 +380,10 @@ Limites : le `.htaccess` racine, `config.js`, `sitemap.xml` et `api/backend.php`
 
 Vérification : `tests/test-admin-site.js` (112 contrôles : connexion refusée/acceptée, PKCE, CSRF, connexion ancienne, mesures et export CSV avec valeurs hostiles, jeton invalide/valide/du `.env`, archives piégées, retour arrière automatique et manuel, fichiers hors liste blanche, jeton jamais écrit ni transmis au téléchargement, anciennes adresses `/api/admin/*` en 404) contre un site déployé sous Apache et `tests/fake-services.js` (faux Google + faux GitHub) ; les archives de test sont fabriquées par `tests/make-fixtures.php`.
 
+### Modèles Xplore accessibles ou non (onglet Site de `/auth`)
+
+Un bouton rend la page `/xplore` (`xplore.html`) et les fichiers `downloads/*.xml` **accessibles ou inaccessibles** (404). Ces fichiers étant servis directement par Apache, le bouton pose (ou retire) un bloc balisé `# >>> Xplore désactivé (administration) v1` tout en haut du `.htaccess` de la racine web ; le reste du fichier n'est jamais modifié et revient octet pour octet à l'identique à la réactivation. Une copie `.htaccess.bak-xplore` est faite avant chaque écriture (refusée par Apache comme tout fichier `.ht*`), le site est contrôlé ensuite et l'ancien contenu rétabli s'il ne répond plus. Après l'action, le site vérifie l'effet réel sur `/xplore.html` et avertit si l'hébergement ignore les règles `.htaccess`. Les mises à jour (`/auth`, `update.php`) conservent ce bloc. Les liens vers `/xplore` présents sur d'autres pages ne sont pas retirés (ils mènent alors à une page 404).
+
 ### Maintenance (onglet Site de `/auth`)
 
 Deux interrupteurs, mémorisés dans `data/var/maintenance.json` (créer ou supprimer ce fichier par FTP a le même effet si `/auth` est inaccessible ; `{"mode":"site"}` ou `{"mode":"full"}`) :
