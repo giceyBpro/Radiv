@@ -96,7 +96,7 @@
     <h2>Isotopes disponibles (isotope_code)</h2>
     <table>
       <thead><tr><th>Libellé</th><th>Code API</th></tr></thead>
-      <tbody>
+      <tbody id="isotopesBody">
         <tr><td>Iode-131-0%-fixation</td><td><code>iode131_0_fixation</code></td></tr>
         <tr><td>Iode-131-5%-fixation</td><td><code>iode131_5_fixation</code></td></tr>
         <tr><td>Iode-131-25%-fixation</td><td><code>iode131_25_fixation</code></td></tr>
@@ -113,6 +113,13 @@
         <tr><td>MIBG-131I</td><td><code>mibg_131i</code></td></tr>
         <tr><td>Non défini (local)</td><td><code>non_defini</code></td></tr>
       </tbody>
+    </table>
+
+    <h2>Scénarios d'exposition (audience_code)</h2>
+    <p>Liste lue en direct sur <code>GET /api/config</code> : elle reflète toujours le moteur de calcul actif.</p>
+    <table>
+      <thead><tr><th>Libellé</th><th>Code API</th><th>Hypothèse</th></tr></thead>
+      <tbody id="scenariosBody"><tr><td colspan="3">Chargement…</td></tr></tbody>
     </table>
 
     <h2>Authentification (clé d'API, si l'administrateur l'exige)</h2>
@@ -137,5 +144,20 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
     </div>
   </main>
   <script src="config.js"></script>
+  <script>
+    // Tableaux alimentés par GET /api/config : un isotope ou un scénario ajouté au moteur apparaît sans modifier cette page.
+    (function () {
+      function esc(v) { return String(v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+      var base = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/$/, '');
+      fetch(base + '/config').then(function (r) { return r.json(); }).then(function (c) {
+        var iso = (c.isotopes || []).map(function (i) { return '<tr><td>' + esc(i.label) + '</td><td><code>' + esc(i.api_code) + '</code></td></tr>'; }).join('');
+        if (iso) document.getElementById('isotopesBody').innerHTML = iso;
+        var sc = (c.scenarios || []).map(function (x) { return '<tr><td>' + esc(x.label) + '</td><td><code>' + esc(x.audience_code) + '</code></td><td>' + esc(x.condition) + '</td></tr>'; }).join('');
+        document.getElementById('scenariosBody').innerHTML = sc || '<tr><td colspan="3">Indisponible.</td></tr>';
+      }).catch(function () {
+        document.getElementById('scenariosBody').innerHTML = '<tr><td colspan="3">Indisponible (consultez <code>GET /api/config</code>).</td></tr>';
+      });
+    })();
+  </script>
 </body>
 </html>
