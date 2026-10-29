@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MPL-2.0
+   Copyright (c) 2026 Projet RadIV et contributeurs */
 /* Présentation minimale (sobre, lisible sur mobile). Les couleurs se changent dans :root. */
 :root { --fond: #fff; --texte: #1d2733; --accent: #0b5cad; --bord: #c9d3de; --erreur: #a4262c; }
 * { box-sizing: border-box; }

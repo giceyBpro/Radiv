@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== CATALOGUE : ISOTOPES, SCÉNARIOS D'EXPOSITION, CURES =====
 // Les valeurs ne sont PAS dans le code mais dans data/*.json (à modifier là, sans toucher à PHP) :
 //   data/isotopes.json   périodes effectives, références (voir data/SOURCES.md), profil de calcul (champ facultatif « profile »,

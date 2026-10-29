@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== LOGIQUE DE LA PAGE MINIMALE =====
 // Appelle l'API du moteur (GET config, POST calculate) et affiche le résultat. Aucun texte visible ici : voir config.js.
 (function () {

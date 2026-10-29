@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // Profils de calcul (src/profiles.php) : un isotope AJOUTÉ DANS LES DONNÉES, avec un profil existant, se comporte comme
 // l'isotope d'origine, sans toucher au code. Le moteur est copié dans un dossier temporaire pour y ajouter des isotopes.
 // Usage : php core/tests/test-profiles.php

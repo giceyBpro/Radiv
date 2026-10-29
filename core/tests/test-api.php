@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // Contrôles de l'interface d'API minimale (sans serveur web). Usage : php core/tests/test-api.php
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }

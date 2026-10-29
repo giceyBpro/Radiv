@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== PHYSIQUE : DÉCROISSANCE, GÉOMÉTRIE, DURÉE DE RESTRICTION =====
 // Modèle de Carlier et al. (voir data/SOURCES.md). Aucune validation ici : voir calculate.php.
 

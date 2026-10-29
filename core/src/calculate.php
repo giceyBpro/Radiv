@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== VALIDATION DES ENTRÉES ET ASSEMBLAGE DU RÉSULTAT =====
 // calculate($payload) est l'unique fonction à appeler : elle valide les champs, calcule une durée par scénario et
 // renvoie un tableau prêt à être encodé en JSON (ok, rows, recommendations_days, errors...).

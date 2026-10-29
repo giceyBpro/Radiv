@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== ARRONDI DES DURÉES DE RESTRICTION =====
 // Deux conventions possibles, au choix de l'hébergeur du moteur (voir set_rounding_mode) :
 //   "round" (défaut du moteur) : arrondi au plus proche, légèrement plus protecteur (jour supérieur dès que la fraction dépasse 0,5) ;

@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== MOTEUR DE CALCUL RIV — POINT D'ENTRÉE =====
 // Il suffit d'inclure ce fichier pour disposer de tout le moteur (espace de noms RivEngine) :
 //

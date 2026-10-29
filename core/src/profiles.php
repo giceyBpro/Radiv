@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== PROFILS DE CALCUL : CE QUI DIFFÈRE D'UN ISOTOPE À L'AUTRE =====
 // La plupart des isotopes se calculent pareil : débit de dose mesuré à 1 m, période de l'isotope. Quelques-uns ont une règle
 // propre ; elle est regroupée ici sous un NOM de profil, que l'isotope choisit dans data/isotopes.json (champ « profile »,
