@@ -288,6 +288,29 @@ async function update(c, ref, token) {
     const odd = JSON.parse((await calcAdmin({ calculation_mode: 'sfmn', provider: 'x' })).text);
     t('calculation_mode et provider ignorés comme sur l\'API publique', odd.ok === true && odd.calculation_mode === undefined); }
 
+  console.log('\n— Modèles Xplore: accessibles ou non (règle .htaccess posée par l\'administration)');
+  { const ht = path.join(WWW, '.htaccess'); const original = fs.readFileSync(ht, 'utf8');
+    const status = async (p) => (await fetch(`${BASE}${p}`, { redirect: 'manual' })).status;
+    const paths = ['/xplore.html', '/downloads/MN_Radiopro_APIRADIV_generique.xml', '/downloads/MN_Consignes-radioprotection_RadIV.xml'];
+    const toggle = async (enabled) => { resetLimits(); const pg = await c.req('GET', `${BASE}/auth`); const r = await c.req('POST', `${BASE}/auth/xplore`, { form: { csrf: csrfOf(pg.text), enabled: enabled ? '1' : '0' }, headers: { Origin: BASE } }); return flash((await c.req('GET', r.loc || `${BASE}/auth`)).text); };
+    t('POST /auth/xplore sans session → 404', (await new Client().req('POST', `${BASE}/auth/xplore`, { form: { enabled: '0' } })).status === 404);
+    page = await c.req('GET', `${BASE}/auth`);
+    t('carte Modèles Xplore: accessibles par défaut', /Modèles Xplore<\/h2>/.test(page.text) && /accessibles<\/span>/.test(page.text) && /Rendre inaccessibles/.test(page.text));
+    t('page et fichiers XML servis par défaut', (await Promise.all(paths.map(status))).every((x) => x === 200));
+    let msg = await toggle(false);
+    t('accès coupé: message de confirmation', /inaccessibles/.test(msg) && !/Attention/.test(msg), msg);
+    t('…page /xplore.html et les deux fichiers XML répondent 404', (await Promise.all(paths.map(status))).every((x) => x === 404));
+    t('…le reste du site n\'est pas touché (accueil, API, autre fichier du dossier downloads)', (await status('/')) === 200 && (await status('/api/config')) === 200 && (await status('/legal')) === 200);
+    const during = fs.readFileSync(ht, 'utf8');
+    t('….htaccess: bloc balisé en tête, reste du fichier intact, copie de sauvegarde faite', during.startsWith('# >>> Xplore désactivé') && during.endsWith(original) && fs.existsSync(ht + '.bak-xplore'));
+    page = await c.req('GET', `${BASE}/auth`);
+    t('…carte: inaccessibles, depuis quand et par qui, bouton de réactivation', /inaccessibles<\/span>/.test(page.text) && /admin@example\.org/.test(page.text) && /Rendre accessibles/.test(page.text));
+    t('…un second clic identique ne change rien', /déjà inaccessibles/.test(await toggle(false)));
+    msg = await toggle(true);
+    t('accès rétabli: page et fichiers de nouveau servis', /accessibles/.test(msg) && (await Promise.all(paths.map(status))).every((x) => x === 200), msg);
+    t('….htaccess exactement revenu à son contenu d\'origine, état supprimé', fs.readFileSync(ht, 'utf8') === original && !exists('backend/data/var/xplore.json'));
+    fs.unlinkSync(ht + '.bak-xplore'); }
+
   console.log('\n— Moteur: dépôt privé distinct (jeton propre) et site sans core/');
   { const PRIV_TOKEN = 'ghp_privatecoretokenprivate12345';
     const coreAction = async (action, form) => { resetLimits(); const pg = await c.req('GET', `${BASE}/auth/moteur`); const r = await c.req('POST', `${BASE}/auth/moteur/${action}`, { form: { csrf: csrfOf(pg.text), ...form }, headers: { Origin: BASE } }); return flash((await c.req('GET', r.loc || `${BASE}/auth/moteur`)).text); };
