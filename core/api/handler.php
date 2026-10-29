@@ -6,7 +6,7 @@
 // l'hébergeur branche son propre routage (voir index.php pour un exemple autonome) et ajoute ce qu'il veut autour
 // (authentification, journalisation, limitation de débit, en-têtes CORS...).
 //
-//   GET  config     isotopes, nombres de cures autorisés, isotope par défaut
+//   GET  config     isotopes, nombres de cures autorisés, isotope par défaut, scénarios
 //   POST calculate  corps JSON = entrées du calcul (voir calculate.php) → durées de restriction par scénario
 declare(strict_types=1);
 
@@ -29,6 +29,8 @@ function handle(string $method, string $route, string $body = ''): array
             'default_isotope_code' => 'iode131_25_fixation',
             'cure_options_by_isotope' => Engine\cure_options_by_isotope(),
             'isotope_inputs' => Engine\isotope_inputs(),
+            // Scénarios d'exposition déclarés (data/scenarios.json), pour documenter l'API sans liste à maintenir à la main.
+            'scenarios' => array_map(function ($s) { return ['audience_code' => $s['audience_code'], 'label' => $s['label'], 'condition' => $s['condition']]; }, Engine\scenarios()),
         ]];
     }
     if ($route === 'calculate') {

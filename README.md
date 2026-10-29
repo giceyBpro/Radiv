@@ -40,7 +40,7 @@ install.php, update.php   installation web (seule méthode) et mise à jour de s
 | `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
 | `contact.html` | Formulaire de contact protégé par reCAPTCHA, envoi email côté backend. |
 | `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
-| `api-fonctionnement.html` | Documentation publique du contrat API. |
+| `api-fonctionnement.html` | Documentation publique du contrat API ; les tableaux des isotopes et des scénarios sont lus en direct sur `GET /api/config` (rien à maintenir à la main). |
 | `test-api.html` | Page de test manuel des endpoints API. |
 | `config.js` | Configuration runtime (URLs API/site) générée par `install.php` (jamais écrasée par les mises à jour). |
 | `vendor/` | Polices et bibliothèques d'impression hébergées sur le site (aucun CDN ; licences dans `vendor/LICENSES.txt`). |

@@ -21,6 +21,8 @@ function config(bool $sfmn, bool $announceMaintenance = true): array
         'isotopes' => Calculation\isotopes(),
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
+        // Scénarios déclarés par le moteur : la page d'information de l'API s'en sert pour rester à jour seule.
+        'scenarios' => array_map(function ($s) { return ['audience_code' => $s['audience_code'], 'label' => $s['label'], 'condition' => $s['condition']]; }, Calculation\scenarios()),
     ] + (function_exists('RivEngine\\isotope_inputs') ? ['isotope_inputs' => Calculation\isotope_inputs()] : []) // moteur < 2.3.0 (épinglé) : la page retombe sur ses règles intégrées
      + ($announceMaintenance && !$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
     + ($sfmn ? [
