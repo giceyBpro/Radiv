@@ -312,8 +312,8 @@
 
     function clearDisplayedResults() {
       lastResult = null;
-      $('effectiveDaysText').textContent = 'Période effective appliquée au calcul, en jours : -';
-      $('effectiveHoursText').textContent = 'Période effective appliquée au calcul, en heures : -';
+      $('effectiveDaysText').textContent = 'Période effective utilisée, en jours : -';
+      $('effectiveHoursText').textContent = 'Période effective utilisée, en heures : -';
       $('resultsBody').innerHTML = '';
       updateResultsVisibility();
       document.dispatchEvent(new CustomEvent('radiv:clear'));
@@ -365,7 +365,7 @@
       $('referenceText').textContent = selected?.reference || '-';
       $('remarkText').textContent = selected?.remark || '-';
       $('effectivePeriodLabel').textContent = periodRequired(selectedCode)
-        ? 'Période effective à renseigner, en jours (obligatoire dans ce cas)'
+        ? 'Période effective à saisir, en jours (requise pour ce choix)'
         : 'Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)';
     }
 
@@ -399,15 +399,15 @@
         : 'Durée restriction<br>(jours)';
 
       $('effectivePeriodLabel').textContent = periodRequired(selected.api_code)
-        ? 'Période effective à renseigner, en jours (obligatoire dans ce cas)'
+        ? 'Période effective à saisir, en jours (requise pour ce choix)'
         : 'Période effective à forcer, en jours (facultatif : laisser vide pour la valeur du radiopharmaceutique)';
 
       if (result.effective_days !== null && Number.isFinite(result.effective_days)) {
-        $('effectiveDaysText').textContent = `Période effective appliquée au calcul, en jours : ${formatNumber(result.effective_days, 2)}`;
-        $('effectiveHoursText').textContent = `Période effective appliquée au calcul, en heures : ${formatNumber(result.effective_hours, 2)}`;
+        $('effectiveDaysText').textContent = `Période effective utilisée, en jours : ${formatNumber(result.effective_days, 2)}`;
+        $('effectiveHoursText').textContent = `Période effective utilisée, en heures : ${formatNumber(result.effective_hours, 2)}`;
       } else {
-        $('effectiveDaysText').textContent = 'Période effective appliquée au calcul, en jours : -';
-        $('effectiveHoursText').textContent = 'Période effective appliquée au calcul, en heures : -';
+        $('effectiveDaysText').textContent = 'Période effective utilisée, en jours : -';
+        $('effectiveHoursText').textContent = 'Période effective utilisée, en heures : -';
       }
 
       const errorBox = $('errorBox');

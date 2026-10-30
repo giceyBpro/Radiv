@@ -93,7 +93,7 @@
         <thead>
           <tr>
             <th>Situation</th>
-            <th>Durée de restriction (jours)</th>
+            <th>Nombre de jours de restriction</th>
           </tr>
         </thead>
         <tbody id="resultRows"></tbody>
@@ -151,7 +151,7 @@
       const shouldShowCureCount = cureIsotopeSet.has(selectedApiCode);
       const inputEntries = [
         ['Type d\'exposition', form.isotope_label],
-        ['Débit de dose mesuré à 1 m (µSv/h)', form.dose_rate],
+        ['Débit de dose relevé à 1 m (µSv/h)', form.dose_rate],
         ['Taille patient (cm)', form.patient_size_cm],
         ['Activité bénin (MBq)', form.benign_activity_mbq],
         ['Fixation bénin (%)', form.benign_fixation_pct],
@@ -172,7 +172,7 @@
       document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
       const effDays = result.effective_days ?? '-';
       const effHours = result.effective_hours ?? '-';
-      document.getElementById('effectiveText').innerHTML = `<strong>Période effective appliquée au calcul :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
+      document.getElementById('effectiveText').innerHTML = `<strong>Période effective utilisée :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
 
       const audienceMeta = {
         conjoint_plus_60: 'Proximité, y compris la nuit, avec son/sa conjoint(e) de plus de 60 ans',

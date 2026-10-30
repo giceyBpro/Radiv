@@ -15,8 +15,8 @@ window.RIV_CONFIG = {
   labels: {
     isotope: 'Radiopharmaceutique',
     cures: 'Nombre de cures planifiées',
-    doseRate: 'Débit de dose mesuré à 1 m du patient à sa sortie de chambre (µSv/h)',
-    patientSize: 'Taille du patient (cm)',
+    doseRate: 'Débit de dose relevé à 1 mètre, à la sortie du patient de sa chambre (µSv/h)',
+    patientSize: 'Taille du patient, en cm',
     benignActivity: 'Activité administrée (MBq)',
     benignFixation: 'Fixation thyroïdienne (%)',
     periodDays: 'Période effective (jours) — facultative',

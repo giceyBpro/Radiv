@@ -639,7 +639,7 @@
     </div>
 
     <section class="section mandatory">
-      <div class="section-title">Éléments obligatoires à préciser</div>
+      <div class="section-title">Informations indispensables</div>
       <div class="mandatory-body">
         <div>
           <div class="field-stack">
@@ -658,12 +658,12 @@
               </div>
             </div>
             <div>
-              <div class="field-title">Débit de dose mesuré à 1 m du patient à sa sortie de chambre (µSv/h)</div>
+              <div class="field-title">Débit de dose relevé à 1 mètre, à la sortie du patient de sa chambre (µSv/h)</div>
               <input id="doseRate" type="number" min="0" step="0.01" value="">
               <div class="small" id="doseRateHelp">Saisie manuelle pour tous les radiopharmaceutiques sauf Iode-131-Bénin.</div>
             </div>
             <div>
-              <div class="field-title">Taille du patient (cm)</div>
+              <div class="field-title">Taille du patient, en cm</div>
               <input id="patientSize" type="number" min="1" step="1" value="">
             </div>
             <div id="benignInlineBlock" hidden>
@@ -690,7 +690,7 @@
               </div>
             </div>
             <div id="periodInlineBlock" hidden>
-              <div class="field-title" id="effectivePeriodLabel">Période effective à renseigner, en jours (obligatoire dans ce cas)</div>
+              <div class="field-title" id="effectivePeriodLabel">Période effective à saisir, en jours (requise pour ce choix)</div>
               <input id="userPeriodDays" type="number" min="0" step="0.01" placeholder="ex. 3,5">
             </div>
           </div>
@@ -741,13 +741,13 @@
             <div class="opt-cell">
               <div>
                 <strong class="block">Votre propre scénario (facultatif) — Temps passé à 1 m (h)</strong>
-                Deuxième durée d’exposition, à 1 m fixe, valeur non nulle obligatoire pour activer le scénario utilisateur.
+                Second temps d’exposition, à 1 m fixe : il doit être supérieur à 0 pour activer le scénario personnalisé.
               </div>
             </div>
             <div class="opt-cell value">
               <input id="userHours2" class="opt-row-value" type="number" min="0" step="0.1" placeholder="ex. 3">
             </div>
-            <div class="opt-cell repere">Durée d’exposition à 1 m (valeur non nulle obligatoire).</div>
+            <div class="opt-cell repere">Temps passé à 1 m (doit être supérieur à 0).</div>
 
             <div class="opt-cell">
               <div>
@@ -776,8 +776,8 @@
 
     <div id="resultsSection" hidden>
     <div class="effective-box">
-      <div id="effectiveDaysText">Période effective appliquée au calcul, en jours : -</div>
-      <div id="effectiveHoursText">Période effective appliquée au calcul, en heures : -</div>
+      <div id="effectiveDaysText">Période effective utilisée, en jours : -</div>
+      <div id="effectiveHoursText">Période effective utilisée, en heures : -</div>
     </div>
 
     <table class="results">
@@ -843,6 +843,6 @@
         .catch(function () { /* injoignable : l'avis reste affiché */ });
     })();
   </script><!--/MAINTENANCE-GATE-->
-  <script src="app.js?v=2472dfcb"></script>
+  <script src="app.js?v=b8dfa8a4"></script>
 </body>
 </html>
