@@ -5,31 +5,31 @@
     "period_hours": 16,
     "reference": "Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012",
     "remark": "-",
-    "situation": "Cancer opéré"
+    "situation": "Néoplasie"
   },
   {
     "api_code": "iode131_5_fixation",
     "label": "Iode-131-5%-fixation",
     "period_hours": 16,
     "reference": "Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012",
-    "remark": "en considérant la période au niveau de la thyroïde",
-    "situation": "Cancer oligo-métastasé"
+    "remark": "période retenue : celle de la thyroïde",
+    "situation": "Néoplasie oligométastatique"
   },
   {
     "api_code": "iode131_25_fixation",
     "label": "Iode-131-25%-fixation",
     "period_hours": 16,
     "reference": "Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012",
-    "remark": "en considérant la période au niveau de la thyroïde",
-    "situation": "Cancer poly-métastasé"
+    "remark": "période retenue : celle de la thyroïde",
+    "situation": "Néoplasie multimétastatique"
   },
   {
     "api_code": "iode131_benin",
     "label": "Iode-131-Bénin",
     "period_hours": 122.4,
     "reference": "Carlier et al., Nuclear Medicine Communications 2006, 27:559–566",
-    "remark": "en considérant la période au niveau de la thyroïde",
-    "situation": "Pathologie bénigne",
+    "remark": "période retenue : celle de la thyroïde",
+    "situation": "Indication non néoplasique",
     "profile": "benign_iodine"
   },
   {
@@ -37,7 +37,7 @@
     "label": "Radium-223",
     "period_days": 11.43,
     "reference": "Période physique du radium-223",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": "",
     "cures": [1]
   },
@@ -46,7 +46,7 @@
     "label": "PSMA-177Lu",
     "period_hours": 40,
     "reference": "Kratochwil et al., EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019",
-    "remark": "Valeur la plus longue proposée",
+    "remark": "Valeur haute des recommandations",
     "situation": "",
     "cures": [1, 4, 6]
   },
@@ -55,7 +55,7 @@
     "label": "Synovectomie-90Y",
     "period_days": 2.67,
     "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": ""
   },
   {
@@ -63,7 +63,7 @@
     "label": "Synovectomie-186Re",
     "period_days": 3.7,
     "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": ""
   },
   {
@@ -71,7 +71,7 @@
     "label": "Synovectomie-169Er",
     "period_days": 9.4,
     "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": ""
   },
   {
@@ -79,7 +79,7 @@
     "label": "Microsphères-90Y",
     "period_hours": 64.05,
     "reference": "Période physique de l’yttrium-90",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": ""
   },
   {
@@ -87,7 +87,7 @@
     "label": "Microsphères-166Ho",
     "period_hours": 26.81,
     "reference": "Période physique de l’holmium-166",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": ""
   },
   {
@@ -95,7 +95,7 @@
     "label": "Lipiodol-131I",
     "period_days": 8.04,
     "reference": "Giammarile et al., EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011",
-    "remark": "Demi vie physique",
+    "remark": "Période physique",
     "situation": ""
   },
   {
@@ -103,7 +103,7 @@
     "label": "Lutétium-177 NET",
     "period_hours": 100,
     "reference": "Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019",
-    "remark": "Demi vie effective",
+    "remark": "Période effective",
     "situation": "",
     "cures": [1, 4]
   },
@@ -112,7 +112,7 @@
     "label": "MIBG-131I",
     "period_hours": 10.6,
     "reference": "Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim enfants, n=6)",
-    "remark": "Demi vie effective",
+    "remark": "Période effective",
     "situation": ""
   },
   {
