@@ -33,64 +33,6 @@
     "profile": "benign_iodine"
   },
   {
-    "api_code": "radium223",
-    "label": "Radium-223",
-    "period_days": 11.43,
-    "reference": "Période physique du radium-223",
-    "remark": "Période physique",
-    "situation": "",
-    "cures": [1]
-  },
-  {
-    "api_code": "psma_177lu",
-    "label": "PSMA-177Lu",
-    "period_hours": 40,
-    "reference": "Kratochwil et al., EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019",
-    "remark": "Valeur haute des recommandations",
-    "situation": "",
-    "cures": [1, 4, 6]
-  },
-  {
-    "api_code": "synovectomie_90y",
-    "label": "Synovectomie-90Y",
-    "period_days": 2.67,
-    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
-    "remark": "Période physique",
-    "situation": ""
-  },
-  {
-    "api_code": "synovectomie_186re",
-    "label": "Synovectomie-186Re",
-    "period_days": 3.7,
-    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
-    "remark": "Période physique",
-    "situation": ""
-  },
-  {
-    "api_code": "synovectomie_169er",
-    "label": "Synovectomie-169Er",
-    "period_days": 9.4,
-    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
-    "remark": "Période physique",
-    "situation": ""
-  },
-  {
-    "api_code": "microspheres_90y",
-    "label": "Microsphères-90Y",
-    "period_hours": 64.05,
-    "reference": "Période physique de l’yttrium-90",
-    "remark": "Période physique",
-    "situation": ""
-  },
-  {
-    "api_code": "microspheres_166ho",
-    "label": "Microsphères-166Ho",
-    "period_hours": 26.81,
-    "reference": "Période physique de l’holmium-166",
-    "remark": "Période physique",
-    "situation": ""
-  },
-  {
     "api_code": "lipiodol_131i",
     "label": "Lipiodol-131I",
     "period_days": 8.04,
@@ -113,6 +55,64 @@
     "period_hours": 10.6,
     "reference": "Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim enfants, n=6)",
     "remark": "Période effective",
+    "situation": ""
+  },
+  {
+    "api_code": "microspheres_90y",
+    "label": "Microsphères-90Y",
+    "period_hours": 64.05,
+    "reference": "Période physique de l’yttrium-90",
+    "remark": "Période physique",
+    "situation": ""
+  },
+  {
+    "api_code": "microspheres_166ho",
+    "label": "Microsphères-166Ho",
+    "period_hours": 26.81,
+    "reference": "Période physique de l’holmium-166",
+    "remark": "Période physique",
+    "situation": ""
+  },
+  {
+    "api_code": "psma_177lu",
+    "label": "PSMA-177Lu",
+    "period_hours": 40,
+    "reference": "Kratochwil et al., EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019",
+    "remark": "Valeur haute des recommandations",
+    "situation": "",
+    "cures": [1, 4, 6]
+  },
+  {
+    "api_code": "radium223",
+    "label": "Radium-223",
+    "period_days": 11.43,
+    "reference": "Période physique du radium-223",
+    "remark": "Période physique",
+    "situation": "",
+    "cures": [1]
+  },
+  {
+    "api_code": "synovectomie_90y",
+    "label": "Synovectomie-90Y",
+    "period_days": 2.67,
+    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
+    "remark": "Période physique",
+    "situation": ""
+  },
+  {
+    "api_code": "synovectomie_169er",
+    "label": "Synovectomie-169Er",
+    "period_days": 9.4,
+    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
+    "remark": "Période physique",
+    "situation": ""
+  },
+  {
+    "api_code": "synovectomie_186re",
+    "label": "Synovectomie-186Re",
+    "period_days": 3.7,
+    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003",
+    "remark": "Période physique",
     "situation": ""
   },
   {
