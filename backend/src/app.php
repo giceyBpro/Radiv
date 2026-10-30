@@ -71,13 +71,13 @@ if ($method === 'OPTIONS') {
 
 try {
     // Maintenance (pilotée depuis /auth) : l'accueil n'affiche que l'avis de maintenance ; en maintenance complète, l'API de
-    // calcul et le contact répondent aussi 503. /auth, /health et la configuration en lecture seule restent disponibles.
+    // calcul répond aussi 503. Le formulaire de contact, /auth, /health et la configuration en lecture seule restent disponibles.
     if (Maintenance\mode() !== 'off') {
         if (($method === 'GET' || $method === 'HEAD') && Seo\page_for_path($path) === '/') {
             Maintenance\send_page($method === 'HEAD');
             exit;
         }
-        if (Maintenance\mode() === 'full' && $method === 'POST' && ($path === '/api/calculate' || $path === '/api/contact')) {
+        if (Maintenance\mode() === 'full' && $method === 'POST' && $path === '/api/calculate') {
             header('Retry-After: 3600');
             Http\send_json(503, Maintenance\api_stopped());
             exit;
