@@ -62,7 +62,6 @@ function page_html(): string
 <p>Le site {$name} est momentanément en maintenance. Merci de votre compréhension.</p>
 <p>En attendant, vous pouvez calculer les durées de restriction avec l'outil en ligne de la SFMN : <a href="{$url}" target="_blank" rel="noopener noreferrer">accéder à l'outil de la SFMN</a>.</p>
 <p>Pour nous écrire, le <a href="/contact.html">formulaire de contact</a> reste disponible.</p>
-<p class="small">Ce site est indépendant de la SFMN et de son groupe de travail Radioprotection.</p>
 </main></body>
 </html>
 HTML;
