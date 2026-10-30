@@ -519,7 +519,7 @@
       // Toujours la référence scientifique publiée, quel que soit le calcul affiché (jamais un simple lien vers un site).
       link.href = 'https://doi.org/10.1016/j.mednuc.2026.03.002';
       link.textContent = 'https://doi.org/10.1016/j.mednuc.2026.03.002';
-      meta.textContent = '— Carlier et al., Médecine Nucléaire 2026;50:131-136 (groupe Radioprotection SFMN)';
+      meta.textContent = '— Carlier et al., Médecine Nucléaire 2026;50:131-136';
     }
 
     async function renderResults() {
