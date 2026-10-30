@@ -1,6 +1,6 @@
 <?php
 // Carte « Maintenance » de l'onglet Site de l'administration (voir maintenance.php) : mettre le site en maintenance
-// (accueil seulement) ou en maintenance complète (API de calcul et contact arrêtés aussi), ou le remettre en service.
+// (accueil seulement) ou en maintenance complète (API de calcul arrêtée aussi ; le formulaire de contact reste disponible), ou le remettre en service.
 // Mêmes protections que les mises à jour : session, CSRF, connexion Google récente.
 declare(strict_types=1);
 
@@ -28,7 +28,7 @@ function maintenance_card(string $csrf): string
         $out .= '<p class="small">Depuis le ' . h($state['since']) . ' (' . h($state['by']) . ').</p>';
     }
     $out .= '<p class="small"><strong>Maintenance</strong> : la page d\'accueil n\'affiche que « site en maintenance » avec le lien vers l\'outil de la SFMN ; l\'API continue de fonctionner. '
-        . '<strong>Maintenance complète</strong> : en plus, le calcul (<code>/api/calculate</code>) et le formulaire de contact répondent 503. '
+        . '<strong>Maintenance complète</strong> : en plus, le calcul (<code>/api/calculate</code>) répond 503 ; le formulaire de contact reste disponible dans les deux cas. '
         . '<code>/auth</code>, <code>/health</code> et la configuration en lecture seule restent disponibles.</p>'
         . '<div style="display:flex;gap:10px;flex-wrap:wrap">';
     if ($state['mode'] !== 'site') $out .= $button('site', 'Activer la maintenance', true);

@@ -3,8 +3,8 @@
 // (créer ou supprimer ce fichier par FTP a le même effet si /auth est inaccessible).
 //   'site' : la page d'accueil n'affiche plus que « site en maintenance » avec le lien vers l'outil de la SFMN ;
 //            l'API continue de fonctionner.
-//   'full' : comme 'site', et l'API de calcul et le formulaire de contact répondent 503 (code MAINTENANCE).
-// Jamais touchés : /auth (pour pouvoir lever la maintenance), /health, /api/config et /api/public-config (lecture seule,
+//   'full' : comme 'site', et l'API de calcul répond 503 (code MAINTENANCE).
+// Jamais touchés : le formulaire de contact (page et envoi : le lien figure sur l'avis), /auth (pour pouvoir lever la maintenance), /health, /api/config et /api/public-config (lecture seule,
 // utilisés par les contrôles de fonctionnement des mises à jour).
 declare(strict_types=1);
 
@@ -61,6 +61,7 @@ function page_html(): string
 <h1>Site en maintenance</h1>
 <p>Le site {$name} est momentanément en maintenance. Merci de votre compréhension.</p>
 <p>En attendant, vous pouvez calculer les durées de restriction avec l'outil en ligne de la SFMN : <a href="{$url}" target="_blank" rel="noopener noreferrer">accéder à l'outil de la SFMN</a>.</p>
+<p>Pour nous écrire, le <a href="/contact.html">formulaire de contact</a> reste disponible.</p>
 <p class="small">Ce site est indépendant de la SFMN et de son groupe de travail Radioprotection.</p>
 </main></body>
 </html>

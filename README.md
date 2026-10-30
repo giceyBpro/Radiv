@@ -392,7 +392,8 @@ Un bouton rend la page `/xplore` (`xplore.html`) et les fichiers `downloads/*.xm
 Deux interrupteurs, mémorisés dans `data/var/maintenance.json` (créer ou supprimer ce fichier par FTP a le même effet si `/auth` est inaccessible ; `{"mode":"site"}` ou `{"mode":"full"}`) :
 
 - **Maintenance** : la page d'accueil (`/`) répond 503 (`Retry-After: 3600`, `noindex`) et n'affiche que « Site en maintenance » avec le lien vers l'outil de la SFMN (`SFMN_CALCULATOR_URL`) ; l'API continue de fonctionner. Si l'accueil est servi sans passer par PHP (blocs `.htaccess` SEO absents), `/api/config` annonce `maintenance` et `app.js` affiche le même avis en plein écran.
-- **Maintenance complète** : en plus, `POST /api/calculate` et `POST /api/contact` répondent 503 avec `{"ok":false,"error":{"code":"MAINTENANCE",…}}`.
+- **Maintenance complète** : en plus, `POST /api/calculate` répond 503 avec `{"ok":false,"error":{"code":"MAINTENANCE",…}}`.
+- **Contact** : dans les deux cas, l'avis de maintenance renvoie vers le formulaire de contact (`contact.html`), dont l'envoi (`POST /api/contact`) reste disponible.
 
 **Page d'attente de l'accueil** : `index.html` s'ouvre sur un avis de maintenance quasi vide (le calculateur est masqué par une feuille de style en ligne) ; un script en ligne interroge `/api/config` et ne retire l'avis qu'une fois le site confirmé en service. API injoignable ou en maintenance : l'avis reste. Le bloc est balisé `<!--MAINTENANCE-GATE-->` (la page de test SFMN de l'administration le retire).
 

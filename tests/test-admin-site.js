@@ -253,7 +253,8 @@ async function update(c, ref, token) {
     msg = await setMode('full'); t('maintenance complète activée', /Maintenance complète activée/.test(msg), msg);
     r2 = await calc(); const body2 = await r2.json();
     t('maintenance complète: calcul → 503 MAINTENANCE avec Retry-After', r2.status === 503 && body2.ok === false && body2.error.code === 'MAINTENANCE' && r2.headers.get('retry-after') === '3600');
-    t('…formulaire de contact → 503', (await fetch(`${BASE}/api/contact`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: '{}' })).status === 503);
+    t('…formulaire de contact toujours disponible (pas de 503)', (await fetch(`${BASE}/api/contact`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: '{}' })).status !== 503);
+    t('…l\'avis de maintenance renvoie vers le formulaire de contact', /href="\/contact\.html"/.test(await (await fetch(`${BASE}/`)).text()));
     t('…/health, /api/config et /auth restent disponibles', (await fetch(`${BASE}/health`)).status === 200 && (await fetch(`${BASE}/api/config`)).status === 200 && (await c.req('GET', `${BASE}/auth`)).status === 200);
     t('…accueil toujours en maintenance', (await fetch(`${BASE}/`)).status === 503);
     msg = await setMode('off'); t('remise en service', /remis en service/.test(msg), msg);
