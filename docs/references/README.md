@@ -16,11 +16,7 @@ racine web.
 | `Giammarile_2011_EJNMMI_foie_intra-arteriel.pdf` | Giammarile F, Bodei L, Chiesa C, Flux G, Forrer F, Kraeber-Bodere F, et al. EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds. Eur J Nucl Med Mol Imaging 2011;38:1393-406. https://doi.org/10.1007/s00259-011-1812-2 |
 | `Levart_2019_EJNMMI_Phys_177Lu-DOTATATE.pdf` | Levart D, Kalogianni E, Corcoran B, Mulholland N, Vivian G. Radiation precautions for inpatient and outpatient 177Lu-DOTATATE peptide receptor radionuclide therapy of neuroendocrine tumours. EJNMMI Phys 2019;6:7. https://doi.org/10.1186/s40658-019-0243-1 |
 
-**Droits**
-- **Accès libre, licence CC BY 4.0** (réutilisables avec mention de la source) : Carlier et al. 2026 et Levart et al. 2019.
-- **Protégés, usage interne seulement** : Vija et al. (© Société Française du Cancer / Elsevier Masson), la lettre de réponse et la lettre de commentaires
-  (© Elsevier Masson, tous droits réservés), l'article de Carlier et al. de 2004 (© EDP Sciences), les recommandations EANM de Clunie et Fischer (2003) et de Giammarile et al. (2011) (© Springer), et le
-  tableur SFPM/SFMN (licence non précisée : traité comme protégé).
-
-Pour tous : ne pas rendre le dépôt public avec les documents protégés, ne pas les copier dans `public/` et ne pas citer de longs passages sur le site
-(reformuler, avec la référence).
+**Droits et usage** : **aucun de ces PDF n'est jamais publié ni déployé** ; ils sont conservés pour un usage personnel (vérification des valeurs et des références).
+Certains sont en accès libre (Carlier et al. 2026 et Levart et al. 2019 : licence CC BY 4.0), d'autres sont protégés (© Elsevier Masson, EDP Sciences, Springer,
+Société Française du Cancer ; tableur SFPM/SFMN : licence non précisée, traité comme protégé), mais la règle est la même pour tous : ne jamais les inclure dans
+le dépôt public du moteur, ne jamais les copier dans `public/`, et ne pas citer de longs passages sur le site (reformuler, avec la référence).
