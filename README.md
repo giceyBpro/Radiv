@@ -100,6 +100,8 @@ Vérifié par `tests/test-install.js` (canonique, Open Graph, JSON-LD, ETag/304,
 
 Retourne les radiopharmaceutiques disponibles, l'isotope par défaut, les nombres de cures autorisés par isotope (`cure_options_by_isotope`) et **la saisie attendue pour chaque isotope** (`isotope_inputs`) : pour chacun, `dose_rate`, `benign_activity_mbq`, `benign_fixation_pct` et `user_period_days` valent `required` (à renseigner), `optional` ou `ignored` (inutile : une interface peut le masquer). Ces informations viennent du moteur (profil de calcul de l'isotope) : une interface qui les lit n'a pas à connaître les codes d'isotopes, et un isotope ajouté dans les données s'affiche correctement sans la modifier. Pendant une maintenance, le champ `maintenance` s'ajoute.
 
+**Intitulés des isotopes propres à RadIV** : le moteur n'est pas modifié ; une surcouche du site (`backend/src/lib/isotope_labels.php`, tableau `LABELS`) remplace l'intitulé de chaque isotope par celui de RadIV, dans `/api/config` (donc pages, script Xplore et documentation d'API) et dans `selected.label` des réponses de `/api/calculate`. Le code (`api_code`) ne change jamais. La liste est triée par ordre alphabétique de l'intitulé affiché (nombres dans l'ordre numérique : Iode 131 à 0 %, 5 % puis 25 %), l'isotope « Personnalisé » (`non_defini`) toujours en dernier. Un isotope ajouté plus tard dans le moteur n'est pas dans `LABELS` : il s'affiche sous son intitulé du moteur.
+
 ### `POST /api/calculate`
 
 Calcule les durées de restriction recommandées.

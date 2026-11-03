@@ -10,6 +10,7 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 
 use RivEngine as Calculation;
 use Radiv\Config;
+use Radiv\IsotopeLabels;
 use Radiv\Maintenance;
 use Radiv\Updater;
 
@@ -18,7 +19,7 @@ use Radiv\Updater;
 function config(bool $sfmn, bool $announceMaintenance = true): array
 {
     return [
-        'isotopes' => Calculation\isotopes(),
+        'isotopes' => IsotopeLabels\apply(Calculation\isotopes()), // intitulés de RadIV, triés (voir isotope_labels.php)
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
         // Scénarios déclarés par le moteur : la page d'information de l'API s'en sert pour rester à jour seule.
