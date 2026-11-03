@@ -10,7 +10,7 @@
 // 3. Saisissez la clé : le script télécharge la version demandée, ne retient que les fichiers attendus, les installe
 //    dans le sous-dossier choisi (« riv » par défaut), vérifie que le moteur calcule, puis SE SUPPRIME.
 //
-// Résultat :  <dossier>/index.html, config.js (vos textes), app.js, style.css   → la page de saisie
+// Résultat :  <dossier>/index.html (la page de saisie, un seul fichier), config.js (vos textes)
 //             <dossier>/api/                                                     → l'API (config, calculate)
 //             <dossier>/engine/                                                  → le moteur (inaccessible depuis le web)
 //
@@ -64,7 +64,7 @@ function destination($rel)
         'VERSION' => 'engine/VERSION',
         'api/handler.php' => 'engine/api/handler.php',
         'api/index.php' => 'api/index.php',
-        'web/index.html' => 'index.html', 'web/config.js' => 'config.js', 'web/app.js' => 'app.js', 'web/style.css' => 'style.css',
+        'web/index.html' => 'index.html', 'web/config.js' => 'config.js',
     );
     if (isset($fixed[$rel])) return $fixed[$rel];
     if (preg_match('#^src/[A-Za-z0-9_-]+\.php$#', $rel)) return 'engine/' . $rel;
@@ -136,7 +136,7 @@ function read_archive($zipFile)
         $files[$dest] = $content;
     }
     $zip->close();
-    foreach (array('engine/src/bootstrap.php', 'engine/src/calculate.php', 'engine/data/isotopes.json', 'engine/api/handler.php', 'api/index.php', 'index.html', 'app.js') as $needed) {
+    foreach (array('engine/src/bootstrap.php', 'engine/src/calculate.php', 'engine/data/isotopes.json', 'engine/api/handler.php', 'api/index.php', 'index.html', 'config.js') as $needed) {
         if (!isset($files[$needed])) throw new RuntimeException('Version incomplète : ' . $needed . ' manque dans l\'archive.');
     }
     return $files;

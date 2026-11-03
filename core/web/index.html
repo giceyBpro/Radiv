@@ -1,16 +1,42 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: MPL-2.0
      Copyright (c) 2026 Projet RadIV et contributeurs -->
-<!-- Page minimale du moteur RIV. Tous les textes visibles viennent de config.js ; ici, seulement la structure. -->
+<!--
+  PAGE MINIMALE DU MOTEUR RIV : un seul fichier HTML (structure, présentation et logique), plus config.js pour les textes.
+  Elle appelle l'API du moteur (GET config, POST calculate) et affiche le tableau des durées de restriction.
+    - Textes, libellés, adresse de l'API : config.js (le seul fichier à modifier pour personnaliser la page).
+    - Couleurs : variables CSS du bloc <style>, juste en dessous.
+    - Isotopes, scénarios, champs à saisir : lus sur l'API, rien n'est écrit en dur ici (voir « Champs affichés »).
+-->
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Calcul des durées de restriction</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Durées de restriction</title>
+  <style>
+    /* Présentation sobre, lisible sur mobile. Les couleurs se changent ici. */
+    :root { --fond: #fff; --texte: #1d2733; --accent: #0b5cad; --bord: #c9d3de; --erreur: #a4262c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--texte); background: var(--fond); }
+    main { max-width: 760px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.4rem; }
+    label { display: block; margin: 12px 0; font-weight: 600; }
+    label span { display: block; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px; font: inherit; border: 1px solid var(--bord); border-radius: 6px; }
+    fieldset { border: 1px solid var(--bord); border-radius: 6px; margin: 16px 0; }
+    legend { font-weight: 600; padding: 0 6px; }
+    button { padding: 10px 20px; font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 6px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--bord); text-align: left; vertical-align: top; }
+    td:last-child, th:last-child { text-align: right; white-space: nowrap; font-weight: 700; }
+    .errors { color: var(--erreur); padding-left: 20px; }
+    .disclaimer { margin-top: 24px; font-size: .9rem; color: #566; }
+    [hidden] { display: none !important; }
+  </style>
 </head>
 <body>
   <main>
+    <!-- Les éléments data-text / data-label reçoivent leur texte de config.js (textContent : jamais de HTML injecté). -->
     <h1 data-text="title"></h1>
     <p data-text="intro"></p>
 
@@ -44,7 +70,133 @@
 
     <p class="disclaimer" data-text="disclaimer"></p>
   </main>
+
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      const C = window.RIV_CONFIG;                          // textes et réglages (config.js)
+      const $ = (id) => document.getElementById(id);
+      const api = (C.apiBase || '').replace(/\/$/, '');     // adresse de l'API ('' = même adresse que la page)
+
+      // ----- Textes de la page ---------------------------------------------------------------------------------------
+      document.title = C.title;
+      document.querySelectorAll('[data-text]').forEach((el) => { el.textContent = C[el.dataset.text] || ''; });
+      document.querySelectorAll('[data-label]').forEach((el) => { el.textContent = C.labels[el.dataset.label] || ''; });
+      $('submit').textContent = C.labels.calculate;
+
+      // ----- Champs affichés -----------------------------------------------------------------------------------------
+      // Le moteur annonce, pour chaque isotope, ce qu'il faut saisir (GET config, « isotope_inputs ») : pour chacun des champs
+      // dose_rate, benign_activity_mbq, benign_fixation_pct et user_period_days, "required", "optional" ou "ignored".
+      // Un isotope ajouté dans les données du moteur s'affiche donc correctement sans modifier cette page.
+      let cureOptions = {};   // code isotope → nombres de cures autorisés
+      let inputs = {};        // code isotope → champ → "required" | "optional" | "ignored"
+
+      // Saisie attendue pour un isotope. Repli (moteur ancien qui n'annonce rien) : règles de l'iode bénin et de l'isotope à période libre.
+      function inputsFor(code) {
+        if (inputs[code]) return inputs[code];
+        const standard = { dose_rate: 'required', benign_activity_mbq: 'ignored', benign_fixation_pct: 'ignored', user_period_days: 'optional' };
+        if (code === 'iode131_benin') return Object.assign({}, standard, { dose_rate: 'ignored', benign_activity_mbq: 'required', benign_fixation_pct: 'required' });
+        if (code === 'non_defini') return Object.assign({}, standard, { user_period_days: 'required' });
+        return standard;
+      }
+
+      // Affiche ou masque les champs selon l'isotope choisi : nombre de cures, activité et fixation (iode bénin), débit de dose.
+      function refreshFields() {
+        const code = $('isotope').value;
+        const cures = cureOptions[code] || [];
+        $('cures').innerHTML = '';
+        cures.forEach((n) => { const o = document.createElement('option'); o.value = n; o.textContent = n; $('cures').appendChild(o); });
+        $('cureField').hidden = cures.length < 2;
+
+        const wanted = inputsFor(code);
+        $('benignFields').hidden = wanted.benign_activity_mbq === 'ignored' && wanted.benign_fixation_pct === 'ignored';
+        $('doseRateField').hidden = wanted.dose_rate === 'ignored';
+        const periodLabel = document.querySelector('[data-label="periodDays"]');
+        periodLabel.textContent = wanted.user_period_days === 'required' ? C.labels.periodDaysRequired : C.labels.periodDays;
+      }
+
+      // ----- Envoi du calcul -----------------------------------------------------------------------------------------
+      // Valeur numérique d'un champ, null s'il est vide.
+      function number(id) { return $(id).value.trim() === '' ? null : Number($(id).value); }
+
+      // Corps de la requête POST calculate : les champs ignorés pour l'isotope ne sont pas envoyés.
+      function requestBody() {
+        const wanted = inputsFor($('isotope').value);
+        const body = { isotope_code: $('isotope').value, patient_size_cm: number('patientSize'), user_period_days: number('periodDays') };
+        if (!$('cureField').hidden) body.cure_count = Number($('cures').value);
+        if (wanted.benign_activity_mbq !== 'ignored') body.benign_activity_mbq = number('benignActivity');
+        if (wanted.benign_fixation_pct !== 'ignored') body.benign_fixation_pct = number('benignFixation');
+        if (wanted.dose_rate !== 'ignored') body.dose_rate = number('doseRate');
+        return Object.assign(body, {
+          user_hours_1: number('customHours1'), user_distance_1: number('customDistance1'),
+          user_hours_2: number('customHours2'), user_limit: number('customLimit')
+        });
+      }
+
+      // ----- Affichage -----------------------------------------------------------------------------------------------
+      // Liste de messages d'erreur (ou d'information) ; une liste vide la masque.
+      function showMessages(messages) {
+        const list = $('errors');
+        list.innerHTML = '';
+        (Array.isArray(messages) ? messages : [messages]).filter(Boolean).forEach((text) => {
+          const li = document.createElement('li');
+          li.textContent = text;
+          list.appendChild(li);
+        });
+        list.hidden = !list.children.length;
+      }
+
+      // Résultat de l'API : tableau des durées (une ligne par scénario) ou liste d'erreurs.
+      function render(result) {
+        const body = $('results').querySelector('tbody');
+        body.innerHTML = '';
+        showMessages(result.ok ? [] : (result.errors && result.errors.length ? result.errors : [result.error && result.error.message]));
+        $('results').hidden = !result.ok;
+        if (!result.ok) return;
+
+        result.rows.forEach((row) => {
+          if (row.audience_code === 'scenario_utilisateur' && row.value === null) return;   // scénario personnalisé non demandé
+          const tr = document.createElement('tr');
+          [row.label, row.condition, row.value === null ? C.messages.notComputed : String(row.value)].forEach((text) => {
+            const td = document.createElement('td');
+            td.textContent = text;
+            tr.appendChild(td);
+          });
+          body.appendChild(tr);
+        });
+      }
+
+      // ----- Démarrage -----------------------------------------------------------------------------------------------
+      // Lit la configuration du moteur (isotopes, cures, champs attendus) puis prépare le formulaire.
+      async function start() {
+        showMessages(C.messages.loading);
+        try {
+          const config = await (await fetch(api + '/config')).json();
+          cureOptions = config.cure_options_by_isotope || {};
+          inputs = config.isotope_inputs || {};
+          config.isotopes.forEach((isotope) => {
+            const o = document.createElement('option');
+            o.value = isotope.api_code;
+            o.textContent = isotope.label;
+            $('isotope').appendChild(o);
+          });
+          $('isotope').value = config.default_isotope_code;
+          refreshFields();
+          showMessages([]);
+        } catch (e) { showMessages(C.messages.apiError); }
+      }
+
+      $('isotope').addEventListener('change', refreshFields);
+      $('form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          const response = await fetch(api + '/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody()) });
+          render(await response.json());
+        } catch (e) { showMessages(C.messages.apiError); $('results').hidden = true; }
+      });
+      start();
+    })();
+  </script>
 </body>
 </html>
