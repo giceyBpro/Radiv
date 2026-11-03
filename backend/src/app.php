@@ -33,6 +33,7 @@ require __DIR__ . '/lib/session.php';
 require __DIR__ . '/lib/google.php';
 require __DIR__ . '/lib/updater.php';
 require __DIR__ . '/lib/core_lab.php';
+require __DIR__ . '/lib/isotope_labels.php';
 require __DIR__ . '/lib/frontend.php';
 require __DIR__ . '/lib/admin_measures.php';
 require __DIR__ . '/lib/admin_sfmn.php';
@@ -49,6 +50,7 @@ use Radiv\Contact;
 use Radiv\Frontend;
 use Radiv\Geo;
 use Radiv\Http;
+use Radiv\IsotopeLabels;
 use Radiv\Json;
 use Radiv\Maintenance;
 use Radiv\Measurements;
@@ -130,7 +132,7 @@ try {
         unset($payload['provider']);
         // Un éventuel « calculation_mode » (ancien paramètre d'API) est ignoré sans erreur : le calcul est toujours celui du moteur.
         unset($payload['calculation_mode']);
-        $result = Calculation\calculate($payload);
+        $result = IsotopeLabels\apply_to_result(Calculation\calculate($payload)); // intitulé de l'isotope propre à RadIV
         $timestamp = Measurements\now_iso();
         Http\send_json(200, $result);
 
