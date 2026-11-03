@@ -3,7 +3,7 @@
     "api_code": "iode131_0_fixation",
     "label": "Iode-131-0%-fixation",
     "period_hours": 16,
-    "reference": "Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012",
+    "reference": "Carlier T. Recommandations pratiques concernant la sortie des patients après traitement du cancer différencié de la thyroïde à l'131I. Radioprotection 2004;39:481-92 ; DOI : 10.1051/radiopro:2004012",
     "remark": "-",
     "situation": "Néoplasie"
   },
@@ -11,7 +11,7 @@
     "api_code": "iode131_5_fixation",
     "label": "Iode-131-5%-fixation",
     "period_hours": 16,
-    "reference": "Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012",
+    "reference": "Carlier T. Recommandations pratiques concernant la sortie des patients après traitement du cancer différencié de la thyroïde à l'131I. Radioprotection 2004;39:481-92 ; DOI : 10.1051/radiopro:2004012",
     "remark": "période retenue : celle de la thyroïde",
     "situation": "Néoplasie oligométastatique"
   },
@@ -19,7 +19,7 @@
     "api_code": "iode131_25_fixation",
     "label": "Iode-131-25%-fixation",
     "period_hours": 16,
-    "reference": "Carlier et al., Radioprotection 2004 Vol. 39, n° 4, pages 481 à 492 — DOI: 10.1051/radiopro:2004012",
+    "reference": "Carlier T. Recommandations pratiques concernant la sortie des patients après traitement du cancer différencié de la thyroïde à l'131I. Radioprotection 2004;39:481-92 ; DOI : 10.1051/radiopro:2004012",
     "remark": "période retenue : celle de la thyroïde",
     "situation": "Néoplasie multimétastatique"
   },
@@ -27,7 +27,7 @@
     "api_code": "iode131_benin",
     "label": "Iode-131-Bénin",
     "period_hours": 122.4,
-    "reference": "Carlier et al., Nuclear Medicine Communications 2006, 27:559–566 — DOI : 10.1097/00006231-200607000-00003",
+    "reference": "Carlier T. Optimized radioiodine therapy for Graves' disease: two MIRD-based models for the computation of patient-specific therapeutic 131I activity. Nucl Med Commun 2006;27:559-66 ; DOI : 10.1097/00006231-200607000-00003",
     "remark": "période retenue : celle de la thyroïde",
     "situation": "Indication non néoplasique",
     "profile": "benign_iodine"
@@ -36,7 +36,7 @@
     "api_code": "lipiodol_131i",
     "label": "Lipiodol-131I",
     "period_days": 8.04,
-    "reference": "Giammarile et al., EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds 2011 — DOI : 10.1007/s00259-011-1812-2",
+    "reference": "Giammarile F. EANM procedure guideline for the treatment of liver cancer and liver metastases with intra-arterial radioactive compounds. EJNMMI 2011;38:1393-406 ; DOI : 10.1007/s00259-011-1812-2",
     "remark": "Période physique",
     "situation": ""
   },
@@ -44,7 +44,7 @@
     "api_code": "lutetium177_net",
     "label": "Lutétium-177 NET",
     "period_hours": 100,
-    "reference": "Fitschen et al, Z Med Phys 2011 — DOI : 10.1016/j.zemedi.2011.05.001 ; Levart et al, EJNMMI Phys 2019 — DOI : 10.1186/s40658-019-0243-1",
+    "reference": "Fitschen J. External radiation exposure and effective half-life in Lu-177-Dota-Tate therapy. Z Med Phys 2011;21:266-73 ; DOI : 10.1016/j.zemedi.2011.05.001 / Levart D. Radiation precautions for inpatient and outpatient 177Lu-DOTATATE peptide receptor radionuclide therapy of neuroendocrine tumours. EJNMMI Phys 2019;6:7 ; DOI : 10.1186/s40658-019-0243-1",
     "remark": "Période effective",
     "situation": "",
     "cures": [1, 4]
@@ -53,7 +53,7 @@
     "api_code": "mibg_131i",
     "label": "MIBG-131I",
     "period_hours": 10.6,
-    "reference": "Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim enfants, n=6) — DOI : 10.1097/00006231-199509000-00007",
+    "reference": "Wafelman AR. Renal excretion of meta-iodobenzylguanidine after therapeutic doses in cancer patients and its relation to dose and creatinine clearance. Nucl Med Commun 1995;16:767-72 ; DOI : 10.1097/00006231-199509000-00007 (t½ élim. enfants, n = 6)",
     "remark": "Période effective",
     "situation": ""
   },
@@ -77,7 +77,7 @@
     "api_code": "psma_177lu",
     "label": "PSMA-177Lu",
     "period_hours": 40,
-    "reference": "Kratochwil et al., EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands 2019 — DOI : 10.1007/s00259-019-04485-3",
+    "reference": "Kratochwil C. EANM procedure guidelines for radionuclide therapy with 177Lu-labelled PSMA-ligands (177Lu-PSMA-RLT). EJNMMI 2019;46:2536-44 ; DOI : 10.1007/s00259-019-04485-3",
     "remark": "Valeur haute des recommandations",
     "situation": "",
     "cures": [1, 4, 6]
@@ -95,7 +95,7 @@
     "api_code": "synovectomie_90y",
     "label": "Synovectomie-90Y",
     "period_days": 2.67,
-    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003 — DOI : 10.1007/s00259-002-1058-0",
+    "reference": "Clunie G. EANM procedure guidelines for radiosynovectomy. EJNMMI 2003;30:BP12-6 ; DOI : 10.1007/s00259-002-1058-0",
     "remark": "Période physique",
     "situation": ""
   },
@@ -103,7 +103,7 @@
     "api_code": "synovectomie_169er",
     "label": "Synovectomie-169Er",
     "period_days": 9.4,
-    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003 — DOI : 10.1007/s00259-002-1058-0",
+    "reference": "Clunie G. EANM procedure guidelines for radiosynovectomy. EJNMMI 2003;30:BP12-6 ; DOI : 10.1007/s00259-002-1058-0",
     "remark": "Période physique",
     "situation": ""
   },
@@ -111,7 +111,7 @@
     "api_code": "synovectomie_186re",
     "label": "Synovectomie-186Re",
     "period_days": 3.7,
-    "reference": "Clunie et al., EANM Procedure Guidelines for Radiosynovectomy 2003 — DOI : 10.1007/s00259-002-1058-0",
+    "reference": "Clunie G. EANM procedure guidelines for radiosynovectomy. EJNMMI 2003;30:BP12-6 ; DOI : 10.1007/s00259-002-1058-0",
     "remark": "Période physique",
     "situation": ""
   },
