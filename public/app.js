@@ -56,6 +56,25 @@
       scenario_utilisateur: { label: 'Scénario utilisateur', condition: 'Exposition : h à m + h à 1 m · limite de dose : mSv' }
     };
 
+    // Texte de référence avec ses DOI rendus cliquables (nœuds DOM : aucun HTML issu des données n'est interprété).
+    function setReferenceText(el, text) {
+      el.textContent = '';
+      const re = /(?:https?:\/\/doi\.org\/)?(10\.\d{4,9}\/[^\s<>,;]*[^\s<>,;.])/g;
+      let last = 0;
+      for (const m of String(text).matchAll(re)) {
+        el.append(text.slice(last, m.index));
+        const a = document.createElement('a');
+        a.className = 'inline-link';
+        a.href = 'https://doi.org/' + m[1];
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = m[1];
+        el.append(a);
+        last = m.index + m[0].length;
+      }
+      el.append(text.slice(last));
+    }
+
     function formatNumber(value, decimals = 2) {
       if (value === null || value === undefined || Number.isNaN(value)) return '-';
       return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(value);
@@ -361,7 +380,7 @@
       toggleBenignRows(isBenign);
       togglePeriodRow(periodRequired(selectedCode));
       applyRequiredHighlight(selectedCode);
-      $('referenceText').textContent = selected?.reference || '-';
+      setReferenceText($('referenceText'), selected?.reference || '-');
       $('remarkText').textContent = selected?.remark || '-';
       $('effectivePeriodLabel').textContent = periodRequired(selectedCode)
         ? 'Période effective à saisir, en jours (requise pour ce choix)'
@@ -388,7 +407,7 @@
           $('doseRate').value = String(Number(result.computed_dose_rate.toFixed(4)));
         }
       }
-      $('referenceText').textContent = selected.reference || '-';
+      setReferenceText($('referenceText'), selected.reference || '-');
       $('remarkText').textContent = selected.remark || '-';
       renderSourceForMode(result);
       selectedCureCount = Number(result.cure_count || selectedCureCount || 1);

@@ -113,6 +113,11 @@
     const SITE_URL = window.RADIOPROTECTION_SITE_URL || window.location.origin;
     const COPYRIGHT_OWNER = window.RADIOPROTECTION_COPYRIGHT_OWNER || SITE_URL;
 
+    // DOI (déjà échappés) rendus cliquables.
+    function linkDoi(escaped) {
+      return String(escaped).replace(/(?:https?:\/\/doi\.org\/)?(10\.\d{4,9}\/[^\s<>,;]*[^\s<>,;.])/g, '<a href="https://doi.org/$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    }
+
     function safe(value) {
       if (value === null || value === undefined || value === '') return '-';
       return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -169,7 +174,7 @@
 
       const result = payload.result || {};
       const sourceRef = 'Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002';
-      document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${safe(sourceRef)}`;
+      document.getElementById('referenceText').innerHTML = `<strong>Référence / source :</strong> ${linkDoi(safe(sourceRef))}`;
       const effDays = result.effective_days ?? '-';
       const effHours = result.effective_hours ?? '-';
       document.getElementById('effectiveText').innerHTML = `<strong>Période effective utilisée :</strong> ${safe(effDays)} jours (${safe(effHours)} heures)`;
