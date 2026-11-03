@@ -53,7 +53,7 @@
     "api_code": "mibg_131i",
     "label": "MIBG-131I",
     "period_hours": 10.6,
-    "reference": "Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim enfants, n=6)",
+    "reference": "Wafelman et al., Nucl. Med. Commun. 16 (1995) 767–772 (t½,elim enfants, n=6) — DOI : 10.1097/00006231-199509000-00007",
     "remark": "Période effective",
     "situation": ""
   },
