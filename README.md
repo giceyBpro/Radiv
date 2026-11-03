@@ -62,8 +62,8 @@ externe pointait vers elles, et elles ne sont liées depuis aucune page publique
 - **Balises dépendant de l'adresse du site, rendues par le backend** : l'adresse du site n'étant connue qu'à l'installation, `index.html` et
   `mentions-legales.html` contiennent un repère `<!--SEO-HEAD-->` que `backend/src/lib/seo.php` remplace à la volée, d'après `SITE_PUBLIC_URL` : **adresse canonique
   absolue** (`/` et `/legal`), `og:url`, `og:site_name`, `og:image` / `twitter:image` (`/og-image.png`, 1200×630), **données structurées JSON-LD** (`WebSite`,
-  `Organization`, `WebApplication` pour l'accueil avec `dateModified` = date de la version installée, `WebPage` pour les mentions légales) et **nom du site dans le
-  `h1`** dès le HTML (sans attendre le JavaScript). Réponses avec `ETag`, `Cache-Control: public, max-age=300` et `304`. Si l'adresse du site n'est pas configurée
+  `Organization`, `WebApplication` pour l'accueil avec `dateModified` = date de la version installée, `WebPage` pour les mentions légales) et **nom du site dans
+  `og:site_name`** dès le HTML (sans attendre le JavaScript). Réponses avec `ETag`, `Cache-Control: public, max-age=300` et `304`. Si l'adresse du site n'est pas configurée
   ou si le fichier manque, la page est servie telle quelle (aucune erreur visible).
 - **`sitemap.xml`** est servi par le backend (accueil et mentions légales, avec leur date de dernière modification) ; `install.php` en écrit aussi une version statique
   de repli.
