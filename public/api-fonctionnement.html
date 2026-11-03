@@ -149,8 +149,18 @@ X-API-Key: rdv_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
     (function () {
       function esc(v) { return String(v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
       var base = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/$/, '');
-      fetch(base + '/config').then(function (r) { return r.json(); }).then(function (c) {
-        var iso = (c.isotopes || []).map(function (i) { return '<tr><td>' + esc(i.label) + '</td><td><code>' + esc(i.api_code) + '</code></td></tr>'; }).join('');
+      // Isotopes et scénarios : GET /api/config (API du moteur). Intitulés et ordre de RadIV : GET /api/public-config, facultatif.
+      var site = fetch(base + '/public-config').then(function (r) { return r.json(); }).catch(function () { return {}; });
+      Promise.all([fetch(base + '/config').then(function (r) { return r.json(); }), site]).then(function (both) {
+        var c = both[0], labels = both[1].isotope_labels || {}, order = both[1].isotope_order;
+        var list = c.isotopes || [];
+        if (Array.isArray(order)) {
+          var byCode = {};
+          list.forEach(function (i) { byCode[i.api_code] = i; });
+          var ordered = order.map(function (code) { return byCode[code]; }).filter(Boolean);
+          if (ordered.length === list.length) list = ordered;
+        }
+        var iso = list.map(function (i) { return '<tr><td>' + esc(labels[i.api_code] || i.label) + '</td><td><code>' + esc(i.api_code) + '</code></td></tr>'; }).join('');
         if (iso) document.getElementById('isotopesBody').innerHTML = iso;
         var sc = (c.scenarios || []).map(function (x) { return '<tr><td>' + esc(x.label) + '</td><td><code>' + esc(x.audience_code) + '</code></td><td>' + esc(x.condition) + '</td></tr>'; }).join('');
         document.getElementById('scenariosBody').innerHTML = sc || '<tr><td colspan="3">Indisponible.</td></tr>';

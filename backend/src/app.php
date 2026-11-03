@@ -132,7 +132,7 @@ try {
         unset($payload['provider']);
         // Un éventuel « calculation_mode » (ancien paramètre d'API) est ignoré sans erreur : le calcul est toujours celui du moteur.
         unset($payload['calculation_mode']);
-        $result = IsotopeLabels\apply_to_result(Calculation\calculate($payload)); // intitulé de l'isotope propre à RadIV
+        $result = Calculation\calculate($payload);
         $timestamp = Measurements\now_iso();
         Http\send_json(200, $result);
 

@@ -2,14 +2,16 @@
 // Intitulés des isotopes propres à RadIV (surcouche du site : le moteur de calcul n'est pas modifié).
 //
 // Le moteur fournit, pour chaque isotope, un intitulé (champ « label » de core/data/isotopes.json). RadIV affiche ses propres
-// intitulés, définis dans LABELS ci-dessous : le code de l'isotope (api_code) ne change jamais, seul le texte affiché change.
+// intitulés, définis dans LABELS ci-dessous : le code de l'isotope (api_code) ne change jamais.
 //   - Pour changer un intitulé : modifier la ligne correspondante de LABELS.
 //   - Isotope ajouté plus tard dans le moteur : absent de LABELS, il s'affiche sous son intitulé du moteur, sans rien faire.
-// La liste des isotopes est triée par ordre alphabétique de l'intitulé affiché (accents ignorés, nombres dans l'ordre
-// numérique : « Iode 131 (5 %) » avant « Iode 131 (25 %) »), l'isotope « personnalisé » (non_defini) toujours en dernier.
 //
-// Appliquée en un seul endroit pour tout le site : /api/config (donc pages, script Xplore, documentation d'API) et le champ
-// selected.label des réponses de /api/calculate.
+// Ces intitulés ne sont destinés qu'aux pages de RadIV et à la page « Info API ». Ils sont publiés par GET /api/public-config (la
+// configuration propre au site), jamais dans GET /api/config ni dans les réponses de calcul : l'API reste celle du moteur,
+// avec ses intitulés. /api/public-config ajoute :
+//   - isotope_labels : code de l'isotope → intitulé de RadIV ;
+//   - isotope_order  : les codes dans l'ordre d'affichage, soit l'ordre alphabétique de l'intitulé affiché (accents ignorés,
+//     nombres dans l'ordre numérique : « Iode 131 (5 %) » avant « Iode 131 (25 %) »), l'isotope « personnalisé » en dernier.
 declare(strict_types=1);
 
 namespace Radiv\IsotopeLabels;
@@ -53,21 +55,16 @@ function sort_key(string $label): string
     return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $plain));
 }
 
-// Liste des isotopes du moteur, avec les intitulés de RadIV, triée (« personnalisé » en dernier). Les autres champs sont intacts.
-function apply(array $isotopes): array
+// Intitulés de RadIV et ordre d'affichage pour une liste d'isotopes du moteur : [code → intitulé, codes triés].
+function display(array $isotopes): array
 {
-    foreach ($isotopes as &$isotope) $isotope['label'] = label_of($isotope);
-    unset($isotope);
-    usort($isotopes, static function (array $a, array $b): int {
-        if ($a['api_code'] === LAST || $b['api_code'] === LAST) return ($a['api_code'] === LAST) <=> ($b['api_code'] === LAST);
-        return strnatcasecmp(sort_key($a['label']), sort_key($b['label']));
-    });
-    return $isotopes;
-}
+    $labels = [];
+    foreach ($isotopes as $isotope) $labels[$isotope['api_code']] = label_of($isotope);
 
-// Résultat d'un calcul avec l'intitulé de RadIV dans « selected » (le reste de la réponse est inchangé).
-function apply_to_result(array $result): array
-{
-    if (isset($result['selected']['api_code'])) $result['selected']['label'] = label_of($result['selected']);
-    return $result;
+    $codes = array_keys($labels);
+    usort($codes, static function (string $a, string $b) use ($labels): int {
+        if ($a === LAST || $b === LAST) return ($a === LAST) <=> ($b === LAST);
+        return strnatcasecmp(sort_key($labels[$a]), sort_key($labels[$b]));
+    });
+    return [$labels, $codes];
 }

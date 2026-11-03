@@ -19,7 +19,7 @@ use Radiv\Updater;
 function config(bool $sfmn, bool $announceMaintenance = true): array
 {
     return [
-        'isotopes' => IsotopeLabels\apply(Calculation\isotopes()), // intitulés de RadIV, triés (voir isotope_labels.php)
+        'isotopes' => Calculation\isotopes(),
         'default_isotope_code' => 'iode131_25_fixation',
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
         // Scénarios déclarés par le moteur : la page d'information de l'API s'en sert pour rester à jour seule.
@@ -36,6 +36,9 @@ function config(bool $sfmn, bool $announceMaintenance = true): array
 
 function public_config(bool $announceMaintenance = true): array
 {
+    // Intitulés des isotopes propres à RadIV et leur ordre d'affichage (surcouche du site, voir isotope_labels.php).
+    [$labels, $order] = IsotopeLabels\display(Calculation\isotopes());
+    $isotopeDisplay = ['isotope_labels' => $labels, 'isotope_order' => $order];
     return [
         'recaptcha_site_key' => Config\env('RECAPTCHA_SITE_KEY'),
         // Reflète la config de journalisation actuelle: sert à générer une page RGPD qui
@@ -51,5 +54,5 @@ function public_config(bool $announceMaintenance = true): array
         'last_updated' => Updater\installed_date(),
         // Version du moteur de calcul (core/) réellement actif, affichée discrètement en bas de la page d'accueil.
         'core_version' => function_exists('RivEngine\\version') ? Calculation\version() : '',
-    ] + ($announceMaintenance && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []);
+    ] + $isotopeDisplay + ($announceMaintenance && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []);
 }

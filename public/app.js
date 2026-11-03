@@ -186,8 +186,38 @@
       return response.json();
     }
 
+    // Configuration du site (GET /api/public-config), lue une seule fois : branding, version du moteur et intitulés d'isotopes.
+    // Renvoie null si le serveur ne répond pas (valeurs de repli).
+    let publicConfigPromise = null;
+    function fetchPublicConfig() {
+      if (!publicConfigPromise) {
+        publicConfigPromise = fetchWithTimeout(`${API_BASE}/public-config`, {}, 8000)
+          .then((response) => (response.ok ? response.json() : null))
+          .catch(() => null);
+      }
+      return publicConfigPromise;
+    }
+
+    let isotopeLabels = {};   // code → intitulé de RadIV (public-config.isotope_labels)
+
+    // Intitulé affiché dans le menu : celui de RadIV ; à défaut (serveur ancien), celui du moteur, complété de la
+    // situation clinique pour l'iode.
+    function isotopeText(iso) {
+      if (isotopeLabels[iso.api_code]) return isotopeLabels[iso.api_code];
+      const withSituation = new Set(['iode131_0_fixation', 'iode131_5_fixation', 'iode131_25_fixation']);
+      return withSituation.has(iso.api_code) && iso.situation ? `${iso.label} (${iso.situation})` : iso.label;
+    }
+
+    // Isotopes dans l'ordre d'affichage annoncé par le serveur (public-config.isotope_order : codes) ; ordre du moteur à défaut.
+    function orderedIsotopes(config, order) {
+      const list = config.isotopes || [];
+      if (!Array.isArray(order)) return list;
+      const byCode = new Map(list.map((iso) => [iso.api_code, iso]));
+      const ordered = order.map((code) => byCode.get(code)).filter(Boolean);
+      return ordered.length === list.length ? ordered : list;
+    }
+
     function populateIsotopes(defaultIsotopeCode) {
-      const labelWithSituationCodes = new Set(['iode131_0_fixation', 'iode131_5_fixation', 'iode131_25_fixation']);
       const visibleIsotopes = selectedCalculationMode === 'sfmn'
         ? isotopes.filter((iso) => iso.api_code !== 'non_defini')
         : isotopes;
@@ -199,9 +229,7 @@
       visibleIsotopes.forEach((iso) => {
         const option = document.createElement('option');
         option.value = iso.api_code;
-        option.textContent = labelWithSituationCodes.has(iso.api_code) && iso.situation
-          ? `${iso.label} (${iso.situation})`
-          : iso.label;
+        option.textContent = isotopeText(iso);
         if (iso.api_code === preferredCode) option.selected = true;
         $('isotope').appendChild(option);
       });
@@ -292,7 +320,7 @@
       });
 
       if (!missingLabels.length) return [];
-      const isotopeLabel = selected?.label || code;
+      const isotopeLabel = isotopeLabels[code] || selected?.label || code;
       return [`Pour « ${isotopeLabel} », merci de renseigner : ${missingLabels.join(', ')}.`];
     }
 
@@ -621,9 +649,8 @@
     // valeurs de config.js ne servent que d'affichage initial et de repli si l'API ne répond pas.
     async function applyBranding() {
       try {
-        const response = await fetchWithTimeout(`${API_BASE}/public-config`, {}, 8000);
-        if (!response.ok) return;
-        const data = await response.json();
+        const data = await fetchPublicConfig();
+        if (!data) return;
         if (typeof data.site_name === 'string' && data.site_name) SITE_NAME = data.site_name;
         if (typeof data.copyright_owner === 'string' && data.copyright_owner) COPYRIGHT_OWNER = data.copyright_owner;
         if (typeof data.last_updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.last_updated)) LAST_UPDATED = data.last_updated;
@@ -664,9 +691,10 @@
       setFooterMeta();
       applyBranding();
       try {
-        const config = await fetchConfig();
+        const [config, site] = await Promise.all([fetchConfig(), fetchPublicConfig()]);
         if (config.maintenance) { showMaintenanceNotice(); return; }
-        isotopes = config.isotopes || [];
+        isotopeLabels = (site && site.isotope_labels) || {};
+        isotopes = orderedIsotopes(config, site && site.isotope_order);
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
         isotopeInputs = config.isotope_inputs || {};
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
