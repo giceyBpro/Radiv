@@ -516,6 +516,7 @@
     function renderSourceForMode(result = null) {
       const link = $('sourceLink');
       const meta = $('sourceMeta');
+      if (!link || !meta) return; // la référence figure désormais dans le bloc « Référence » en bas de page
       // Toujours la référence scientifique publiée, quel que soit le calcul affiché (jamais un simple lien vers un site).
       link.href = 'https://doi.org/10.1016/j.mednuc.2026.03.002';
       link.textContent = 'https://doi.org/10.1016/j.mednuc.2026.03.002';
