@@ -65,6 +65,11 @@
       .catch(() => {});
   </script>
   <script>
+    // DOI (déjà échappés) rendus cliquables.
+    function linkDoi(escaped) {
+      return String(escaped).replace(/(?:https?:\/\/doi\.org\/)?(10\.\d{4,9}\/[^\s<>,;]*[^\s<>,;.])/g, '<a href="https://doi.org/$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    }
+
     function safe(value) {
       if (value === null || value === undefined || value === '') return '-';
       return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -106,7 +111,7 @@
       const summaryItems = [
         `Type d'exposition : ${safe(form.isotope_label || selected.label)}`,
         `Période effective appliquée au calcul : ${safe(result.effective_days)} jour(s) (${safe(result.effective_hours)} heure(s))`,
-        'Référence : Carlier et al., Médecine Nucléaire 2026;50:131-136 — https://doi.org/10.1016/j.mednuc.2026.03.002'
+        linkDoi('Référence : Carlier et al., Médecine Nucléaire 2026;50:131-136 — DOI : 10.1016/j.mednuc.2026.03.002')
       ];
       document.getElementById('summaryList').innerHTML = summaryItems.map((text) => `<li>${text}</li>`).join('');
 
