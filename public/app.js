@@ -82,7 +82,6 @@
         $('coreVersionLabel').textContent = CORE_VERSION;
         coreRow.style.display = CORE_VERSION ? '' : 'none';
       }
-      $('siteNameBanner').textContent = SITE_NAME;
       $('copyrightText').textContent = `© ${new Date().getFullYear()} ${COPYRIGHT_OWNER}`;
     }
 
