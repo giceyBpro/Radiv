@@ -96,7 +96,7 @@ r = candidate((d) => edit(d, 'src/rounding.php', "return rounding_mode() === 'fl
 t('bug d\'arrondi → détecté par les tests de cohérence', r.verdict === 'bloquant' && test(r, 'arrondi').status === 'fail', r.headline);
 
 // 6. Structure de réponse cassée (champ supprimé)
-r = candidate((d) => edit(d, 'src/calculate.php', "        'effective_days' => $effectiveDays,\n", ''));
+r = candidate((d) => edit(d, 'src/calculate.php', "        'effective_days' => $in['effectiveDays'],\n", ''));
 t('champ supprimé de la réponse → rupture détectée', r.verdict === 'bloquant' && test(r, 'structure').status === 'fail', r.headline);
 
 // 7. Compte rendu lisible
