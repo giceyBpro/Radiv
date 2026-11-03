@@ -44,7 +44,7 @@
     "api_code": "lutetium177_net",
     "label": "Lutétium-177 NET",
     "period_hours": 100,
-    "reference": "Fitschen et al, Z Med Phys 2011, Levart et al, EJNMMI Phys 2019 — DOI : 10.1186/s40658-019-0243-1",
+    "reference": "Fitschen et al, Z Med Phys 2011 — DOI : 10.1016/j.zemedi.2011.05.001 ; Levart et al, EJNMMI Phys 2019 — DOI : 10.1186/s40658-019-0243-1",
     "remark": "Période effective",
     "situation": "",
     "cures": [1, 4]
