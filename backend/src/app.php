@@ -41,6 +41,7 @@ require __DIR__ . '/lib/admin_core.php';
 require __DIR__ . '/lib/admin_maintenance.php';
 require __DIR__ . '/lib/admin_xplore.php';
 require __DIR__ . '/lib/admin_radiv.php';
+require __DIR__ . '/lib/admin_minisite.php';
 require __DIR__ . '/lib/admin_site.php';
 
 use Radiv\AdminSite;

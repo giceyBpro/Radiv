@@ -36,6 +36,10 @@ const ROUTES = [
     'GET /auth/radiv/api/config' => 'radiv_api_config',
     'GET /auth/radiv/api/public-config' => 'radiv_api_public',
     'POST /auth/radiv/api/calculate' => 'radiv_api_calculate',
+    'GET /auth/minisite' => 'minisite_page',
+    'GET /auth/minisite/config.js' => 'minisite_config_js',
+    'GET /auth/minisite/api/config' => 'minisite_api_config',
+    'POST /auth/minisite/api/calculate' => 'minisite_api_calculate',
     'GET /auth/test-sfmn' => 'sfmn_page',
     'GET /auth/test-sfmn/config.js' => 'sfmn_config_js',
     'GET /auth/test-sfmn/api/config' => 'sfmn_api_config',
@@ -554,6 +558,7 @@ function tabs_html(string $active): string
     if (Config\admin_measurements_enabled()) $tabs .= $tab('mesures', '/auth/mesures', 'Mesures');
     $tabs .= $tab('fournisseurs', '/auth/fournisseurs', 'Fournisseurs');
     $tabs .= $tab('moteur', '/auth/moteur', 'Moteur');
+    $tabs .= $tab('minisite', '/auth/minisite', 'Mini-site');
     return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN');
 }
 
