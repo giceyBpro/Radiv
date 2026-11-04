@@ -350,9 +350,11 @@ function allowed($rel)
         return false;
     }
     if ($parts[0] === 'core') {
-        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json et VERSION.
-        // Jamais api/ ni tests/ (démonstration autonome et outillage de développement).
+        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json, VERSION et la page minimale (web/).
+        // Jamais api/ ni tests/ (démonstration autonome et outillage de développement), ni le reste de web/.
         if ($rel === 'core/VERSION') return true;
+        // Page minimale du moteur (affichée par l'onglet « Mini-site » de /auth, jamais servie directement : le backend est privé).
+        if ($rel === 'core/web/index.html' || $rel === 'core/web/config.js') return true;
         if ($count === 3 && $parts[1] === 'src') return preg_match('/^[A-Za-z0-9_-]+\.php$/', $parts[2]) === 1;
         if ($count === 3 && $parts[1] === 'data') return preg_match('/^[A-Za-z0-9_-]+\.json$/', $parts[2]) === 1;
         return false;

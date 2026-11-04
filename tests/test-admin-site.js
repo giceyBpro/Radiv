@@ -169,7 +169,7 @@ async function update(c, ref, token) {
     same.push('VERSION');
     t('moteur du dépôt installé en entier par la mise à jour (src, data, VERSION identiques)', same.every((f) => exists(`backend/core/${f}`) && fs.readFileSync(path.join(WWW, 'backend/core', f)).equals(fs.readFileSync(path.join(repoCore, f)))), same.filter((f) => !exists(`backend/core/${f}`)).join());
     t('fichier retiré du moteur supprimé (cures.json)', !exists('backend/core/data/cures.json'));
-    t('moteur installé, jamais api/, web/, tests/ ni documentation', !exists('backend/core/api') && !exists('backend/core/web') && !exists('backend/core/tests') && !exists('backend/core/AGENTS.md') && !exists('backend/core/install-core.php'));
+    t('moteur installé : seulement la page minimale de web/ (index.html et config.js), jamais api/, tests/ ni documentation', !exists('backend/core/api') && JSON.stringify(fs.readdirSync(path.join(WWW, 'backend/core/web')).sort()) === JSON.stringify(['config.js', 'index.html']) && !exists('backend/core/tests') && !exists('backend/core/AGENTS.md') && !exists('backend/core/install-core.php'));
     t('l\'API utilise le moteur installé (isotope_inputs annoncé)', !!(await (await fetch(`${BASE}/api/config`)).json()).isotope_inputs); }
   t('installée', /Mise à jour installée : 1111111/.test(r.msg), r.msg);
   t('app.js remplacé', read('app.js').includes('fixture v1.1')); t('nouveau fichier créé', exists('downloads/ajout-v1_1.xml'));
@@ -292,6 +292,21 @@ async function update(c, ref, token) {
     t('appel d\'une autre origine refusé (403)', bad.status === 403);
     const odd = JSON.parse((await calcAdmin({ calculation_mode: 'sfmn', provider: 'x' })).text);
     t('calculation_mode et provider ignorés comme sur l\'API publique', odd.ok === true && odd.calculation_mode === undefined); }
+
+  console.log('\n— Onglet « Mini-site » : la page minimale du moteur, dans l\'administration');
+  { t('GET /auth/minisite sans session → 404 (page, config.js, API)', (await new Client().req('GET', `${BASE}/auth/minisite`)).status === 404 && (await new Client().req('GET', `${BASE}/auth/minisite/config.js`)).status === 404 && (await new Client().req('GET', `${BASE}/auth/minisite/api/config`)).status === 404 && (await new Client().req('POST', `${BASE}/auth/minisite/api/calculate`, { form: {} })).status === 404);
+    page = await c.req('GET', `${BASE}/auth/minisite`);
+    const nonce = (/script-src 'self' 'nonce-([^']+)'/.exec(page.headers.get('content-security-policy') || '') || [])[1];
+    t('page du moteur dans l\'administration : onglet actif, config.js redirigé, script en ligne autorisé par nonce', page.status === 200 && /class="tab on"[^>]*>Mini-site</.test(page.text) && /id="isotope"/.test(page.text) && /<script src="\/auth\/minisite\/config\.js"/.test(page.text) && !!nonce && page.text.includes(`<script nonce="${nonce}">`));
+    t('…config.js du moteur avec l\'API d\'administration', /apiBase = "\/auth\/minisite\/api"/.test((await c.req('GET', `${BASE}/auth/minisite/config.js`)).text));
+    resetLimits();
+    const mcfg = JSON.parse((await c.req('GET', `${BASE}/auth/minisite/api/config`)).text);
+    t('…API de configuration : isotopes, saisie attendue et scénarios du moteur', Array.isArray(mcfg.isotopes) && mcfg.isotope_inputs && Array.isArray(mcfg.scenarios) && mcfg.isotopes.find((i) => i.api_code === 'radium223').label === 'Radium-223');
+    const calcMini = c.reqJson('POST', `${BASE}/auth/minisite/api/calculate`, { isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }, { Origin: BASE });
+    const one = await calcMini; let oneJson = null; try { oneJson = JSON.parse(one.text); } catch (e) { /* non JSON */ }
+    t('…calcul du moteur', one.status === 200 && oneJson && oneJson.ok === true && Object.keys(oneJson.recommendations_days).length === 8);
+    const bad = await c.reqJson('POST', `${BASE}/auth/minisite/api/calculate`, { isotope_code: 'radium223', dose_rate: 100, patient_size_cm: 150 }, { Origin: 'https://evil.example' });
+    t('…appel d\'une autre origine refusé (403)', bad.status === 403); }
 
   console.log('\n— Modèles Xplore: accessibles ou non (règle .htaccess posée par l\'administration)');
   { const ht = path.join(WWW, '.htaccess'); const original = fs.readFileSync(ht, 'utf8');

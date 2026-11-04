@@ -64,7 +64,7 @@ php core/tests/test-scenarios.php # scénarios déclarés dans les données (ajo
 
 ## 6. Déploiement
 
-Les sites n'installent de ce dossier que `src/*.php`, `data/*.json` et `VERSION` (liste blanche des outils de mise à jour). Tout autre fichier ajouté ici (`api/`, `web/`, `tests/`, `install-core.php`, documentation) n'est jamais déployé sur un site. Ne pas ajouter d'autre exigence de déploiement sans l'accord des mainteneurs des sites.
+Les sites n'installent de ce dossier que `src/*.php`, `data/*.json`, `VERSION` et la page minimale `web/index.html` avec `web/config.js` (liste blanche des outils de mise à jour ; le site RadIV l'affiche dans l'onglet « Mini-site » de son administration). Tout autre fichier ajouté ici (`api/`, `tests/`, `install-core.php`, documentation, autre fichier de `web/`) n'est jamais déployé sur un site. Ne pas ajouter d'autre exigence de déploiement sans l'accord des mainteneurs des sites.
 
 ## 7. Avant de proposer une modification
 
