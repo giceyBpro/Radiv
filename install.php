@@ -33,7 +33,7 @@ const DEFAULT_REPO = 'giceyBpro/Radiv';
 // qu'elles restent identiques). Chemins du DÉPÔT : « public/... » va dans la racine web, « backend/... » dans le
 // dossier du backend. downloads/, vendor/ et backend/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
-    'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
+    'index.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'og-image.png', 'robots.txt',
 );

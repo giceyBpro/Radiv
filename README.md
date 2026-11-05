@@ -56,7 +56,7 @@ de l'administration du site, derrière la connexion Google (voir [Administration
 ## Référencement
 
 Deux pages sont indexables : l'accueil (`/`) et les mentions légales (`/legal`). Toutes les autres portent `<meta name="robots" content="noindex, nofollow">`
-(aide patient, contact, impression, documentation de l'API, page de test, modèles Xplore, ancienne version `v1.html`) : cela bloque l'indexation même si un lien
+(aide patient, contact, impression, documentation de l'API, page de test, modèles Xplore) : cela bloque l'indexation même si un lien
 externe pointait vers elles, et elles ne sont liées depuis aucune page publique.
 
 - **Balises dépendant de l'adresse du site, rendues par le backend** : l'adresse du site n'étant connue qu'à l'installation, `index.html` et

@@ -28,7 +28,7 @@ const layout = (text) => (text.match(/^\$RUNTIME_LAYOUT = <<<'LAYOUT'\n[\s\S]*?^
 t('description de runtime.env ($RUNTIME_LAYOUT) identique dans install.php et update.php', layout(inst) !== '' && layout(inst) === layout(upd));
 
 // Comportement de allowed() : la version de l'installeur / du secours et celle de l'application donnent les mêmes réponses
-const paths = ['public/index.html', 'public/v1.html', 'public/app.js', 'public/robots.txt', 'public/favicon.ico', 'public/config.js', 'public/.htaccess', 'public/.env', 'public/sitemap.xml',
+const paths = ['public/index.html', 'public/app.js', 'public/robots.txt', 'public/favicon.ico', 'public/config.js', 'public/.htaccess', 'public/.env', 'public/sitemap.xml',
   'public/api/index.php', 'public/api/.htaccess', 'public/api/backend.php', 'public/api/evil.php', 'public/api/lib/x.php', 'public/downloads/a.xml', 'public/downloads/sub/a.xml', 'public/downloads/.hidden',
   'public/vendor/fonts.css', 'public/vendor/fonts/a.woff2', 'public/vendor/evil.php', 'public/vendor/fonts/evil.phtml', 'public/vendor/a/b/c.js', 'public/vendor/.htaccess',
   'backend/.htaccess', 'backend/src/app.php', 'core/VERSION', 'core/src/calculate.php', 'core/src/sub/x.php', 'core/src/x.txt', 'core/data/isotopes.json', 'core/data/x.php', 'core/api/index.php', 'core/tests/x.php', 'core/README.md', 'backend/src/lib/config.php', 'backend/src/lib/sub/x.php', 'backend/src/x.txt', 'backend/src/.hidden.php',

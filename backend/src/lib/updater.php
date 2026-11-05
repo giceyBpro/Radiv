@@ -26,14 +26,14 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 // Les chemins de ce fichier sont ceux du DÉPÔT : « public/... » est copié dans la racine web, « backend/... » dans le
 // dossier du backend (voir dest()). Même liste blanche que install.php et update.php.
 const FRONTEND_FILES = [
-    'index.html', 'v1.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
+    'index.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'og-image.png', 'robots.txt',
 ];
 
 // Fichiers retirés du dépôt, à supprimer des sites existants lors de la prochaine mise à jour (sauvegardés d'abord),
-// même s'ils ne figurent pas dans le manifeste. Chemins du dépôt (« public/... »). Aucun pour l'instant.
-const RETIRED_FILES = [];
+// même s'ils ne figurent pas dans le manifeste. Chemins du dépôt (« public/... »).
+const RETIRED_FILES = ['public/v1.html'];   // ancienne version de la page d'accueil, supprimée
 
 // Sans ces fichiers dans la version cible, le site ne saurait plus se mettre à jour lui-même
 // (cible trop ancienne, archive tronquée): refusé avant toute écriture.
