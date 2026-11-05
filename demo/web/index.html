@@ -23,6 +23,13 @@
     label { display: block; margin: 12px 0; font-weight: 600; }
     label span { display: block; margin-bottom: 4px; }
     input, select { width: 100%; padding: 8px; font: inherit; border: 1px solid var(--bord); border-radius: 6px; }
+    /* Champs obligatoires bien visibles : astérisque rouge et filet rouge à gauche ; champs facultatifs : mention « facultatif ». */
+    label[data-need="required"] > span::after { content: " *"; color: var(--erreur); font-weight: 700; }
+    label[data-need="required"] > input, label[data-need="required"] > select { border-left: 4px solid var(--erreur); }
+    label[data-need="optional"] > span::after { content: " (" var(--optional-text) ")"; color: #566; font-weight: 400; font-size: .9rem; }
+    label > input.missing, label > select.missing { border-color: var(--erreur); background: #fdecee; outline: 2px solid var(--erreur); }
+    .legend { font-size: .9rem; color: #566; }
+    .legend b { color: var(--erreur); }
     fieldset { border: 1px solid var(--bord); border-radius: 6px; margin: 16px 0; }
     legend { font-weight: 600; padding: 0 6px; }
     button { padding: 10px 20px; font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 6px; cursor: pointer; }
@@ -39,6 +46,7 @@
     <!-- Les éléments data-text / data-label reçoivent leur texte de config.js (textContent : jamais de HTML injecté). -->
     <h1 data-text="title"></h1>
     <p data-text="intro"></p>
+    <p class="legend"><b>*</b> <span data-label="requiredLegend"></span></p>
 
     <form id="form" novalidate>
       <label><span data-label="isotope"></span><select id="isotope"></select></label>
@@ -173,6 +181,44 @@
         extra.forEach((field) => { document.querySelector('[data-extra-field="' + field.code + '"]').hidden = (wanted[field.code] || 'ignored') === 'ignored'; });
         const periodLabel = document.querySelector('[data-label="periodDays"]');
         periodLabel.textContent = wanted.user_period_days === 'required' ? C.labels.periodDaysRequired : C.labels.periodDays;
+        markNeeds(wanted);
+      }
+
+      // ----- Champs obligatoires ---------------------------------------------------------------------------------------
+      // Chaque champ affiché porte data-need = "required" (astérisque rouge et filet rouge) ou "optional" (mention « facultatif »),
+      // d'après la saisie annoncée par le moteur pour l'isotope choisi. Les champs de base sont reliés à leur code ci-dessous ; les
+      // champs ajoutés par le moteur (extra) se marquent d'après leur propre code.
+      function needLabel(inputId) { return $(inputId).closest('label'); }
+      // Texte « facultatif » (config.js) transmis au style par une variable CSS, car attr() ne lit que l'élément qui porte le ::after.
+      function setOptionalText(label) {
+        label.dataset.optional = C.labels.optional || 'optional';
+        label.style.setProperty('--optional-text', JSON.stringify(label.dataset.optional));
+      }
+      function markNeeds(wanted) {
+        const need = (code) => wanted[code] || 'ignored';
+        const targets = [
+          ['isotope', 'required'], ['doseRate', need('dose_rate')], ['benignActivity', need('benign_activity_mbq')],
+          ['benignFixation', need('benign_fixation_pct')], ['patientSize', need('patient_size_cm')], ['periodDays', need('user_period_days')]
+        ];
+        extra.forEach((field) => targets.push(['extra_' + field.code, need(field.code)]));
+        targets.forEach(([id, value]) => {
+          const label = needLabel(id);
+          if (!label) return;
+          setOptionalText(label);
+          label.dataset.need = value === 'ignored' ? '' : value;
+        });
+        // Scénario personnalisé : les quatre champs vont ensemble et sont facultatifs.
+        ['customHours1', 'customDistance1', 'customHours2', 'customLimit'].forEach((id) => { needLabel(id).dataset.need = 'optional'; setOptionalText(needLabel(id)); });
+      }
+
+      // Met en évidence (cadre rouge) les champs obligatoires affichés mais encore vides ; l'indication disparaît dès la saisie.
+      function markMissing() {
+        document.querySelectorAll('label[data-need="required"]').forEach((label) => {
+          const input = label.querySelector('input, select');
+          if (!input || label.closest('[hidden]') || label.hidden) return;
+          input.classList.toggle('missing', input.value.trim() === '');
+          input.oninput = () => input.classList.remove('missing');
+        });
       }
 
       // ----- Envoi du calcul -----------------------------------------------------------------------------------------
@@ -255,6 +301,7 @@
       $('isotope').addEventListener('change', refreshFields);
       $('form').addEventListener('submit', async (event) => {
         event.preventDefault();
+        markMissing();
         try {
           const response = await fetch(api + '/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody()) });
           render(await response.json());
