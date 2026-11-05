@@ -116,17 +116,12 @@ function cure_options_by_isotope(): array
 //   step      (facultatif) pas de saisie : un nombre, ou "any"
 //   help      (facultatif) phrase d'aide affichée avec le champ
 //   options   (type "choice" seulement) liste de {"value": "...", "label": "..."}
-//   common    (facultatif, true/false) true = champ COMMUN à tous les isotopes, contrôlé par le moteur lui-même (aujourd'hui seulement
-//             patient_size_cm : toujours obligatoire). Un champ commun est décrit ici pour que les sites en lisent le libellé, l'unité et
-//             les bornes, mais il n'apparaît pas dans isotope_inputs et les profils ne le citent pas.
-// Les champs de base (dose_rate, benign_activity_mbq, benign_fixation_pct, user_period_days) et le champ commun patient_size_cm sont utilisés
-// par le moteur : ne pas les retirer.
+// Les champs de base (dose_rate, benign_activity_mbq, benign_fixation_pct, user_period_days, patient_size_cm) sont utilisés par le moteur :
+// ne pas les retirer. patient_size_cm (taille du patient) est un champ comme les autres de ce fichier, que tous les profils déclarent obligatoire.
 
-const BASE_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days'];
-// Champs communs à tous les isotopes que le moteur sait décrire dans ce fichier (marqués « common »).
-const COMMON_FIELDS = ['patient_size_cm'];
-// Noms déjà pris par les champs communs du calcul : un champ de saisie ne peut pas les reprendre (sauf, avec « common », ceux de COMMON_FIELDS).
-const RESERVED_FIELD_CODES = ['isotope_code', 'patient_size_cm', 'cure_count', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'provider'];
+const BASE_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days', 'patient_size_cm'];
+// Noms déjà pris par les autres champs du calcul (isotope, cures, scénario personnalisé) : un champ de saisie ne peut pas les reprendre.
+const RESERVED_FIELD_CODES = ['isotope_code', 'cure_count', 'user_hours_1', 'user_distance_1', 'user_hours_2', 'user_limit', 'provider'];
 
 // Contrôle et normalise UNE entrée du fichier (mêmes règles que les scénarios : erreur explicite avec le numéro de l'entrée).
 function read_field(array $row, int $position, array $knownCodes): array
@@ -138,9 +133,7 @@ function read_field(array $row, int $position, array $knownCodes): array
 
     $code = $row['code'] ?? null;
     if (!is_string($code) || preg_match('/^[a-z][a-z0-9_]*$/', $code) !== 1) $fail('code manquant ou invalide (minuscules, chiffres et _, commence par une lettre).');
-    $common = ($row['common'] ?? false) === true;
-    if ($common && !in_array($code, COMMON_FIELDS, true)) $fail('« common » est réservé aux champs communs que le moteur connaît (' . implode(', ', COMMON_FIELDS) . ').');
-    if (!$common && in_array($code, RESERVED_FIELD_CODES, true)) $fail("« {$code} » est déjà un champ commun du calcul.");
+    if (in_array($code, RESERVED_FIELD_CODES, true)) $fail("« {$code} » est déjà un champ du calcul.");
     if (isset($knownCodes[$code])) $fail("code « {$code} » en double.");
     $where .= " ({$code})";
 
@@ -174,7 +167,6 @@ function read_field(array $row, int $position, array $knownCodes): array
         'step' => $row['step'] ?? null,
         'help' => isset($row['help']) ? (string) $row['help'] : '',
         'options' => $options,
-        'common' => $common,
     ];
 }
 
@@ -191,13 +183,8 @@ function input_fields(): array
         $knownCodes[$field['code']] = true;
         $fields[] = $field;
     }
-    foreach ([...BASE_FIELDS, ...COMMON_FIELDS] as $code) {
+    foreach (BASE_FIELDS as $code) {
         if (!isset($knownCodes[$code])) throw new \RuntimeException("data/fields.json : le champ de base « {$code} » est obligatoire.");
-    }
-    foreach ($fields as $field) {
-        if (in_array($field['code'], COMMON_FIELDS, true) && !$field['common']) {
-            throw new \RuntimeException("data/fields.json : le champ « {$field['code']} » doit porter \"common\": true.");
-        }
     }
     return $cache = $fields;
 }

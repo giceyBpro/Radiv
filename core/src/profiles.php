@@ -56,7 +56,7 @@ function profiles(): array
 
     // STANDARD : le débit de dose est saisi (dose_rate), la période est celle de l'isotope.
     $standard = [
-        'inputs' => ['dose_rate' => 'required', 'user_period_days' => 'optional'],
+        'inputs' => ['dose_rate' => 'required', 'patient_size_cm' => 'required', 'user_period_days' => 'optional'],
         'dose_rate' => static fn (array $fields): ?float => $fields['dose_rate'],
         'default_period_days' => static fn (array $isotope, array $fields): ?float => $isotope['periodHours'] / 24,
         'dose_rate_errors' => static fn (string $code, array $fields, ?float $doseRate): array =>
@@ -67,7 +67,7 @@ function profiles(): array
     // IODE BÉNIN : le débit de dose se calcule à partir de l'activité administrée A (MBq) et de la fixation thyroïdienne f (%) :
     //     débit = 2,2 × A × (f / 100) / 37        ; le débit saisi éventuel (dose_rate) est ignoré.
     $benignIodine = [
-        'inputs' => ['benign_activity_mbq' => 'required', 'benign_fixation_pct' => 'required', 'user_period_days' => 'optional'],
+        'inputs' => ['benign_activity_mbq' => 'required', 'benign_fixation_pct' => 'required', 'patient_size_cm' => 'required', 'user_period_days' => 'optional'],
         'dose_rate' => static function (array $fields): ?float {
             $activityMbq = $fields['benign_activity_mbq'];
             $fixationPct = $fields['benign_fixation_pct'];
@@ -87,7 +87,7 @@ function profiles(): array
 
     // PÉRIODE LIBRE : l'isotope n'a pas de période propre ; l'appelant doit fournir user_period_days (> 0).
     $freePeriod = [
-        'inputs' => ['dose_rate' => 'required', 'user_period_days' => 'required'],
+        'inputs' => ['dose_rate' => 'required', 'patient_size_cm' => 'required', 'user_period_days' => 'required'],
         'default_period_days' => static fn (array $isotope, array $fields): ?float => null,
         'period_errors' => static fn (string $code, ?float $effectiveDays, array $fields): array =>
             !($effectiveDays > 0) ? ["Avec isotope_code={$code}, user_period_days devient obligatoire et doit être > 0."] : [],
@@ -100,8 +100,8 @@ function profiles(): array
     //   data/isotopes.json : sur l'isotope concerné, ajouter  "profile": "poids_reference"
     //
     //   $poidsReference = [
-    //       // dose_rate (débit saisi) et poids_kg sont obligatoires ; les autres champs sont ignorés ; la période reste facultative.
-    //       'inputs' => ['dose_rate' => 'required', 'poids_kg' => 'required', 'user_period_days' => 'optional'],
+    //       // dose_rate (débit saisi), poids_kg et patient_size_cm (la taille, obligatoire dans TOUT profil) sont requis ; les autres champs sont ignorés ; la période reste facultative.
+    //       'inputs' => ['dose_rate' => 'required', 'poids_kg' => 'required', 'patient_size_cm' => 'required', 'user_period_days' => 'optional'],
     //       // Débit retenu pour le calcul : null si une donnée manque (l'erreur est alors signalée par dose_rate_errors).
     //       'dose_rate' => static function (array $fields): ?float {
     //           if ($fields['dose_rate'] === null || $fields['poids_kg'] === null) return null;
@@ -136,13 +136,17 @@ function profile_of(array $isotope): array
 // Un champ cité par un profil mais absent de data/fields.json est une erreur de données (faute de frappe probable).
 function profile_inputs(array $isotope): array
 {
-    // Les champs communs (taille du patient) ne dépendent pas de l'isotope : ils n'entrent pas dans la saisie par profil.
-    $declared = array_column(array_filter(input_fields(), static fn (array $field): bool => !$field['common']), 'code');
+    $declared = array_column(input_fields(), 'code');
     $wanted = profile_of($isotope)['inputs'];
     foreach (array_keys($wanted) as $code) {
         if (!in_array($code, $declared, true)) {
             throw new \RuntimeException("Le profil de l'isotope {$isotope['api_code']} cite le champ « {$code} », absent de data/fields.json.");
         }
+    }
+    // La taille du patient sert à tout calcul (géométrie de l'exposition) : tout profil doit la déclarer obligatoire, pour que les interfaces
+    // l'affichent et que les messages d'erreur la citent.
+    if (($wanted['patient_size_cm'] ?? null) !== 'required') {
+        throw new \RuntimeException("Le profil de l'isotope {$isotope['api_code']} doit déclarer patient_size_cm « required » (la taille du patient est obligatoire pour tout calcul).");
     }
     $all = [];
     foreach ($declared as $code) $all[$code] = $wanted[$code] ?? 'ignored';
@@ -179,7 +183,7 @@ function expected_payload(array $isotope): array
     };
     return [
         'common' => $common,
-        'isotope_specific_required' => $fieldsWhere('required'),
+        'isotope_specific_required' => array_values(array_diff($fieldsWhere('required'), ['patient_size_cm'])),   // la taille figure déjà dans « common »
         'isotope_specific_optional' => array_values(array_diff($fieldsWhere('optional'), $common)),
         'isotope_specific_ignored' => $fieldsWhere('ignored'),
     ];

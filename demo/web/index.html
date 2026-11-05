@@ -116,7 +116,7 @@
         return field.unit && !label.includes(field.unit) ? label + ' (' + field.unit + ')' : label;
       }
 
-      // Taille du patient (champ commun) : libellé, unité et bornes lus dans la description du moteur ; la saisie reste à sa place.
+      // Taille du patient : libellé, unité et bornes lus dans la description du moteur ; la saisie reste à sa place.
       function applyCommonFieldMeta(fields) {
         const field = fields.find((candidate) => candidate.code === 'patient_size_cm');
         if (!field) return;

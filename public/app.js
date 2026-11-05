@@ -284,7 +284,7 @@
       return field.unit && !label.includes(field.unit) ? `${label} (${field.unit})` : label;
     }
 
-    // Champ commun « taille du patient » : libellé (celui de RadIV, à défaut celui du moteur), unité et bornes lus dans la description du moteur ;
+    // Champ « taille du patient » : libellé (celui de RadIV, à défaut celui du moteur), unité et bornes lus dans la description du moteur ;
     // la saisie reste à sa place dans le formulaire.
     function applyCommonFieldMeta() {
       const field = declaredFields.find((candidate) => candidate.code === 'patient_size_cm');

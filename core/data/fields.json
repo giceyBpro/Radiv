@@ -43,7 +43,6 @@
     "type": "number",
     "min": 1,
     "step": 1,
-    "common": true,
     "help": "Taille du patient, en centimètres : obligatoire pour tous les isotopes (géométrie de l'exposition)."
   }
 ]
