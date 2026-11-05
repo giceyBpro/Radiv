@@ -24,6 +24,7 @@ window.RIV_CONFIG = {
     benignFixation: 'Fixation thyroïdienne (%)',
     periodDays: 'Période effective (jours)',
     periodDaysRequired: 'Période effective (jours) — obligatoire pour cet isotope',
+    advancedTitle: 'Options avancées : période effective et scénario personnalisé',
     requiredLegend: 'Champ obligatoire',
     optional: 'facultatif',
     customTitle: 'Scénario personnalisé (renseigner les 4 champs ou aucun)',

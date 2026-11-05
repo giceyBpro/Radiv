@@ -44,6 +44,10 @@ const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'demo/api
   t('taille du patient : libellé et unité lus dans la description du moteur', /Taille du patient \(cm\)/.test(await page.locator('[data-label="patientSize"]').innerText()));
   t('titre de la page repris de config.js', /Durées de restriction/.test(await page.textContent('h1')));
   t('radium: débit de dose demandé, pas d\'activité/fixation', await page.locator('#doseRateField').isVisible() && !(await page.locator('#benignFields').isVisible()));
+  t('période effective et scénario personnalisé sous un même repli, fermé par défaut', (await page.locator('#advanced').evaluate((el) => !el.open && !!el.querySelector('#periodDays') && !!el.querySelector('#customHours1') && !!el.querySelector('#customLimit'))) && !(await page.locator('#periodDays').isVisible()));
+  await page.click('#advanced > summary');
+  t('…il s\'ouvre au clic et montre les champs', await page.locator('#periodDays').isVisible() && await page.locator('#customHours1').isVisible());
+  await page.click('#advanced > summary');
   const need = (id) => page.locator(`#${id}`).evaluate((el) => el.closest('label').dataset.need);
   t('champs obligatoires identifiables : isotope, débit de dose et taille marqués « required », période « optional »', (await need('isotope')) === 'required' && (await need('doseRate')) === 'required' && (await need('patientSize')) === 'required' && (await need('periodDays')) === 'optional');
   t('…légende « * Champ obligatoire » affichée, astérisque rouge devant le libellé', /Champ obligatoire/.test(await page.locator('.legend').innerText()) && (await page.locator('#doseRateField > span').evaluate((el) => getComputedStyle(el, '::after').content)) === '" *"');
@@ -68,7 +72,7 @@ const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'demo/api
   await page.waitForSelector('#results:not([hidden]) tbody tr');
   t('…renseigné : le calcul utilise la nouvelle règle', (await page.locator('#results tbody tr').count()) >= 7);
   await page.selectOption('#isotope', 'non_defini');
-  t('« non défini »: période marquée obligatoire', (await need('periodDays')) === 'required');
+  t('« non défini »: période marquée obligatoire, repli ouvert automatiquement', (await need('periodDays')) === 'required' && await page.locator('#advanced').evaluate((el) => el.open) && await page.locator('#periodDays').isVisible());
   t('« non défini »: libellé « période obligatoire »', /obligatoire pour cet isotope/.test(await page.locator('[data-label="periodDays"]').innerText()));
   await page.selectOption('#isotope', 'psma_177lu');
   t('PSMA-177Lu: choix du nombre de cures proposé', await page.locator('#cureField').isVisible());
