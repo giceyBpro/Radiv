@@ -208,7 +208,9 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     fs.writeFileSync(mf, JSON.stringify({ mode: 'site', since: '2026-01-01T00:00:00Z', by: 'test' })); fs.chmodSync(mf, 0o666);
     await page.goto(`${BASE}/`);
     t('accueil servi par PHP: avis de maintenance et lien vers l\'outil de la SFMN', /Site en maintenance/.test(await body()) && (await page.locator('a[href*="acoramen.net"]').count()) === 1 && (await page.locator('#doseRate').count()) === 0);
-    await page.goto(`${BASE}/v1.html`);
+    // Page statique SANS la garde de maintenance de l'accueil (copie dont la garde est retirée) : c'est app.js qui injecte l'avis.
+    fs.writeFileSync(path.join(WWW, 'accueil-sans-garde.html'), fs.readFileSync(path.join(WWW, 'index.html'), 'utf8').replace(/<!--MAINTENANCE-GATE-->[\s\S]*?<!--\/MAINTENANCE-GATE-->\s*/g, ''));
+    await page.goto(`${BASE}/accueil-sans-garde.html`);
     await page.waitForSelector('[role="alert"]', { timeout: 10000 });
     t('page statique (sans PHP): avis plein écran injecté par le script, lien SFMN repris de la page', /Site en maintenance/.test(await page.locator('[role="alert"]').innerText()) && (await page.locator('[role="alert"] a[href*="acoramen.net"]').count()) === 1);
     fs.copyFileSync(path.join(WWW, 'index.html'), path.join(WWW, 'accueil-statique.html'));
@@ -217,7 +219,8 @@ for (let i = 0; i < 60; i += 1) addRow(NOW - 600e3 - i * 1000, full(`4.4.4.${i}`
     t('accueil statique: avis injecté par son propre script (indépendant d\'app.js), un seul avis', (await page.locator('#maintenanceNotice').count()) === 1 && /Site en maintenance/.test(await page.locator('#maintenanceNotice').innerText()) && (await page.locator('#maintenanceNotice a[href*="acoramen.net"]').count()) === 1);
     fs.unlinkSync(path.join(WWW, 'accueil-statique.html'));
     fs.unlinkSync(mf);
-    await page.goto(`${BASE}/v1.html`); await page.waitForTimeout(1500);
+    fs.unlinkSync(path.join(WWW, 'accueil-sans-garde.html'));
+    await page.goto(`${BASE}/`); await page.waitForTimeout(1500);
     t('maintenance levée: plus d\'avis, calculateur visible', (await page.locator('[role="alert"]').count()) === 0 && await page.locator('#calculateBtn').isVisible()); }
 
   console.log('\n— Déconnexion');

@@ -164,8 +164,10 @@ async function update(c, ref, token) {
     fs.writeFileSync(path.join(WWW, 'backend/data/var/manifest.json'), JSON.stringify({ files: ['core/data/cures.json'] }));
     try { execFileSync('chown', ['www-data:www-data', path.join(WWW, 'backend/data/var/manifest.json')]); } catch (e) { fs.chmodSync(path.join(WWW, 'backend/data/var/manifest.json'), 0o666); }
     t('ancien moteur en place (2.0.1, avec cures.json, sans profiles.php)', exists('backend/core/data/cures.json') && !exists('backend/core/src/profiles.php') && read('backend/core/VERSION').trim() === '2.0.1'); }
+  fs.writeFileSync(path.join(WWW, 'v1.html'), '<html>ancienne page d\'accueil</html>');   // page retirée du dépôt : la mise à jour doit la supprimer
   await ghLog(); resetLimits();
   r = await update(c, 'v1.1', TOKEN);
+  t('page retirée du dépôt (v1.html) supprimée par la mise à jour', !exists('v1.html'));
   { const repoCore = path.resolve(__dirname, '..', 'core'); const same = [];
     for (const sub of ['src', 'data']) for (const f of fs.readdirSync(path.join(repoCore, sub))) if (/\.(php|json)$/.test(f)) same.push(`${sub}/${f}`);
     same.push('VERSION');
