@@ -2,8 +2,11 @@ FORMULES ET METHODE DE CALCUL — RADIOPROTECTION RIV
 ===================================================
 
 Source de vérité du calcul
-- Les calculs sont réalisés côté backend dans `api/calculation.php`.
-- Les paramètres isotopes et scénarios standards sont définis dans des tableaux constants.
+- Les calculs sont réalisés par le moteur partagé `core/` (espace de noms RivEngine), appelé par le site : formules dans `core/src/physics.php`,
+  validation et assemblage dans `core/src/calculate.php`, règles propres à certains isotopes dans `core/src/profiles.php`.
+- Les valeurs ne sont pas dans le code mais dans `core/data/` : isotopes et périodes (`isotopes.json`), scénarios d'exposition
+  (`scenarios.json`), champs de saisie (`fields.json`), réglage de l'arrondi (`settings.json`). Références : `core/data/SOURCES.md`.
+- Ce fichier résume la méthode ; en cas de divergence, le moteur et ses données font foi.
 
 1) Grandeurs d'entrée
 - isotope_code
@@ -11,15 +14,18 @@ Source de vérité du calcul
 - patient_size_cm
 - Paramètres scénario utilisateur (optionnels):
   - user_hours_1 (h), user_distance_1 (m), user_hours_2 (h à 1 m), user_limit (mSv)
-- Paramètres iode131_benin:
+- Paramètres iode131_benin (profil « benign_iodine »):
   - benign_activity_mbq, benign_fixation_pct
-- Paramètre non_defini:
+- Paramètre de l'isotope « personnalisé » non_defini (profil « free_period »):
   - user_period_days obligatoire
+- cure_count: nombre de cures, pour les isotopes qui en acceptent plusieurs (champ « cures » de isotopes.json)
+- Les champs dont la saisie dépend de l'isotope sont décrits dans core/data/fields.json ; ce que chaque isotope exige
+  (obligatoire, facultatif ou ignoré) est annoncé par le moteur (isotope_inputs).
 
 2) Période effective (jours)
 - effective_days = user_period_days si renseigné
 - sinon effective_days = periodHours(isotope)/24
-- exception: isotope_code=non_defini -> user_period_days obligatoire
+- exception: profil « free_period » (non_defini) -> user_period_days obligatoire
 
 3) Débit de dose utilisé
 - Cas général: dose_rate (saisi)
@@ -50,9 +56,14 @@ Source de vérité du calcul
 - Jour de fin de restriction:
   ratio = (limit_mSv × 1000) / denominator
   day = -(effective_days/ln(2)) × ln(ratio / dose_rate)
-  résultat = max(0, round(day))
+  résultat = max(0, arrondi(day))
+  arrondi: « round » (au plus proche, défaut) ou « floor » (troncature), réglage rounding_mode de data/settings.json
+  (surchargeable par l'hébergeur, voir core/src/rounding.php)
+- Cures multiples: la limite d'un scénario est divisée par le nombre de cures, sauf si le scénario porte
+  shares_limit_across_cures=false (ex. transports en commun)
 
-5) Scénarios standards (durée, distance, limite)
+5) Scénarios standards (durée, distance, limite) — liste actuelle de core/data/scenarios.json, qui fait foi ; en ajouter un
+   crée une ligne de résultat de plus (guide : core/data/SCENARIOS.md)
 - conjoint_plus_60:
   8 h à 0,3 m + 3 h à 1 m ; limite 15 mSv
 - conjoint_moins_60:
@@ -78,12 +89,13 @@ Source de vérité du calcul
 
 7) Validations / exceptions
 - patient_size_cm > 0 toujours requis
-- Cas général: dose_rate > 0
-- iode131_benin:
-  - benign_activity_mbq > 0 et benign_fixation_pct > 0 requis
+- Cas général (profil « standard »): dose_rate > 0
+- iode131_benin (profil « benign_iodine »):
+  - benign_activity_mbq > 0 et benign_fixation_pct > 0 (et <= 100) requis
   - dose_rate saisi est ignoré
-- non_defini:
+- non_defini (profil « free_period »):
   - dose_rate > 0 et user_period_days > 0 requis
+- Une nouvelle règle de calcul s'ajoute en écrivant un profil (guide en tête de core/src/profiles.php)
 - scenario utilisateur:
   - soit tous les champs vides, soit tous remplis avec valeurs valides
 

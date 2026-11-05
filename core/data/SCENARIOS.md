@@ -48,9 +48,9 @@ Condition générée : « Exposition : 1 h à 1 m · limite de dose : 1 mSv ». 
 1. Le scénario et sa limite proviennent d'une **publication citée** (voir `SOURCES.md`).
 2. `audience_code` unique et définitif ; `label` clair.
 3. Ajouter le scénario **à la fin** du fichier (l'ordre du fichier est l'ordre des lignes ; le scénario personnalisé reste toujours en dernier).
-4. Régénérer le fichier de cas figés (`tests/golden-calcul.json`) : chaque calcul gagne une ligne ; vérifier que **les lignes existantes n'ont pas changé**.
+4. Régénérer le fichier de cas figés (`core/tests/golden-calcul.json`) : chaque calcul gagne une ligne ; vérifier que **les lignes existantes n'ont pas changé**.
 5. Incrémenter `VERSION` (ajout d'un scénario = version **mineure** ; modifier la limite, les durées ou les distances d'un scénario existant change des résultats = version **majeure**).
-6. Lancer `node core/tests/test-calcul.js`, `php core/tests/test-scenarios.php`, `php core/tests/test-api.php`.
+6. Lancer `node core/tests/test-calcul.js` et `php core/tests/test-scenarios.php`.
 
 Le moteur contrôle ce fichier à chaque calcul : champ manquant, doublon, valeur négative ou nulle… provoquent une erreur explicite (avec le
 numéro et le code du scénario) plutôt qu'un résultat faux.

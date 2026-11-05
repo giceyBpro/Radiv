@@ -355,13 +355,17 @@ Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et naviga
 node tests/test-core-lab.js            # zone de test du moteur (/auth/moteur) : scénarios de candidats, application, retour arrière
 node tests/test-core-contract.js       # contrat du site envers le moteur (version + cas figés propres au site)
 node core/tests/test-calcul.js         # calcul: 381 cas figés, deux modes d'arrondi
+php core/tests/test-profiles.php       # profils de calcul (isotopes ajoutés dans les données)
+php core/tests/test-scenarios.php      # scénarios déclarés dans les données
+php core/tests/test-fields.php         # champs de saisie et ajout d'une règle de calcul (exemple du guide de core/src/profiles.php)
 php demo/tests/test-api.php            # API de l'application simple (demo/)
 node tests/check-runtime-layout.js     # mise en forme de config/runtime.env
 ```
 
-`test-calcul.js` compare le moteur (`core/`) à `core/tests/golden-calcul.json`. Les autres tests
-(`test-install.js`, `test-admin-site.js`, `test-browser-admin.js`) ont besoin d'un Apache avec
-mod_php et des faux services `fake-services.js` / `fake-smtp.js`.
+`test-calcul.js` compare le moteur (`core/`) à `core/tests/golden-calcul.json`. Les tests dans un navigateur
+(`test-minisite.js` : page de `demo/` ; `test-radiv-fields.js` : accueil de RadIV, avec une règle de calcul ajoutée dans un moteur de test)
+utilisent Playwright et `php -S`, sans Apache. Les tests d'intégration (`test-install.js`, `test-admin-site.js`, `test-browser-admin.js`)
+ont besoin d'un Apache avec mod_php et des faux services `fake-services.js` / `fake-smtp.js`.
 
 ### Administration du site (`/auth` : connexion Google, mesures, mises à jour)
 
