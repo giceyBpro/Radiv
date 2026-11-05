@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 //  1. Champs de saisie. La règle utilise-t-elle un champ qui n'existe pas encore (une masse, un volume, un choix...) ?
 //     Si oui, le décrire dans data/fields.json (code, libellé, unité, type "number" ou "choice", bornes, aide ; guide :
-//     data/FIELDS.md). Les sites qui lisent GET config affichent alors ce champ SANS modification. Si la règle n'utilise que
+//     data/FIELDS.md). Les sites qui construisent leur formulaire d'après input_fields() (GET config de l'API) affichent alors ce champ SANS modification. Si la règle n'utilise que
 //     des champs existants, passer à l'étape 2.
 //  2. Profil. Dans profiles() ci-dessous, copier le profil « EXEMPLE À COPIER » (il est commenté), le renommer et le
 //     compléter. Un profil ne décrit que ce qui change par rapport au profil standard : ce qu'il ne définit pas est

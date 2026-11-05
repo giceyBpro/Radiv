@@ -1,27 +1,15 @@
 # Moteur de calcul RIV (durées de restriction après radiothérapie interne vectorisée)
 
 Moteur **autonome** (PHP ≥ 8.0, sans dépendance) qui calcule les durées de restriction de contact pour l'entourage d'un
-patient traité par radiothérapie interne vectorisée. Il est utilisé par le site du dépôt parent et conçu pour être repris
-tel quel par un autre site.
+patient traité par radiothérapie interne vectorisée. Il est utilisé par le site RadIV et conçu pour être repris tel quel par un
+autre site ou un autre logiciel. Ce dossier ne contient **que le moteur** : le calcul, et les données (isotopes, champs de
+saisie, scénarios) qui le décrivent. L'API HTTP et la page de saisie en sont séparées.
 
 ## Démarrage rapide
 
-Trois façons de l'utiliser, de la plus simple à la plus complète. Prérequis : **PHP 8.0 ou plus** (rien d'autre à installer).
+Prérequis : **PHP 8.0 ou plus** (rien d'autre à installer).
 
-### A. Essayer en 1 minute (sur votre poste)
-
-```bash
-php -S 127.0.0.1:8080 core/api/index.php
-```
-
-Ouvrez http://127.0.0.1:8080/ : la page de saisie s'affiche. Ou en ligne de commande :
-
-```bash
-curl http://127.0.0.1:8080/config
-curl -X POST http://127.0.0.1:8080/calculate -d '{"isotope_code":"radium223","dose_rate":100,"patient_size_cm":170}'
-```
-
-### B. L'utiliser dans votre propre code PHP (site, Joomla, WordPress, script…)
+### Utiliser le moteur dans votre propre code PHP (site, Joomla, WordPress, script…)
 
 1. Copiez dans votre projet les dossiers **`src/`** et **`data/`** et le fichier **`VERSION`** (gardez-les côte à côte).
 2. Chargez le moteur et calculez :
@@ -57,27 +45,13 @@ publiée), `errors`. Exemple pour le Radium-223 : `recommendations_days` = `{"co
 Réglage facultatif : `RivEngine\set_rounding_mode('floor')` (troncature) à la place de l'arrondi au plus proche (défaut,
 modifiable aussi dans `data/settings.json`).
 
-### C. Déployer le « minisite » (page + API) sur un hébergement web
-
-1. Ouvrez **`install-core.php`** et remplacez `CHANGEZ-MOI` (`INSTALL_KEY`) par une clé secrète de 24 caractères minimum
-   (`openssl rand -hex 24`). Vérifiez `REPO` et `REF` (de préférence une **étiquette** de version, pas `main`) ; `GITHUB_TOKEN`
-   seulement si le dépôt est privé.
-2. Envoyez ce **seul fichier** par FTP dans le dossier web, puis ouvrez `https://<votre-domaine>/install-core.php`.
-3. Saisissez la clé et le nom du sous-dossier (`riv` par défaut) : le script installe, vérifie que le moteur calcule, puis
-   **se supprime**. Le minisite est alors à `https://<votre-domaine>/riv/`.
-4. Personnalisez titre et textes dans **`riv/config.js`** (seul fichier à modifier pour l'affichage).
-
-Mise à jour : relancez la même procédure ; `config.js` et `data/settings.json` sont conservés, l'ancien moteur est rétabli
-automatiquement en cas d'échec.
-
 ### Au quotidien
 
 | Je veux… | Je fais… |
 |---|---|
-| Vérifier que tout fonctionne | `node core/tests/test-calcul.js` (doit afficher « 0 écart »), `php core/tests/test-api.php`, `php core/tests/test-profiles.php`, `php core/tests/test-fields.php` |
+| Vérifier que tout fonctionne | `node core/tests/test-calcul.js` (doit afficher « 0 écart »), `php core/tests/test-profiles.php`, `php core/tests/test-fields.php` |
 | Ajouter ou modifier un scénario d'exposition | `data/scenarios.json` (voir `data/SCENARIOS.md`) : une ligne de résultat de plus partout, sans code |
 | Ajouter un isotope | Une entrée dans `data/isotopes.json` (période, référence publiée, `cures`, `profile` si besoin), un cas de test, `VERSION` +1 mineure — voir `AGENTS.md` |
-| Changer un titre, un libellé de la page | `web/config.js` (ou `riv/config.js` sur le site) |
 | Connaître la version | `RivEngine\version()` ou le fichier `VERSION` |
 | Savoir si une modification est compatible | `AGENTS.md` (règles) et section « Compatibilité » ci-dessous |
 
@@ -93,15 +67,10 @@ automatiquement en cas d'échec.
 | `src/physics.php` | Formules (décroissance, géométrie, durée de restriction), commentées une à une. |
 | `src/calculate.php` | `RivEngine\calculate(array $payload)` : lecture des entrées, erreurs de saisie, une ligne par scénario, assemblage du résultat. |
 | `data/settings.json` | Réglage du moteur : mode d'arrondi par défaut (`rounding_mode`). |
-| `data/fields.json` | **Les champs de saisie propres aux isotopes** (code, libellé, unité, type, bornes, aide) : annoncés par `GET config` (clé `fields`), ils permettent aux sites de construire leur formulaire sans modification. Guide : `data/FIELDS.md`. |
+| `data/fields.json` | **Les champs de saisie propres aux isotopes** (code, libellé, unité, type, bornes, aide) : annoncés par `RivEngine\input_fields()` (que l'API publie dans `GET config`), ils permettent aux sites de construire leur formulaire sans modification. Guide : `data/FIELDS.md`. |
 | `data/scenarios.json` | **Les scénarios d'exposition** (conjoint, enfant, collègues, transports…) : en ajouter un crée automatiquement une ligne dans les résultats de tous les sites. Guide : `data/SCENARIOS.md`. |
 | `data/*.json` | **Les données** (à modifier ici, pas dans le code) ; `data/SOURCES.md` : références et choix. |
-| `api/handler.php` | Interface d'API minimale (`GET config`, `POST calculate`) sans état ni dépendance. |
-| `api/index.php` | Exemple autonome : `php -S 127.0.0.1:8080 core/api/index.php`. |
-| `web/config.js` | **Titre, textes et libellés de la page** : le seul fichier à modifier pour personnaliser l'affichage. |
-| `web/index.html` | Page minimale en **un seul fichier HTML** (structure, présentation et logique ; textes dans `config.js`) : saisie et tableau des résultats. Les champs affichés suivent `isotope_inputs` et le tableau affiche toutes les lignes reçues : un isotope ou un scénario ajouté dans `data/` apparaît sans modifier la page. Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
-| `install-core.php` | Installeur autonome du « minisite » (page + API + moteur) : un seul fichier à envoyer par FTP, clé à définir en tête, se supprime après succès, conserve `config.js` et `data/settings.json` aux mises à jour. À épingler sur une étiquette (`REF`). |
-| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php` ; `php core/tests/test-scenarios.php` ; `php core/tests/test-fields.php`. |
+| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-profiles.php` ; `php core/tests/test-scenarios.php` ; `php core/tests/test-fields.php`. |
 | `AGENTS.md` | Instructions aux agents et contributeurs : périmètre, règles de rétro-compatibilité, versionnement, tests à lancer. |
 | `VERSION` | Version du moteur. |
 
@@ -110,8 +79,7 @@ automatiquement en cas d'échec.
 Le code est court et chaque fichier se lit seul. Ordre conseillé : `data/` (ce que le moteur sait), puis `src/calculate.php`
 (le déroulement d'un calcul, en quatre fonctions : `read_entries`, `entry_errors`, `scenario_rows`, `calculate`), puis
 `src/physics.php` (les formules) et `src/profiles.php` (ce qui change d'un isotope à l'autre). `src/compat.php` et
-`src/rounding.php` règlent des détails de reproduction à l'identique de JavaScript ; `api/handler.php` traduit une requête
-HTTP en appel à `calculate()`. Les commentaires expliquent le **pourquoi** de chaque règle, pas seulement son effet.
+`src/rounding.php` règlent des détails de reproduction à l'identique de JavaScript. Les commentaires expliquent le **pourquoi** de chaque règle, pas seulement son effet.
 
 ## Utilisation
 

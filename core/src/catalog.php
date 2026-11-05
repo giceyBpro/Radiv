@@ -102,7 +102,7 @@ function cure_options_by_isotope(): array
 // Champs de saisie (data/fields.json ; guide complet : data/FIELDS.md)
 // ---------------------------------------------------------------------------------------------------------------------
 // Les champs dont la saisie dépend de l'isotope (débit de dose, activité, fixation, période...) sont DÉCRITS dans le fichier de
-// données : code de l'API, libellé, unité, type, bornes, aide. Le moteur les annonce aux interfaces (GET config, clé « fields »)
+// données : code de l'API, libellé, unité, type, bornes, aide. Le moteur les expose aux interfaces (input_fields() ; l'API publie la liste dans GET config, clé « fields »)
 // pour qu'elles construisent leur formulaire ; un champ ajouté au fichier apparaît donc sur les sites sans toucher à leur code.
 // C'est le profil de calcul de l'isotope (profiles.php) qui dit, champ par champ, s'il est obligatoire, facultatif ou ignoré.
 //

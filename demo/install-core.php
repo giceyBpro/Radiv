@@ -24,7 +24,8 @@
 const INSTALL_KEY = 'CHANGEZ-MOI';
 const REPO = 'giceyBpro/Radiv';        // dépôt GitHub « propriétaire/nom »
 const REF = 'main';                    // branche, ÉTIQUETTE (recommandé : une version figée, ex. « core-v1.0.0 ») ou commit
-const CORE_PREFIX = 'core/';           // dossier du moteur dans le dépôt ('' quand le dépôt ne contient que le moteur)
+const ENGINE_PREFIX = 'core/';         // dossier du moteur dans le dépôt
+const APP_PREFIX = 'demo/';            // dossier de l'application simple (API et page) dans le dépôt
 const GITHUB_TOKEN = '';               // seulement si le dépôt est privé (jeton en lecture) ; sinon laisser vide
 const DEFAULT_DIR = 'riv';
 
@@ -56,19 +57,26 @@ if (!class_exists('ZipArchive') || !function_exists('curl_init')) {
     page('Extensions manquantes', '<p class="ko">Les extensions PHP <code>zip</code> et <code>curl</code> sont nécessaires.</p>');
 }
 
-// Fichiers acceptés (chemin dans le dépôt, sans CORE_PREFIX) → destination relative au dossier d'installation.
-// Tout le reste de l'archive est ignoré.
-function destination($rel)
+// Fichiers acceptés (chemin dans le dépôt) → destination relative au dossier d'installation. Le moteur (ENGINE_PREFIX) et l'application
+// simple (APP_PREFIX) viennent de deux dossiers du dépôt ; tout le reste de l'archive est ignoré.
+function destination($path)
 {
-    $fixed = array(
-        'VERSION' => 'engine/VERSION',
-        'api/handler.php' => 'engine/api/handler.php',
-        'api/index.php' => 'api/index.php',
-        'web/index.html' => 'index.html', 'web/config.js' => 'config.js',
-    );
-    if (isset($fixed[$rel])) return $fixed[$rel];
-    if (preg_match('#^src/[A-Za-z0-9_-]+\.php$#', $rel)) return 'engine/' . $rel;
-    if (preg_match('#^data/[A-Za-z0-9_-]+\.(?:json|md)$#', $rel)) return 'engine/' . $rel;
+    if (strpos($path, ENGINE_PREFIX) === 0) {
+        $rel = substr($path, strlen(ENGINE_PREFIX));
+        if ($rel === 'VERSION') return 'engine/VERSION';
+        if (preg_match('#^src/[A-Za-z0-9_-]+\.php$#', $rel)) return 'engine/' . $rel;
+        if (preg_match('#^data/[A-Za-z0-9_-]+\.(?:json|md)$#', $rel)) return 'engine/' . $rel;
+        return null;
+    }
+    if (strpos($path, APP_PREFIX) === 0) {
+        $fixed = array(
+            'api/handler.php' => 'engine/api/handler.php',
+            'api/index.php' => 'api/index.php',
+            'web/index.html' => 'index.html', 'web/config.js' => 'config.js',
+        );
+        $rel = substr($path, strlen(APP_PREFIX));
+        return isset($fixed[$rel]) ? $fixed[$rel] : null;
+    }
     return null;
 }
 // Fichiers que l'utilisateur personnalise : jamais écrasés s'ils existent.
@@ -121,10 +129,6 @@ function read_archive($zipFile)
             throw new RuntimeException('Archive refusée (lien symbolique).');
         }
         $rel = $parts[1];
-        if (CORE_PREFIX !== '') {
-            if (strpos($rel, CORE_PREFIX) !== 0) continue;
-            $rel = substr($rel, strlen(CORE_PREFIX));
-        }
         $dest = destination($rel);
         if ($dest === null) continue;
         $stat = $zip->statIndex($i);

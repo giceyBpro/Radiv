@@ -67,6 +67,19 @@ function js_number_to_string(float $x): string
     return $k === 1 ? $digits . 'e' . $expStr : $digits[0] . '.' . substr($digits, 1) . 'e' . $expStr;
 }
 
+// Encodage JSON d'une réponse de calcul, aligné sur JSON.stringify de JavaScript : NaN et Infini deviennent null ; ni les caractères
+// non ASCII ni les « / » ne sont échappés. À utiliser pour écrire le résultat de calculate() (API, tests de non-régression).
+function js_json_encode(mixed $data): string
+{
+    $finite = static function ($value) use (&$finite) {
+        if (is_float($value)) return is_finite($value) ? $value : null;
+        if (is_array($value)) return array_map($finite, $value);
+        return $value;
+    };
+    $json = json_encode($finite($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_LINE_TERMINATORS);
+    return $json === false ? 'null' : $json;
+}
+
 // Équivalent de JSON.stringify(valeur ?? null) pour le message d'erreur isotope_code.
 function js_json_stringify(mixed $value): string
 {

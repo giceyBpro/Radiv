@@ -1,5 +1,5 @@
-// Page minimale du moteur (core/web) dans un vrai navigateur (Playwright), servie par l'exemple d'API (core/api/index.php) sur une COPIE du
-// moteur à laquelle on ajoute, dans les données seulement, un isotope de profil « iode bénin » et un scénario d'exposition : la page doit
+// Page minimale de l'application simple (demo/web) dans un vrai navigateur (Playwright), servie par l'exemple d'API (demo/api/index.php) sur une COPIE du
+// moteur (core/) à laquelle on ajoute, dans les données seulement, un isotope de profil « iode bénin » et un scénario d'exposition : la page doit
 // les prendre en charge sans aucune modification. Non requis en CI (Playwright). Usage: node tests/test-minisite.js
 const fs = require('fs');
 const os = require('os');
@@ -13,25 +13,25 @@ let pass = 0; let fail = 0;
 const t = (name, ok, detail = '') => { if (ok) { pass += 1; console.log(`OK    ${name}`); } else { fail += 1; console.log(`ÉCHEC ${name} ${detail}`); } };
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'minisite-'));
-fs.cpSync(path.join(root, 'core'), dir, { recursive: true, filter: (src) => !/[\\/]tests([\\/]|$)/.test(src) });
-const iso = path.join(dir, 'data/isotopes.json');
+for (const sub of ['core', 'demo']) fs.cpSync(path.join(root, sub), path.join(dir, sub), { recursive: true, filter: (src) => !/[\\/]tests([\\/]|$)/.test(src) });   // moteur et application, côte à côte comme dans le dépôt
+const iso = path.join(dir, 'core/data/isotopes.json');
 fs.writeFileSync(iso, JSON.stringify([...JSON.parse(fs.readFileSync(iso, 'utf8')), { api_code: 'essai_benin', label: 'Essai bénin', period_hours: 122.4, reference: 'essai', remark: '-', situation: '', profile: 'benign_iodine' }]));
 // Nouvelle règle de calcul : le profil EXEMPLE du guide de src/profiles.php (décommenté) et le champ « poids_kg » qu'il utilise.
-const ff = path.join(dir, 'data/fields.json');
+const ff = path.join(dir, 'core/data/fields.json');
 fs.writeFileSync(ff, JSON.stringify([...JSON.parse(fs.readFileSync(ff, 'utf8')), { code: 'poids_kg', label: 'Poids du patient (kg)', unit: 'kg', type: 'number', min: 1, step: 'any', help: 'Poids au moment de la mesure.' }]));
 fs.writeFileSync(iso, JSON.stringify([...JSON.parse(fs.readFileSync(iso, 'utf8')), { api_code: 'essai_poids', label: 'Essai poids', period_hours: 100, reference: 'essai', remark: '-', situation: '', profile: 'poids_reference' }]));
-const profilesFile = path.join(dir, 'src/profiles.php');
+const profilesFile = path.join(dir, 'core/src/profiles.php');
 { const src = fs.readFileSync(profilesFile, 'utf8').split('\n'); const ex = []; let inside = false;
   for (const line of src) { if (line.includes('$poidsReference = [')) inside = true; if (inside) ex.push(line.replace(/^\s*\/\/   ?/, '')); if (inside && line.includes('] + $standard;')) break; }
   const reg = "    return $profiles = ['standard' => $standard, 'benign_iodine' => $benignIodine, 'free_period' => $freePeriod];";
   const text = src.join('\n');
   if (!text.includes(reg) || !ex.length) throw new Error('exemple du guide introuvable dans profiles.php');
   fs.writeFileSync(profilesFile, text.replace(reg, ex.join('\n') + '\n    return $profiles = [\'standard\' => $standard, \'benign_iodine\' => $benignIodine, \'free_period\' => $freePeriod, \'poids_reference\' => $poidsReference];')); }
-const sc = path.join(dir, 'data/scenarios.json');
+const sc = path.join(dir, 'core/data/scenarios.json');
 fs.writeFileSync(sc, JSON.stringify([...JSON.parse(fs.readFileSync(sc, 'utf8')), { audience_code: 'voisin_palier', label: 'Voisin de palier', exposures: [{ hours: 1, distance: 1, unit_factor_at_1m: true }], limit: 1 }]));
 
 const PORT = 8391;
-const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'api/index.php')], { stdio: 'ignore' });
+const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'demo/api/index.php')], { stdio: 'ignore' });
 
 (async () => {
   await new Promise((ok) => setTimeout(ok, 1200));

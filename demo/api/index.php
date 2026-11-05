@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== EXEMPLE AUTONOME : SERVIR L'API ET LA PAGE DU MOTEUR =====
-// Pour essayer sans rien installer :  php -S 127.0.0.1:8080 core/api/index.php
+// Pour essayer sans rien installer :  php -S 127.0.0.1:8080 demo/api/index.php
 //   http://127.0.0.1:8080/   la page de saisie (web/index.html)
 //   curl http://127.0.0.1:8080/config
 //   curl -X POST http://127.0.0.1:8080/calculate -d '{"isotope_code":"radium223","dose_rate":100,"patient_size_cm":170}'
@@ -10,7 +10,7 @@
 // Le mode d'arrondi est celui de data/settings.json ; pour le surcharger : RivEngine\set_rounding_mode('floor').
 declare(strict_types=1);
 
-// Dépôt : handler.php est à côté ; site installé par install-core.php : engine/api/handler.php.
+// Dépôt : handler.php est à côté ; site installé par install-core.php : engine/api/handler.php.   Le moteur lui-même est dans core/.
 require is_file(__DIR__ . '/handler.php') ? __DIR__ . '/handler.php' : __DIR__ . '/../engine/api/handler.php';
 
 $method = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');

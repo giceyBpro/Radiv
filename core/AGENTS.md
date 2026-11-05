@@ -6,7 +6,7 @@ Répondre en français. Diff minimal et atomique ; aucun refactor ni formatage h
 
 ## 1. Périmètre : ce que le moteur est (et n'est pas)
 
-- Fait : données (`data/*.json`), formules, validation, assemblage du résultat (`src/*.php`), API minimale (`api/`), page minimale (`web/`), installeur du minisite (`install-core.php`), tests (`tests/`).
+- Fait : données (`data/*.json`), formules, validation, assemblage du résultat (`src/*.php`), tests (`tests/`). L'API HTTP, la page de saisie et l'installeur ne sont **pas** dans ce dossier : ils vivent dans `demo/` (application simple, hors du moteur).
 - **Ne contient jamais** : référence au reste d'un site (`backend/`, `public/`, espaces de noms `Radiv\…`), variable d'environnement d'un site, base de données, accès réseau, écriture de fichier, secret, mode de calcul alternatif, interrogation d'un service externe (aucune trace d'un « mode SFMN »), champ de réponse propre à un site (par exemple `calculation_mode`).
 - Les réglages passent par des fonctions (`set_rounding_mode`) ou par `data/settings.json`, jamais par l'environnement.
 - Les fichiers `src/*.php` ne s'exécutent pas seuls (garde `RIV_ENGINE`, défini par `bootstrap.php`). Tout nouveau fichier de `src/` : recopier ce garde, l'ajouter à la liste de `bootstrap.php`, écrire du PHP 8.0 compatible.
@@ -16,7 +16,7 @@ Répondre en français. Diff minimal et atomique ; aucun refactor ni formatage h
 
 Le contrat entre le moteur et les sites est constitué de :
 
-1. **les fonctions publiques** utilisées par les sites : `calculate`, `isotopes`, `scenarios`, `cure_options_by_isotope`, `get_isotope`, `normalize_cure_count`, `to_number_or_null`, `js_number_to_string`, `js_json_stringify`, `set_rounding_mode`, `version`, `isotope_inputs` (même nom, même signature, même type de retour) ;
+1. **les fonctions publiques** utilisées par les sites : `calculate`, `isotopes`, `scenarios`, `cure_options_by_isotope`, `get_isotope`, `normalize_cure_count`, `to_number_or_null`, `js_number_to_string`, `js_json_stringify`, `set_rounding_mode`, `version`, `isotope_inputs`, `input_fields`, `js_json_encode` (même nom, même signature, même type de retour) ;
 2. **les entrées acceptées** par `calculate()` (noms de champs, conversions, valeurs invalides rejetées avec les mêmes messages) ;
 3. **la forme de la réponse** (clés, ordre, types) et **toutes les valeurs calculées** (durées en jours, périodes, textes de conditions, messages d'erreur) ;
 4. **les codes** (`api_code` des isotopes, `audience_code` des scénarios) et les nombres de cures autorisés ;
@@ -41,7 +41,6 @@ Règles :
 
 ```bash
 node core/tests/test-calcul.js   # 381 cas figés, deux modes d'arrondi : doit afficher 0 écart
-php core/tests/test-api.php      # interface d'API minimale
 php core/tests/test-profiles.php # profils de calcul (isotopes ajoutés dans les données)
 php core/tests/test-scenarios.php # scénarios déclarés dans les données (ajout, génération des conditions, contrôles)
 php core/tests/test-fields.php   # champs de saisie (data/fields.json) et ajout d'une règle de calcul, d'après l'exemple du guide de src/profiles.php
@@ -50,7 +49,7 @@ php core/tests/test-fields.php   # champs de saisie (data/fields.json) et ajout 
 - `core/tests/golden-calcul.json` **est** le contrat chiffré. Il ne se modifie que pour une évolution voulue de résultats (donc une majeure) : régénérer le fichier, relire **chaque** écart, l'expliquer dans `data/SOURCES.md` et dans le message de commit.
 - Ajouter un cas figé pour tout nouveau comportement (nouvel isotope, nouveau scénario, nouvelle erreur), en plus du code.
 - Vérifier aussi les tests côté site si le dépôt radiv est présent : `node tests/test-core-contract.js` (copie du contrat propre au site, volontairement distincte) et `node tests/test-core-lab.js` (zone de test des candidats).
-- Si le dépôt radiv est présent : `NODE_PATH=$(npm root -g) node tests/test-minisite.js` vérifie la page minimale (`web/`) dans un navigateur (isotope et scénario ajoutés dans les données, sans modifier la page).
+- Si le dépôt radiv est présent : `php demo/tests/test-api.php`, `node tests/test-minisite.js` et `node tests/test-radiv-fields.js` vérifient l'API et la page de l'application simple (`demo/`) avec ce moteur, y compris un isotope, un scénario et une règle de calcul ajoutés dans les données.
 - Aucun test ne doit être désactivé, ignoré ou assoupli pour obtenir un résultat vert.
 
 ## 5. Données (`data/`)
@@ -67,14 +66,14 @@ php core/tests/test-fields.php   # champs de saisie (data/fields.json) et ajout 
 
 ## 6. Déploiement
 
-Les sites n'installent de ce dossier que `src/*.php`, `data/*.json`, `VERSION` et la page minimale `web/index.html` avec `web/config.js` (liste blanche des outils de mise à jour ; le site RadIV l'affiche dans l'onglet « Mini-site » de son administration). Tout autre fichier ajouté ici (`api/`, `tests/`, `install-core.php`, documentation, autre fichier de `web/`) n'est jamais déployé sur un site. Ne pas ajouter d'autre exigence de déploiement sans l'accord des mainteneurs des sites.
+Les sites n'installent de ce dossier que `src/*.php`, `data/*.json` et `VERSION` (liste blanche des outils de mise à jour). Tout autre fichier ajouté ici (`tests/`, documentation) n'est jamais déployé sur un site. Ne pas ajouter d'autre exigence de déploiement sans l'accord des mainteneurs des sites.
 
 ## 7. Avant de proposer une modification
 
 - [ ] Le périmètre du §1 est respecté (rien de propre à un site, aucun appel interdit).
 - [ ] Le contrat du §2 est intact, ou la version majeure est incrémentée et justifiée.
 - [ ] `VERSION` est à jour.
-- [ ] `node core/tests/test-calcul.js` : 0 écart ; `php core/tests/test-api.php` : réussi.
+- [ ] `node core/tests/test-calcul.js` : 0 écart ; `php core/tests/test-profiles.php`, `test-scenarios.php` et `test-fields.php` : réussis.
 - [ ] `data/SOURCES.md` et `README.md` reflètent le changement.
 - [ ] Le message de commit dit ce qui change **pour les sites** (résultats, champs, version).
 

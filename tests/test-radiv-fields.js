@@ -16,11 +16,11 @@ const t = (name, ok, detail = '') => { if (ok) { pass += 1; console.log(`OK    $
 
 // Copie du moteur + nouvelle règle (mêmes ajouts que tests/test-minisite.js).
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'radiv-fields-'));
-fs.cpSync(path.join(root, 'core'), dir, { recursive: true, filter: (src) => !/[\\/]tests([\\/]|$)/.test(src) });
+for (const sub of ['core', 'demo']) fs.cpSync(path.join(root, sub), path.join(dir, sub), { recursive: true, filter: (src) => !/[\\/]tests([\\/]|$)/.test(src) });
 const addJson = (file, entry) => { const f = path.join(dir, file); fs.writeFileSync(f, JSON.stringify([...JSON.parse(fs.readFileSync(f, 'utf8')), entry])); };
-addJson('data/fields.json', { code: 'poids_kg', label: 'Poids du patient (kg)', unit: 'kg', type: 'number', min: 1, step: 'any', help: 'Poids au moment de la mesure.' });
-addJson('data/isotopes.json', { api_code: 'essai_poids', label: 'Essai poids', period_hours: 100, reference: 'essai', remark: '-', situation: '', profile: 'poids_reference' });
-const profilesFile = path.join(dir, 'src/profiles.php');
+addJson('core/data/fields.json', { code: 'poids_kg', label: 'Poids du patient (kg)', unit: 'kg', type: 'number', min: 1, step: 'any', help: 'Poids au moment de la mesure.' });
+addJson('core/data/isotopes.json', { api_code: 'essai_poids', label: 'Essai poids', period_hours: 100, reference: 'essai', remark: '-', situation: '', profile: 'poids_reference' });
+const profilesFile = path.join(dir, 'core/src/profiles.php');
 { const src = fs.readFileSync(profilesFile, 'utf8').split('\n'); const ex = []; let inside = false;
   for (const line of src) { if (line.includes('$poidsReference = [')) inside = true; if (inside) ex.push(line.replace(/^\s*\/\/   ?/, '')); if (inside && line.includes('] + $standard;')) break; }
   const reg = "    return $profiles = ['standard' => $standard, 'benign_iodine' => $benignIodine, 'free_period' => $freePeriod];";
@@ -30,7 +30,7 @@ const profilesFile = path.join(dir, 'src/profiles.php');
 
 // Petit serveur : fichiers de public/, API du moteur (config, calculate) et une configuration du site avec un nom de champ choisi par RadIV.
 fs.writeFileSync(path.join(dir, 'router.php'), `<?php
-require __DIR__ . '/api/handler.php';
+require __DIR__ . '/demo/api/handler.php';
 $route = trim((string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 if ($route === 'api/public-config') { header('Content-Type: application/json'); echo json_encode(['site_name' => 'Test', 'field_labels' => ['poids_kg' => 'Poids (nom RadIV)']]); exit; }
 if (strpos($route, 'api/') === 0) { [$s, $d] = RivEngine\\Api\\handle($_SERVER['REQUEST_METHOD'], substr($route, 4), (string) file_get_contents('php://input')); http_response_code($s); header('Content-Type: application/json'); echo RivEngine\\Api\\encode($d); exit; }

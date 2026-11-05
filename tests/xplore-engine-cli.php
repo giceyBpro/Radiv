@@ -1,5 +1,5 @@
 <?php
-// Répond comme l'API du site à partir d'un dossier de moteur donné (API minimale core/api/handler.php) : sert à
+// Répond comme l'API du site à partir d'un dossier de moteur donné (API minimale demo/api/handler.php) : sert à
 // tests/test-xplore.js, qui exécute le script du modèle Xplore sans réseau. Usage : php xplore-engine-cli.php <dossier_core> <METHODE> <route> [corps]
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
