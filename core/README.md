@@ -3,7 +3,8 @@
 Moteur **autonome** (PHP ≥ 8.0, sans dépendance) qui calcule les durées de restriction de contact pour l'entourage d'un
 patient traité par radiothérapie interne vectorisée. Il est utilisé par le site RadIV et conçu pour être repris tel quel par un
 autre site ou un autre logiciel. Ce dossier ne contient **que le moteur** : le calcul, et les données (isotopes, champs de
-saisie, scénarios) qui le décrivent. L'API HTTP et la page de saisie en sont séparées.
+saisie, scénarios) qui le décrivent. L'API HTTP et la page de saisie en sont séparées : un exemple complet se trouve dans `demo/`
+du dépôt RadIV.
 
 ## Démarrage rapide
 
