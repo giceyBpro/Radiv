@@ -35,5 +35,15 @@
     "min": 0,
     "step": "any",
     "help": "Période effective choisie par l'appelant ; facultative sauf pour les isotopes qui n'en ont pas."
+  },
+  {
+    "code": "patient_size_cm",
+    "label": "Taille du patient (cm)",
+    "unit": "cm",
+    "type": "number",
+    "min": 1,
+    "step": 1,
+    "common": true,
+    "help": "Taille du patient, en centimètres : obligatoire pour tous les isotopes (géométrie de l'exposition)."
   }
 ]

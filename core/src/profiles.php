@@ -136,7 +136,8 @@ function profile_of(array $isotope): array
 // Un champ cité par un profil mais absent de data/fields.json est une erreur de données (faute de frappe probable).
 function profile_inputs(array $isotope): array
 {
-    $declared = array_column(input_fields(), 'code');
+    // Les champs communs (taille du patient) ne dépendent pas de l'isotope : ils n'entrent pas dans la saisie par profil.
+    $declared = array_column(array_filter(input_fields(), static fn (array $field): bool => !$field['common']), 'code');
     $wanted = profile_of($isotope)['inputs'];
     foreach (array_keys($wanted) as $code) {
         if (!in_array($code, $declared, true)) {

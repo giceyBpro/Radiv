@@ -66,6 +66,7 @@ $declared = array_column(RivEngine\input_fields(), null, 'code');
 $t('table des champs : les champs de base et les champs ajoutés sont décrits', count($declared) === $baseCount + 2 && $declared['poids_kg']['unit'] === 'kg' && $declared['poids_kg']['type'] === 'number' && $declared['voie']['options'][1]['value'] === 'oral');
 $inputs = RivEngine\isotope_inputs();
 $t('saisie annoncée : le champ ajouté est « required » pour l\'isotope qui l\'utilise, « ignored » pour tous les autres', $inputs['essai_poids']['poids_kg'] === 'required' && $inputs['essai_poids']['dose_rate'] === 'required' && $inputs['radium223']['poids_kg'] === 'ignored' && $inputs['iode131_benin']['voie'] === 'ignored');
+$t('champ commun (taille du patient) : décrit dans la table, marqué « common », absent de la saisie par isotope', $declared['patient_size_cm']['common'] === true && $declared['patient_size_cm']['unit'] === 'cm' && $declared['dose_rate']['common'] === false && !isset($inputs['radium223']['patient_size_cm']) && !isset($inputs['essai_poids']['patient_size_cm']));
 $t('…les isotopes existants ne changent pas pour les champs de base', $inputs['iode131_benin']['benign_activity_mbq'] === 'required' && $inputs['radium223']['dose_rate'] === 'required');
 
 // --- 4. Règle de l'exemple : débit ramené à 70 kg -------------------------------------------------------------------------
@@ -105,6 +106,11 @@ $check('option incomplète refusée', [...$good, ['type' => 'choice', 'options' 
 $check('borne non numérique refusée', [...$good, ['min' => 'abc'] + $extra], 'min doit être un nombre');
 $check('champ de base retiré : refusé', array_slice($good, 1), 'champ de base');
 $check('fichier valide accepté', [...$good, $extra], 'OK');
+$noSize = array_values(array_filter($good, static fn (array $f): bool => $f['code'] !== 'patient_size_cm'));
+$sizeField = array_values(array_filter($good, static fn (array $f): bool => $f['code'] === 'patient_size_cm'))[0];
+$check('taille du patient absente : refusée', $noSize, 'patient_size_cm');
+$check('taille du patient sans « common » : refusée', [...$noSize, array_diff_key($sizeField, ['common' => 1])], 'déjà un champ commun');
+$check('« common » sur un autre champ : refusé', [...$good, ['common' => true] + $extra], 'réservé aux champs communs');
 
 foreach (['src', 'data'] as $dir) { array_map('unlink', glob("{$tmp}/{$dir}/*")); rmdir("{$tmp}/{$dir}"); }
 unlink("{$tmp}/VERSION"); rmdir($tmp);
