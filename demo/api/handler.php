@@ -19,7 +19,8 @@ declare(strict_types=1);
 
 namespace RivEngine\Api;
 
-require_once __DIR__ . '/../src/bootstrap.php';
+// Le moteur : dans le dépôt, core/ est à côté de demo/ ; sur un site installé par install-core.php, il est dans engine/ (à côté de api/).
+require_once is_file(__DIR__ . '/../src/bootstrap.php') ? __DIR__ . '/../src/bootstrap.php' : __DIR__ . '/../../core/src/bootstrap.php';
 
 use RivEngine as Engine;
 
@@ -71,15 +72,8 @@ function calculate_response(string $body): array
     return [$result['ok'] ? 200 : 400, $result];
 }
 
-// Encodage JSON aligné sur JSON.stringify de JavaScript : NaN et Infini deviennent null ; ni les caractères non ASCII
-// ni les « / » ne sont échappés.
+// Encodage JSON de la réponse : celui du moteur, aligné sur JSON.stringify de JavaScript (voir src/compat.php).
 function encode(mixed $data): string
 {
-    $finite = static function ($value) use (&$finite) {
-        if (is_float($value)) return is_finite($value) ? $value : null;
-        if (is_array($value)) return array_map($finite, $value);
-        return $value;
-    };
-    $json = json_encode($finite($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_LINE_TERMINATORS);
-    return $json === false ? 'null' : $json;
+    return Engine\js_json_encode($data);
 }

@@ -11,7 +11,7 @@ window.RIV_CONFIG = {
   // --- Noms des champs ajoutés par le moteur (voir data/FIELDS.md) : { code_du_champ: 'Nom affiché' } ; vide = libellés du moteur ----
   fieldLabels: {},
 
-  // --- Adresse de l'API du moteur (core/api) : « ../ » depuis un serveur lancé avec core/api/index.php ------------
+  // --- Adresse de l'API (demo/api) : '' depuis un serveur lancé avec demo/api/index.php ------------
   apiBase: '',                       // '' = même adresse que la page ; sinon par ex. 'https://exemple.fr/api'
 
   // --- Libellés des champs -----------------------------------------------------------------------------------------

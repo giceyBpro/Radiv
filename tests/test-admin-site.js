@@ -173,7 +173,8 @@ async function update(c, ref, token) {
     same.push('VERSION');
     t('moteur du dépôt installé en entier par la mise à jour (src, data, VERSION identiques)', same.every((f) => exists(`backend/core/${f}`) && fs.readFileSync(path.join(WWW, 'backend/core', f)).equals(fs.readFileSync(path.join(repoCore, f)))), same.filter((f) => !exists(`backend/core/${f}`)).join());
     t('fichier retiré du moteur supprimé (cures.json)', !exists('backend/core/data/cures.json'));
-    t('moteur installé : seulement la page minimale de web/ (index.html et config.js), jamais api/, tests/ ni documentation', !exists('backend/core/api') && JSON.stringify(fs.readdirSync(path.join(WWW, 'backend/core/web')).sort()) === JSON.stringify(['config.js', 'index.html']) && !exists('backend/core/tests') && !exists('backend/core/AGENTS.md') && !exists('backend/core/install-core.php'));
+    t('moteur installé : seulement src, data et VERSION, jamais web/, api/, tests/ ni documentation', !exists('backend/core/api') && !exists('backend/core/web') && !exists('backend/core/tests') && !exists('backend/core/AGENTS.md') && !exists('backend/core/install-core.php'));
+    t('application simple installée : seulement sa page minimale demo/web/ (index.html et config.js), jamais api/, tests/ ni l\'installeur', JSON.stringify(fs.readdirSync(path.join(WWW, 'backend/demo/web')).sort()) === JSON.stringify(['config.js', 'index.html']) && !exists('backend/demo/api') && !exists('backend/demo/tests') && !exists('backend/demo/install-core.php'));
     t('l\'API utilise le moteur installé (isotope_inputs annoncé)', !!(await (await fetch(`${BASE}/api/config`)).json()).isotope_inputs); }
   t('installée', /Mise à jour installée : 1111111/.test(r.msg), r.msg);
   t('app.js remplacé', read('app.js').includes('fixture v1.1')); t('nouveau fichier créé', exists('downloads/ajout-v1_1.xml'));

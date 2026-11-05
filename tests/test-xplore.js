@@ -1,5 +1,5 @@
 // Exécute le script du modèle Xplore (public/downloads/MN_Radiopro_APIRADIV_generique.xml) avec un faux « Tools » et un faux
-// « fetch » branché sur le moteur (core/api/handler.php), sans réseau. Vérifie notamment que le script reprend AUTOMATIQUEMENT
+// « fetch » branché sur le moteur (demo/api/handler.php), sans réseau. Vérifie notamment que le script reprend AUTOMATIQUEMENT
 // les informations annoncées par /api/config (nombres de cures, saisie attendue) : un isotope ajouté dans les données
 // du moteur, avec un profil existant, fonctionne sans modifier le modèle.
 // Usage: node tests/test-xplore.js
@@ -36,7 +36,9 @@ t('le script ne contient plus de référence au mode de calcul', !/calculation_m
 // Copie du moteur (avec un isotope ajouté dans les données) pour vérifier la reprise automatique.
 function engineCopy(extra, extraScenarios) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xplore-core-'));
-  for (const sub of ['src', 'data', 'api', 'VERSION']) fs.cpSync(path.join(root, 'core', sub), path.join(dir, sub), { recursive: true });
+  // Disposition d'un site installé (install-core.php) : moteur (src, data, VERSION) et API (api/handler.php) dans le même dossier.
+  for (const sub of ['src', 'data', 'VERSION']) fs.cpSync(path.join(root, 'core', sub), path.join(dir, sub), { recursive: true });
+  fs.cpSync(path.join(root, 'demo/api'), path.join(dir, 'api'), { recursive: true });
   if (extra) {
     const f = path.join(dir, 'data/isotopes.json');
     const rows = JSON.parse(fs.readFileSync(f, 'utf8'));

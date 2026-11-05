@@ -1,10 +1,10 @@
 <?php
-// Onglet « Mini-site » de l'administration (/auth/minisite) : la page minimale du moteur (core/web/index.html + config.js), telle
-// qu'elle fonctionne seule, mais encapsulée dans l'administration, derrière la session.
+// Onglet « Mini-site » de l'administration (/auth/minisite) : la page minimale de l'application simple (demo/web/index.html + config.js),
+// telle qu'elle fonctionne seule, mais encapsulée dans l'administration, derrière la session.
 //
 // Elle sert à essayer le moteur lui-même (intitulés et scénarios du moteur, sans la surcouche ni les pages de RadIV), y compris pendant
 // une maintenance : ses appels passent par /auth/minisite/api/*, jamais par l'API publique (donc rien n'est enregistré dans les mesures).
-// Le fichier HTML est celui du moteur, non modifié : seuls l'en-tête d'administration, l'adresse de config.js et un nonce sur son script
+// Le fichier HTML est celui de l'application simple, non modifié : seuls l'en-tête d'administration, l'adresse de config.js et un nonce sur son script
 // en ligne (la page d'administration refuse tout autre script) sont ajoutés. Les appels de calcul sont ceux de l'onglet « Radiv » (admin_radiv.php).
 declare(strict_types=1);
 
@@ -13,15 +13,21 @@ namespace Radiv\AdminSite;
 if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécutable hors de l'API
 
 use Radiv\Config;
-use Radiv\CoreLab;
 use Radiv\Session;
 
 const MINISITE_BASE = '/auth/minisite';
 
-// Contenu d'un fichier de la page minimale du moteur en service (core/web/), ou null s'il est absent.
+// Dossier de l'application simple : backend/demo/ une fois le site installé, demo/ à la racine du dépôt en développement.
+function minisite_dir(): string
+{
+    $installed = dirname(__DIR__, 2) . '/demo';
+    return is_file($installed . '/web/index.html') ? $installed : dirname(__DIR__, 3) . '/demo';
+}
+
+// Contenu d'un fichier de la page minimale (demo/web/), ou null s'il est absent.
 function minisite_file(string $name): ?string
 {
-    $content = @file_get_contents(CoreLab\active_dir() . '/web/' . $name);
+    $content = @file_get_contents(minisite_dir() . '/web/' . $name);
     return $content === false ? null : $content;
 }
 
@@ -51,7 +57,7 @@ function do_minisite_page(): bool
     return true;
 }
 
-// config.js du moteur (titre, textes, libellés), avec l'adresse de l'API remplacée par celle de l'administration.
+// config.js de la page (titre, textes, libellés), avec l'adresse de l'API remplacée par celle de l'administration.
 function do_minisite_config_js(): bool
 {
     $js = Session\admin() === null ? null : minisite_file('config.js');

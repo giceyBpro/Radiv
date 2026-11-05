@@ -1,7 +1,7 @@
 # Champs de saisie (`data/fields.json`)
 
 Les champs dont la saisie **dépend de l'isotope** (débit de dose, activité, fixation, période...) sont décrits dans `data/fields.json`.
-Le moteur annonce cette description aux interfaces (`GET config`, clé `fields`) : un site construit son formulaire à partir d'elle, et
+Le moteur expose cette description aux interfaces (`RivEngine\input_fields()`, publiée par l'API dans `GET config`, clé `fields`) : un site construit son formulaire à partir d'elle, et
 un champ ajouté dans le fichier apparaît donc sur les sites **sans modification de leur code**. Cette page explique comment ajouter ou
 modifier un champ.
 

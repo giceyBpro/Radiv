@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 
-require __DIR__ . '/../api/handler.php';
+require __DIR__ . '/../src/bootstrap.php';
 
 // Arrondi : variable RESTRICTION_ROUNDING_MODE positionnée par test-calcul.js.
 RivEngine\set_rounding_mode(static fn () => getenv('RESTRICTION_ROUNDING_MODE') ?: null);
@@ -18,4 +18,4 @@ foreach ($payloads as $payload) {
     // Règle de l'API: un JSON scalaire (5, "x") n'a pas de champs → payload vide.
     $results[] = RivEngine\calculate(is_array($payload) ? $payload : []);
 }
-echo RivEngine\Api\encode($results);
+echo RivEngine\js_json_encode($results);

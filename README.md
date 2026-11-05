@@ -13,7 +13,9 @@ public/            → copié dans la racine web (front-end)
   api/.htaccess      réécrit /api/* vers index.php
   api/backend.php    (généré) emplacement du backend
 core/              → copié dans backend/core/ (moteur de calcul partagé, privé ; voir core/README.md)
-  src/ data/ VERSION  moteur (src/*.php), données (data/*.json), version ; api/ et tests/ ne sont jamais déployés
+  src/ data/ VERSION  moteur (src/*.php), données (data/*.json), version ; tests/ et la documentation ne sont jamais déployés
+demo/              application simple (API, page de saisie, installeur ; voir demo/README.md) ; seule demo/web/index.html et config.js
+                   sont copiées dans backend/demo/web/ (onglet « Mini-site » de /auth) ; le reste n'est jamais déployé
 backend/           → copié dans le dossier du backend (privé)
   .htaccess          « Require all denied » (toujours, même hors de la racine web)
   src/               code PHP (app.php, lib/*.php)
@@ -87,7 +89,8 @@ Vérifié par `tests/test-install.js` (canonique, Open Graph, JSON-LD, ETag/304,
 |---|---|
 | `public/api/index.php` | Façade publique de l'API : trouve le backend et lui passe la requête. |
 | `backend/src/app.php` | Application de l'API PHP : routage HTTP, sécurité. |
-| `core/` | Moteur de calcul partagé (mode « local ») : données JSON, formules, validation, API minimale et tests. Sans dépendance au reste du site, destiné à être transféré tel quel dans un dépôt indépendant (open source) ; installé dans `backend/core/`. |
+| `core/` | Moteur de calcul partagé (mode « local ») : données JSON, formules, validation et tests (rien d'autre : ni API HTTP, ni page). Sans dépendance au reste du site, destiné à être transféré tel quel dans un dépôt indépendant (open source) ; installé dans `backend/core/`. |
+| `demo/` | Application simple au-dessus du moteur : API HTTP (`api/`), page de saisie en un seul fichier HTML (`web/`), installeur autonome (`install-core.php`) et leurs tests. Hors du moteur et non publiée avec lui ; voir `demo/README.md`. |
 | `backend/src/lib/*.php` | Configuration, état partagé, HTTP, journal des mesures, géoIP, proxy SFMN, contact/SMTP, administration `/auth`, mises à jour. |
 | `update.php` | Mise à jour de secours autonome et idempotente (voir [Mise à jour de secours](#mise-à-jour-de-secours-updatephp)). |
 | `install.php` | Première installation sans SSH (voir [Première installation](#première-installation-sans-ssh-installphp-ex-hébergement-mutualisé-ovh)). |
@@ -352,6 +355,7 @@ Depuis la racine du dépôt (Node ne sert qu'aux tests : faux services et naviga
 node tests/test-core-lab.js            # zone de test du moteur (/auth/moteur) : scénarios de candidats, application, retour arrière
 node tests/test-core-contract.js       # contrat du site envers le moteur (version + cas figés propres au site)
 node core/tests/test-calcul.js         # calcul: 381 cas figés, deux modes d'arrondi
+php demo/tests/test-api.php            # API de l'application simple (demo/)
 node tests/check-runtime-layout.js     # mise en forme de config/runtime.env
 ```
 
@@ -403,7 +407,7 @@ Deux interrupteurs, mémorisés dans `data/var/maintenance.json` (créer ou supp
 
 **Onglet Radiv (`/auth/radiv`)** : le site lui-même (sa page d'accueil, `index.html` + `app.js`, donc toujours à jour sans maintenance propre à cette vue) affiché dans l'administration, derrière la session. Ses appels passent par `/auth/radiv/api/*` (même origine exigée), qui ne dépendent pas de la maintenance : l'administrateur peut donc utiliser le calculateur **même en maintenance complète**, quand l'API publique répond 503. Ni avis de maintenance, ni mesure enregistrée.
 
-**Onglet Mini-site (`/auth/minisite`)** : la page minimale du moteur (`core/web/index.html` + `config.js`, copiées dans `backend/core/web/` par les mises à jour : ce sont les deux seuls fichiers de `core/web/` dans la liste blanche), telle qu'elle fonctionne seule, mais derrière la session d'administration. Elle sert à essayer le moteur lui-même (intitulés et scénarios du moteur, sans la surcouche ni les pages de RadIV), y compris pendant une maintenance : ses appels passent par `/auth/minisite/api/*` (mêmes protections que l'onglet Radiv : session, origine, limite de requêtes) et ne sont pas enregistrés dans les mesures. La page est servie telle quelle ; seuls l'en-tête d'administration, l'adresse de `config.js` et un nonce sur son script en ligne (que la politique de sécurité de la page n'autoriserait pas sans lui) sont ajoutés. Vérifié par `tests/test-admin-site.js` et `tests/test-browser-admin.js` (calcul dans un vrai navigateur).
+**Onglet Mini-site (`/auth/minisite`)** : la page minimale de l'application simple (`demo/web/index.html` + `config.js`, copiées dans `backend/demo/web/` par les mises à jour : ce sont les deux seuls fichiers de `demo/` dans la liste blanche), telle qu'elle fonctionne seule, mais derrière la session d'administration. Elle sert à essayer le moteur lui-même (intitulés et scénarios du moteur, sans la surcouche ni les pages de RadIV), y compris pendant une maintenance : ses appels passent par `/auth/minisite/api/*` (mêmes protections que l'onglet Radiv : session, origine, limite de requêtes) et ne sont pas enregistrés dans les mesures. La page est servie telle quelle ; seuls l'en-tête d'administration, l'adresse de `config.js` et un nonce sur son script en ligne (que la politique de sécurité de la page n'autoriserait pas sans lui) sont ajoutés. Vérifié par `tests/test-admin-site.js` et `tests/test-browser-admin.js` (calcul dans un vrai navigateur).
 
 Restent toujours disponibles : `/auth` (pour lever la maintenance), `/health`, `/api/config` et `/api/public-config` (lecture seule, utilisés par les contrôles des mises à jour). Les changements sont inscrits au journal des mises à jour.
 

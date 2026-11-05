@@ -33,7 +33,10 @@ const FRONTEND_FILES = [
 
 // Fichiers retirés du dépôt, à supprimer des sites existants lors de la prochaine mise à jour (sauvegardés d'abord),
 // même s'ils ne figurent pas dans le manifeste. Chemins du dépôt (« public/... »).
-const RETIRED_FILES = ['public/v1.html'];   // ancienne version de la page d'accueil, supprimée
+const RETIRED_FILES = [
+    'public/v1.html',                                              // ancienne version de la page d'accueil, supprimée
+    'core/web/index.html', 'core/web/config.js',                   // page minimale, passée du moteur à demo/web/
+];
 
 // Sans ces fichiers dans la version cible, le site ne saurait plus se mettre à jour lui-même
 // (cible trop ancienne, archive tronquée): refusé avant toute écriture.
@@ -102,14 +105,17 @@ function allowed(string $rel): bool
         return false;
     }
     if ($parts[0] === 'core') {
-        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json, VERSION et la page minimale (web/).
-        // Jamais api/ ni tests/ (démonstration autonome et outillage de développement), ni le reste de web/.
+        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json et VERSION.
+        // Jamais tests/ ni documentation (outillage de développement).
         if ($rel === 'core/VERSION') return true;
-        // Page minimale du moteur (affichée par l'onglet « Mini-site » de /auth, jamais servie directement : le backend est privé).
-        if ($rel === 'core/web/index.html' || $rel === 'core/web/config.js') return true;
         if ($count === 3 && $parts[1] === 'src') return preg_match('/^[A-Za-z0-9_-]+\.php$/', $parts[2]) === 1;
         if ($count === 3 && $parts[1] === 'data') return preg_match('/^[A-Za-z0-9_-]+\.json$/', $parts[2]) === 1;
         return false;
+    }
+    if ($parts[0] === 'demo') {
+        // Application simple (demo/) : seule sa page minimale, copiée dans <backend>/demo/web/ et affichée par l'onglet « Mini-site » de /auth
+        // (jamais servie directement : le backend est privé). Jamais api/, tests/ ni l'installeur.
+        return $rel === 'demo/web/index.html' || $rel === 'demo/web/config.js';
     }
     return false;
 }
@@ -119,7 +125,7 @@ function dest(string $rel): string
 {
     if (str_starts_with($rel, 'public/')) return Config\web_root() . '/' . substr($rel, 7);
     if (str_starts_with($rel, 'backend/')) return Config\backend_dir() . '/' . substr($rel, 8);
-    if (str_starts_with($rel, 'core/')) return Config\backend_dir() . '/' . $rel;
+    if (str_starts_with($rel, 'core/') || str_starts_with($rel, 'demo/')) return Config\backend_dir() . '/' . $rel;
     throw new \RuntimeException('Chemin hors liste blanche: ' . $rel);
 }
 

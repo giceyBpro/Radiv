@@ -282,14 +282,17 @@ function allowed($rel)
         return false;
     }
     if ($parts[0] === 'core') {
-        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json, VERSION et la page minimale (web/).
-        // Jamais api/ ni tests/ (démonstration autonome et outillage de développement), ni le reste de web/.
+        // Moteur de calcul partagé (copié tel quel dans <backend>/core/) : src/*.php, data/*.json et VERSION.
+        // Jamais tests/ ni documentation (outillage de développement).
         if ($rel === 'core/VERSION') return true;
-        // Page minimale du moteur (affichée par l'onglet « Mini-site » de /auth, jamais servie directement : le backend est privé).
-        if ($rel === 'core/web/index.html' || $rel === 'core/web/config.js') return true;
         if ($count === 3 && $parts[1] === 'src') return preg_match('/^[A-Za-z0-9_-]+\.php$/', $parts[2]) === 1;
         if ($count === 3 && $parts[1] === 'data') return preg_match('/^[A-Za-z0-9_-]+\.json$/', $parts[2]) === 1;
         return false;
+    }
+    if ($parts[0] === 'demo') {
+        // Application simple (demo/) : seule sa page minimale, copiée dans <backend>/demo/web/ et affichée par l'onglet « Mini-site » de /auth
+        // (jamais servie directement : le backend est privé). Jamais api/, tests/ ni l'installeur.
+        return $rel === 'demo/web/index.html' || $rel === 'demo/web/config.js';
     }
     return false;
 }
@@ -298,7 +301,7 @@ function dest_of($rel, $docroot, $backendDir)
 {
     if (strpos($rel, 'public/') === 0) return $docroot . '/' . substr($rel, 7);
     if (strpos($rel, 'backend/') === 0) return $backendDir . '/' . substr($rel, 8);
-    if (strpos($rel, 'core/') === 0) return $backendDir . '/' . $rel;
+    if (strpos($rel, 'core/') === 0 || strpos($rel, 'demo/') === 0) return $backendDir . '/' . $rel;
     throw new RuntimeException('Chemin hors liste blanche : ' . $rel);
 }
 
