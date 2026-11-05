@@ -274,7 +274,7 @@
     // Les quatre champs de base ont leur saisie intégrée à la page. Tout AUTRE champ de la table du moteur (ajouté pour une nouvelle règle
     // de calcul) est construit ici, d'après sa description (libellé, unité, type, bornes, aide) : il apparaît sans modifier la page,
     // seulement pour les isotopes dont le profil l'utilise (isotope_inputs).
-    const BUILT_IN_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days'];
+    const BUILT_IN_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days', 'patient_size_cm'];
     let declaredFields = [];   // description des champs (config.fields)
     let fieldLabels = {};      // code → nom affiché par RadIV (public-config.field_labels), à défaut le libellé du moteur
 
@@ -282,6 +282,18 @@
     function fieldTitle(field) {
       const label = fieldLabels[field.code] || field.label;
       return field.unit && !label.includes(field.unit) ? `${label} (${field.unit})` : label;
+    }
+
+    // Champ commun « taille du patient » : libellé (celui de RadIV, à défaut celui du moteur), unité et bornes lus dans la description du moteur ;
+    // la saisie reste à sa place dans le formulaire.
+    function applyCommonFieldMeta() {
+      const field = declaredFields.find((candidate) => candidate.code === 'patient_size_cm');
+      const input = $('patientSize');
+      if (!field || !input) return;
+      if (input.previousElementSibling) input.previousElementSibling.textContent = fieldTitle(field);
+      if (field.min !== null && field.min !== undefined) input.min = String(field.min);
+      if (field.max !== null && field.max !== undefined) input.max = String(field.max);
+      if (field.step !== null && field.step !== undefined) input.step = String(field.step);
     }
 
     // Construit une fois les champs supplémentaires dans #extraFieldsBlock (absent des pages anciennes : rien à faire).
@@ -790,6 +802,7 @@
         declaredFields = config.fields || [];
         fieldLabels = (site && site.field_labels) || {};
         renderExtraFields();
+        applyCommonFieldMeta();
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
         // Le site public ne propose qu'un calcul : sa configuration ne contient aucun mode. Seule la page de test de
         // l'administration en annonce plusieurs (sélecteur construit alors dynamiquement, voir ensureCalculationModeButtons).

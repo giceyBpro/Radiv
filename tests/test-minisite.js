@@ -41,6 +41,7 @@ const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'demo/api
   await page.goto(`http://127.0.0.1:${PORT}/`);
   await page.waitForSelector('#isotope option', { state: 'attached' });
 
+  t('taille du patient : libellé et unité lus dans la description du moteur', /Taille du patient \(cm\)/.test(await page.locator('[data-label="patientSize"]').innerText()));
   t('titre de la page repris de config.js', /Durées de restriction/.test(await page.textContent('h1')));
   t('radium: débit de dose demandé, pas d\'activité/fixation', await page.locator('#doseRateField').isVisible() && !(await page.locator('#benignFields').isVisible()));
   await page.selectOption('#isotope', 'iode131_benin');

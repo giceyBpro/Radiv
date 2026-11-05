@@ -108,12 +108,23 @@
       // ont leur saisie ci-dessus ; tout AUTRE champ est construit ici d'après sa description, et affiché seulement pour les isotopes
       // dont la règle de calcul l'utilise (isotope_inputs). Un champ ajouté au moteur apparaît donc sans modifier cette page.
       // Pour afficher un autre nom que celui du moteur : C.fieldLabels = { code_du_champ: 'Nom affiché' } dans config.js.
-      const BASE_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days'];
+      const BASE_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days', 'patient_size_cm'];
       let extra = [];   // descriptions des champs ajoutés
 
       function fieldTitle(field) {
         const label = (C.fieldLabels && C.fieldLabels[field.code]) || field.label;
         return field.unit && !label.includes(field.unit) ? label + ' (' + field.unit + ')' : label;
+      }
+
+      // Taille du patient (champ commun) : libellé, unité et bornes lus dans la description du moteur ; la saisie reste à sa place.
+      function applyCommonFieldMeta(fields) {
+        const field = fields.find((candidate) => candidate.code === 'patient_size_cm');
+        if (!field) return;
+        document.querySelector('[data-label="patientSize"]').textContent = fieldTitle(field);
+        const input = $('patientSize');
+        if (field.min !== null && field.min !== undefined) input.min = String(field.min);
+        if (field.max !== null && field.max !== undefined) input.max = String(field.max);
+        if (field.step !== null && field.step !== undefined) input.step = String(field.step);
       }
 
       function buildExtraFields(fields) {
@@ -228,6 +239,7 @@
           cureOptions = config.cure_options_by_isotope || {};
           inputs = config.isotope_inputs || {};
           buildExtraFields(config.fields || []);
+          applyCommonFieldMeta(config.fields || []);
           config.isotopes.forEach((isotope) => {
             const o = document.createElement('option');
             o.value = isotope.api_code;

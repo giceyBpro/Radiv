@@ -32,7 +32,7 @@ const profilesFile = path.join(dir, 'core/src/profiles.php');
 fs.writeFileSync(path.join(dir, 'router.php'), `<?php
 require __DIR__ . '/demo/api/handler.php';
 $route = trim((string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-if ($route === 'api/public-config') { header('Content-Type: application/json'); echo json_encode(['site_name' => 'Test', 'field_labels' => ['poids_kg' => 'Poids (nom RadIV)']]); exit; }
+if ($route === 'api/public-config') { header('Content-Type: application/json'); echo json_encode(['site_name' => 'Test', 'field_labels' => ['poids_kg' => 'Poids (nom RadIV)', 'patient_size_cm' => 'Taille (nom RadIV)']]); exit; }
 if (strpos($route, 'api/') === 0) { [$s, $d] = RivEngine\\Api\\handle($_SERVER['REQUEST_METHOD'], substr($route, 4), (string) file_get_contents('php://input')); http_response_code($s); header('Content-Type: application/json'); echo RivEngine\\Api\\encode($d); exit; }
 $file = ${JSON.stringify(path.join(root, 'public'))} . '/' . ($route === '' ? 'index.html' : $route);
 if (!is_file($file)) { http_response_code(404); exit; }
@@ -51,6 +51,7 @@ const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'router.p
   await page.goto(`http://127.0.0.1:${PORT}/`);
   await page.waitForSelector('#isotope option', { state: 'attached' });
 
+  t('champ commun « taille du patient » : libellé choisi par RadIV et bornes lues dans la description du moteur', /Taille \(nom RadIV\)/.test(await page.locator('#patientSize').evaluate((el) => el.previousElementSibling.textContent)) && (await page.locator('#patientSize').getAttribute('min')) === '1');
   const field = page.locator('[data-extra-field="poids_kg"]');
   await page.selectOption('#isotope', 'radium223');
   t('champ ajouté par le moteur : masqué pour les isotopes qui ne l\'utilisent pas', !(await field.isVisible()));

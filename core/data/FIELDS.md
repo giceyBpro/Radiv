@@ -8,7 +8,7 @@ modifier un champ.
 ## Ce qu'est un champ, et ce qu'il n'est pas
 
 - Un champ décrit **une saisie** : son code dans l'API, son libellé, son unité, son type, ses bornes, son aide.
-- Il ne dit **pas** s'il est obligatoire : c'est le **profil de calcul** de l'isotope qui décide, pour chaque champ, « obligatoire »,
+- Il ne dit **pas** s'il est obligatoire (sauf un champ `common`, toujours obligatoire) : c'est le **profil de calcul** de l'isotope qui décide, pour chaque champ, « obligatoire »,
   « facultatif » ou « ignoré » (`src/profiles.php`, élément `inputs`). Un champ ajouté ici est « ignoré » pour tous les profils
   existants : rien ne change tant qu'un profil ne l'utilise pas.
 - Il ne contient **aucune règle de calcul** : la règle s'écrit dans un profil. La marche à suivre complète (déclarer le champ, écrire le
@@ -26,6 +26,7 @@ modifier un champ.
 | `step` | Facultatif. Pas de saisie : un nombre, ou `"any"`. |
 | `help` | Facultatif. Phrase d'aide affichée avec le champ. |
 | `options` | Pour `choice` seulement, obligatoire : liste de `{"value": "...", "label": "..."}`. Le moteur refuse toute autre valeur et signale l'erreur. |
+| `common` | Facultatif (`false` par défaut). `true` = champ **commun à tous les isotopes**, contrôlé par le moteur lui-même (aujourd'hui seulement `patient_size_cm`, la taille du patient, toujours obligatoire). Il est décrit ici pour que les sites en lisent le libellé, l'unité et les bornes ; il n'apparaît pas dans la saisie par isotope (`isotope_inputs`) et les profils ne le citent pas. |
 
 Exemples :
 
@@ -34,10 +35,11 @@ Exemples :
 {"code": "voie", "label": "Voie d'administration", "type": "choice", "options": [{"value": "iv", "label": "Intraveineuse"}, {"value": "oral", "label": "Orale"}]}
 ```
 
-## Les quatre champs de base
+## Les champs de base et le champ commun
 
-`dose_rate`, `benign_activity_mbq`, `benign_fixation_pct` et `user_period_days` sont utilisés par les profils d'origine : **ne pas les
-retirer** (le moteur le refuse). On peut modifier leur libellé, leur unité et leur aide.
+`dose_rate`, `benign_activity_mbq`, `benign_fixation_pct` et `user_period_days` sont utilisés par les profils d'origine, et
+`patient_size_cm` (la taille du patient, champ commun) par le calcul de la géométrie : **ne pas les retirer** (le moteur le refuse).
+On peut modifier leur libellé, leur unité, leurs bornes et leur aide.
 
 ## Noms affichés sur les sites
 
