@@ -28,6 +28,9 @@
     label[data-need="required"] > input, label[data-need="required"] > select { border-left: 4px solid var(--erreur); }
     label[data-need="optional"] > span::after { content: " (" var(--optional-text) ")"; color: #566; font-weight: 400; font-size: .9rem; }
     label > input.missing, label > select.missing { border-color: var(--erreur); background: #fdecee; outline: 2px solid var(--erreur); }
+    details#advanced { margin: 16px 0; border: 1px solid var(--bord); border-radius: 6px; padding: 0 12px; }
+    details#advanced > summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+    details#advanced[open] > summary { border-bottom: 1px solid var(--bord); margin-bottom: 4px; }
     .legend { font-size: .9rem; color: #566; }
     .legend b { color: var(--erreur); }
     fieldset { border: 1px solid var(--bord); border-radius: 6px; margin: 16px 0; }
@@ -57,17 +60,21 @@
         <label><span data-label="benignFixation"></span><input id="benignFixation" type="number" min="0" max="100" step="any"></label>
       </div>
       <label><span data-label="patientSize"></span><input id="patientSize" type="number" min="1" step="1"></label>
-      <label><span data-label="periodDays"></span><input id="periodDays" type="number" min="0" step="any"></label>
       <!-- Champs ajoutés par le moteur pour de nouvelles règles de calcul : construits d'après GET config (« fields »), voir « Champs ajoutés par le moteur ». -->
       <div id="extraFields"></div>
 
-      <fieldset>
-        <legend data-label="customTitle"></legend>
-        <label><span data-label="customHours1"></span><input id="customHours1" type="number" min="0" step="any"></label>
-        <label><span data-label="customDistance1"></span><input id="customDistance1" type="number" min="0" step="any"></label>
-        <label><span data-label="customHours2"></span><input id="customHours2" type="number" min="0" step="any"></label>
-        <label><span data-label="customLimit"></span><input id="customLimit" type="number" min="0" step="any"></label>
-      </fieldset>
+      <!-- Options avancées, repliées par défaut : période effective et scénario personnalisé. Le repli s'ouvre seul quand la période est obligatoire. -->
+      <details id="advanced">
+        <summary data-label="advancedTitle"></summary>
+        <label><span data-label="periodDays"></span><input id="periodDays" type="number" min="0" step="any"></label>
+        <fieldset>
+          <legend data-label="customTitle"></legend>
+          <label><span data-label="customHours1"></span><input id="customHours1" type="number" min="0" step="any"></label>
+          <label><span data-label="customDistance1"></span><input id="customDistance1" type="number" min="0" step="any"></label>
+          <label><span data-label="customHours2"></span><input id="customHours2" type="number" min="0" step="any"></label>
+          <label><span data-label="customLimit"></span><input id="customLimit" type="number" min="0" step="any"></label>
+        </fieldset>
+      </details>
 
       <button type="submit" id="submit"></button>
     </form>
@@ -181,6 +188,8 @@
         extra.forEach((field) => { document.querySelector('[data-extra-field="' + field.code + '"]').hidden = (wanted[field.code] || 'ignored') === 'ignored'; });
         const periodLabel = document.querySelector('[data-label="periodDays"]');
         periodLabel.textContent = wanted.user_period_days === 'required' ? C.labels.periodDaysRequired : C.labels.periodDays;
+        // Le repli des options avancées s'ouvre seul quand la période est obligatoire (isotope sans période propre).
+        if (wanted.user_period_days === 'required') $('advanced').open = true;
         markNeeds(wanted);
       }
 
@@ -216,8 +225,11 @@
         document.querySelectorAll('label[data-need="required"]').forEach((label) => {
           const input = label.querySelector('input, select');
           if (!input || label.closest('[hidden]') || label.hidden) return;
-          input.classList.toggle('missing', input.value.trim() === '');
+          const empty = input.value.trim() === '';
+          input.classList.toggle('missing', empty);
           input.oninput = () => input.classList.remove('missing');
+          const fold = label.closest('details');
+          if (empty && fold) fold.open = true;   // un champ obligatoire vide ne reste jamais caché dans un repli
         });
       }
 
