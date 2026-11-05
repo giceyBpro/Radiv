@@ -50,6 +50,8 @@
       </div>
       <label><span data-label="patientSize"></span><input id="patientSize" type="number" min="1" step="1"></label>
       <label><span data-label="periodDays"></span><input id="periodDays" type="number" min="0" step="any"></label>
+      <!-- Champs ajoutés par le moteur pour de nouvelles règles de calcul : construits d'après GET config (« fields »), voir « Champs ajoutés par le moteur ». -->
+      <div id="extraFields"></div>
 
       <fieldset>
         <legend data-label="customTitle"></legend>
@@ -101,6 +103,51 @@
         return standard;
       }
 
+      // ----- Champs ajoutés par le moteur ----------------------------------------------------------------------------------
+      // Le moteur décrit ses champs de saisie (GET config, « fields » : libellé, unité, type, bornes, aide). Les quatre champs de base
+      // ont leur saisie ci-dessus ; tout AUTRE champ est construit ici d'après sa description, et affiché seulement pour les isotopes
+      // dont la règle de calcul l'utilise (isotope_inputs). Un champ ajouté au moteur apparaît donc sans modifier cette page.
+      // Pour afficher un autre nom que celui du moteur : C.fieldLabels = { code_du_champ: 'Nom affiché' } dans config.js.
+      const BASE_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days'];
+      let extra = [];   // descriptions des champs ajoutés
+
+      function fieldTitle(field) {
+        const label = (C.fieldLabels && C.fieldLabels[field.code]) || field.label;
+        return field.unit && !label.includes(field.unit) ? label + ' (' + field.unit + ')' : label;
+      }
+
+      function buildExtraFields(fields) {
+        extra = fields.filter((field) => !BASE_FIELDS.includes(field.code));
+        extra.forEach((field) => {
+          const label = document.createElement('label');
+          label.dataset.extraField = field.code;
+          label.hidden = true;
+          const title = document.createElement('span');
+          title.textContent = fieldTitle(field);
+          let input;
+          if (field.type === 'choice') {
+            input = document.createElement('select');
+            input.appendChild(document.createElement('option'));
+            (field.options || []).forEach((option) => {
+              const o = document.createElement('option');
+              o.value = option.value;
+              o.textContent = option.label;
+              input.appendChild(o);
+            });
+          } else {
+            input = document.createElement('input');
+            input.type = 'number';
+            if (field.min !== null && field.min !== undefined) input.min = String(field.min);
+            if (field.max !== null && field.max !== undefined) input.max = String(field.max);
+            input.step = field.step === null || field.step === undefined ? 'any' : String(field.step);
+          }
+          input.id = 'extra_' + field.code;
+          label.append(title, input);
+          if (field.help) title.title = field.help;
+          $('extraFields').appendChild(label);
+        });
+      }
+
       // Affiche ou masque les champs selon l'isotope choisi : nombre de cures, activité et fixation (iode bénin), débit de dose.
       function refreshFields() {
         const code = $('isotope').value;
@@ -112,6 +159,7 @@
         const wanted = inputsFor(code);
         $('benignFields').hidden = wanted.benign_activity_mbq === 'ignored' && wanted.benign_fixation_pct === 'ignored';
         $('doseRateField').hidden = wanted.dose_rate === 'ignored';
+        extra.forEach((field) => { document.querySelector('[data-extra-field="' + field.code + '"]').hidden = (wanted[field.code] || 'ignored') === 'ignored'; });
         const periodLabel = document.querySelector('[data-label="periodDays"]');
         periodLabel.textContent = wanted.user_period_days === 'required' ? C.labels.periodDaysRequired : C.labels.periodDays;
       }
@@ -128,6 +176,10 @@
         if (wanted.benign_activity_mbq !== 'ignored') body.benign_activity_mbq = number('benignActivity');
         if (wanted.benign_fixation_pct !== 'ignored') body.benign_fixation_pct = number('benignFixation');
         if (wanted.dose_rate !== 'ignored') body.dose_rate = number('doseRate');
+        extra.forEach((field) => {
+          if ((wanted[field.code] || 'ignored') === 'ignored') return;
+          body[field.code] = field.type === 'choice' ? ($('extra_' + field.code).value || null) : number('extra_' + field.code);
+        });
         return Object.assign(body, {
           user_hours_1: number('customHours1'), user_distance_1: number('customDistance1'),
           user_hours_2: number('customHours2'), user_limit: number('customLimit')
@@ -175,6 +227,7 @@
           const config = await (await fetch(api + '/config')).json();
           cureOptions = config.cure_options_by_isotope || {};
           inputs = config.isotope_inputs || {};
+          buildExtraFields(config.fields || []);
           config.isotopes.forEach((isotope) => {
             const o = document.createElement('option');
             o.value = isotope.api_code;

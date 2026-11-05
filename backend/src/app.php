@@ -34,6 +34,7 @@ require __DIR__ . '/lib/google.php';
 require __DIR__ . '/lib/updater.php';
 require __DIR__ . '/lib/core_lab.php';
 require __DIR__ . '/lib/isotope_labels.php';
+require __DIR__ . '/lib/field_labels.php';
 require __DIR__ . '/lib/frontend.php';
 require __DIR__ . '/lib/admin_measures.php';
 require __DIR__ . '/lib/admin_sfmn.php';

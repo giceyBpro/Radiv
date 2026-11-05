@@ -44,6 +44,7 @@ node core/tests/test-calcul.js   # 381 cas figés, deux modes d'arrondi : doit a
 php core/tests/test-api.php      # interface d'API minimale
 php core/tests/test-profiles.php # profils de calcul (isotopes ajoutés dans les données)
 php core/tests/test-scenarios.php # scénarios déclarés dans les données (ajout, génération des conditions, contrôles)
+php core/tests/test-fields.php   # champs de saisie (data/fields.json) et ajout d'une règle de calcul, d'après l'exemple du guide de src/profiles.php
 ```
 
 - `core/tests/golden-calcul.json` **est** le contrat chiffré. Il ne se modifie que pour une évolution voulue de résultats (donc une majeure) : régénérer le fichier, relire **chaque** écart, l'expliquer dans `data/SOURCES.md` et dans le message de commit.
@@ -60,6 +61,8 @@ php core/tests/test-scenarios.php # scénarios déclarés dans les données (ajo
 - Les scénarios d'exposition se déclarent **uniquement** dans `data/scenarios.json` (guide : `data/SCENARIOS.md`). Ajouter un scénario = version **mineure** (une ligne de plus dans `rows` et `recommendations_days`, lignes existantes inchangées ; régénérer les cas figés en vérifiant que seules des lignes sont ajoutées) ; modifier la limite, les durées, les distances ou le partage entre cures d'un scénario existant change des résultats = version **majeure**. Ne jamais renommer un `audience_code` publié. La règle « limite non divisée par les cures » est le champ `shares_limit_across_cures`, jamais un test sur un code dans le PHP.
 - Les nombres de cures d'un isotope se déclarent **dans son entrée de `isotopes.json`** (champ facultatif `cures`, ex. `[1, 4]` ; absent = une seule cure), pas dans un fichier à part.
 - Une règle de calcul propre à un isotope se choisit par le champ facultatif `profile` de son entrée (`standard` par défaut, `benign_iodine`, `free_period`). Un isotope qui suit une règle existante s'ajoute **sans code** ; une règle nouvelle exige un profil dans `src/profiles.php` (évolution du moteur : contrat, version, cas figés). Le profil n'est jamais émis dans la réponse.
+- Les champs de saisie propres aux isotopes se décrivent dans `data/fields.json` (guide : `data/FIELDS.md`). Ajouter un champ ne change aucun résultat existant (il est « ignoré » pour tous les profils existants) : version **mineure**. Les quatre champs de base (`dose_rate`, `benign_activity_mbq`, `benign_fixation_pct`, `user_period_days`) ne se retirent pas.
+- **Ajouter une règle de calcul** (nouveau profil) : suivre le guide en 4 étapes écrit en tête de `src/profiles.php` ; `tests/test-fields.php` exécute l'exemple de ce guide, qui doit donc rester exact.
 - Les JSON restent valides, UTF-8, sans commentaires ; `settings.json` ne contient que des réglages du moteur.
 
 ## 6. Déploiement

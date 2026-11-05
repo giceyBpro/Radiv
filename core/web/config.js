@@ -8,6 +8,9 @@ window.RIV_CONFIG = {
   intro: "Renseignez les mesures du patient pour obtenir, pour chaque situation de la vie quotidienne, la durée pendant laquelle les contacts doivent être limités.",
   disclaimer: "Aide au calcul : ne remplace ni l'avis du médecin nucléaire ni celui de la personne compétente en radioprotection.",
 
+  // --- Noms des champs ajoutés par le moteur (voir data/FIELDS.md) : { code_du_champ: 'Nom affiché' } ; vide = libellés du moteur ----
+  fieldLabels: {},
+
   // --- Adresse de l'API du moteur (core/api) : « ../ » depuis un serveur lancé avec core/api/index.php ------------
   apiBase: '',                       // '' = même adresse que la page ; sinon par ex. 'https://exemple.fr/api'
 

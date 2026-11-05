@@ -1,0 +1,39 @@
+[
+  {
+    "code": "dose_rate",
+    "label": "Débit de dose à 1 m (µSv/h)",
+    "unit": "µSv/h",
+    "type": "number",
+    "min": 0,
+    "step": "any",
+    "help": "Débit de dose mesuré à 1 m du patient, à sa sortie de chambre."
+  },
+  {
+    "code": "benign_activity_mbq",
+    "label": "Activité administrée (MBq)",
+    "unit": "MBq",
+    "type": "number",
+    "min": 0,
+    "step": "any",
+    "help": "Activité d'iode 131 administrée pour une indication bénigne."
+  },
+  {
+    "code": "benign_fixation_pct",
+    "label": "Fixation thyroïdienne (%)",
+    "unit": "%",
+    "type": "number",
+    "min": 0,
+    "max": 100,
+    "step": "any",
+    "help": "Fixation thyroïdienne, en pourcentage de l'activité administrée (ex. 15)."
+  },
+  {
+    "code": "user_period_days",
+    "label": "Période effective (jours)",
+    "unit": "j",
+    "type": "number",
+    "min": 0,
+    "step": "any",
+    "help": "Période effective choisie par l'appelant ; facultative sauf pour les isotopes qui n'en ont pas."
+  }
+]

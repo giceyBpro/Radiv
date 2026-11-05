@@ -74,7 +74,7 @@ automatiquement en cas d'échec.
 
 | Je veux… | Je fais… |
 |---|---|
-| Vérifier que tout fonctionne | `node core/tests/test-calcul.js` (doit afficher « 0 écart »), `php core/tests/test-api.php`, `php core/tests/test-profiles.php` |
+| Vérifier que tout fonctionne | `node core/tests/test-calcul.js` (doit afficher « 0 écart »), `php core/tests/test-api.php`, `php core/tests/test-profiles.php`, `php core/tests/test-fields.php` |
 | Ajouter ou modifier un scénario d'exposition | `data/scenarios.json` (voir `data/SCENARIOS.md`) : une ligne de résultat de plus partout, sans code |
 | Ajouter un isotope | Une entrée dans `data/isotopes.json` (période, référence publiée, `cures`, `profile` si besoin), un cas de test, `VERSION` +1 mineure — voir `AGENTS.md` |
 | Changer un titre, un libellé de la page | `web/config.js` (ou `riv/config.js` sur le site) |
@@ -89,10 +89,11 @@ automatiquement en cas d'échec.
 | `src/rounding.php` | Mode d'arrondi (`round` ou `floor`), réglable par `RivEngine\set_rounding_mode()`. |
 | `src/compat.php` | Conversions identiques à JavaScript (garantit des résultats stables pour les clients existants). |
 | `src/catalog.php` | Lecture de `data/*.json` : isotopes, scénarios, cures. |
-| `src/profiles.php` | Règles propres à certains isotopes (iode bénin, période libre), choisies par le champ `profile` de `isotopes.json`. `isotope_inputs()` annonce aux interfaces les champs à saisir pour chaque isotope (`required` / `optional` / `ignored`). |
+| `src/profiles.php` | **Le fichier à modifier pour ajouter une règle de calcul** : les règles propres à certains isotopes (iode bénin, période libre), choisies par le champ `profile` de `isotopes.json`, et un guide en 4 étapes (déclarer le champ, écrire le profil d'après l'exemple commenté, l'attribuer à des isotopes, tester). `isotope_inputs()` annonce aux interfaces les champs à saisir pour chaque isotope (`required` / `optional` / `ignored`). |
 | `src/physics.php` | Formules (décroissance, géométrie, durée de restriction), commentées une à une. |
 | `src/calculate.php` | `RivEngine\calculate(array $payload)` : lecture des entrées, erreurs de saisie, une ligne par scénario, assemblage du résultat. |
 | `data/settings.json` | Réglage du moteur : mode d'arrondi par défaut (`rounding_mode`). |
+| `data/fields.json` | **Les champs de saisie propres aux isotopes** (code, libellé, unité, type, bornes, aide) : annoncés par `GET config` (clé `fields`), ils permettent aux sites de construire leur formulaire sans modification. Guide : `data/FIELDS.md`. |
 | `data/scenarios.json` | **Les scénarios d'exposition** (conjoint, enfant, collègues, transports…) : en ajouter un crée automatiquement une ligne dans les résultats de tous les sites. Guide : `data/SCENARIOS.md`. |
 | `data/*.json` | **Les données** (à modifier ici, pas dans le code) ; `data/SOURCES.md` : références et choix. |
 | `api/handler.php` | Interface d'API minimale (`GET config`, `POST calculate`) sans état ni dépendance. |
@@ -100,7 +101,7 @@ automatiquement en cas d'échec.
 | `web/config.js` | **Titre, textes et libellés de la page** : le seul fichier à modifier pour personnaliser l'affichage. |
 | `web/index.html` | Page minimale en **un seul fichier HTML** (structure, présentation et logique ; textes dans `config.js`) : saisie et tableau des résultats. Les champs affichés suivent `isotope_inputs` et le tableau affiche toutes les lignes reçues : un isotope ou un scénario ajouté dans `data/` apparaît sans modifier la page. Tout texte visible vient de `config.js`. Essai : `php -S 127.0.0.1:8080 core/api/index.php` puis http://127.0.0.1:8080/ |
 | `install-core.php` | Installeur autonome du « minisite » (page + API + moteur) : un seul fichier à envoyer par FTP, clé à définir en tête, se supprime après succès, conserve `config.js` et `data/settings.json` aux mises à jour. À épingler sur une étiquette (`REF`). |
-| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php` ; `php core/tests/test-scenarios.php`. |
+| `tests/` | `node core/tests/test-calcul.js` : 381 cas figés, 2 modes d'arrondi ; `php core/tests/test-api.php` ; `php core/tests/test-profiles.php` ; `php core/tests/test-scenarios.php` ; `php core/tests/test-fields.php`. |
 | `AGENTS.md` | Instructions aux agents et contributeurs : périmètre, règles de rétro-compatibilité, versionnement, tests à lancer. |
 | `VERSION` | Version du moteur. |
 

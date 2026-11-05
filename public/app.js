@@ -270,6 +270,94 @@
       }
     }
 
+    // ----- Champs de saisie déclarés par le moteur (GET config, « fields ») ----------------------------------------------------------
+    // Les quatre champs de base ont leur saisie intégrée à la page. Tout AUTRE champ de la table du moteur (ajouté pour une nouvelle règle
+    // de calcul) est construit ici, d'après sa description (libellé, unité, type, bornes, aide) : il apparaît sans modifier la page,
+    // seulement pour les isotopes dont le profil l'utilise (isotope_inputs).
+    const BUILT_IN_FIELDS = ['dose_rate', 'benign_activity_mbq', 'benign_fixation_pct', 'user_period_days'];
+    let declaredFields = [];   // description des champs (config.fields)
+    let fieldLabels = {};      // code → nom affiché par RadIV (public-config.field_labels), à défaut le libellé du moteur
+
+    function extraFields() { return declaredFields.filter((field) => !BUILT_IN_FIELDS.includes(field.code)); }
+    function fieldTitle(field) {
+      const label = fieldLabels[field.code] || field.label;
+      return field.unit && !label.includes(field.unit) ? `${label} (${field.unit})` : label;
+    }
+
+    // Construit une fois les champs supplémentaires dans #extraFieldsBlock (absent des pages anciennes : rien à faire).
+    function renderExtraFields() {
+      const box = $('extraFieldsBlock');
+      if (!box) return;
+      box.innerHTML = '';
+      extraFields().forEach((field) => {
+        const wrap = document.createElement('div');
+        wrap.dataset.extraField = field.code;
+        wrap.hidden = true;
+        const title = document.createElement('div');
+        title.className = 'field-title';
+        let input;
+        if (field.type === 'choice') {
+          input = document.createElement('select');
+          const none = document.createElement('option');
+          none.value = '';
+          input.appendChild(none);
+          (field.options || []).forEach((option) => {
+            const o = document.createElement('option');
+            o.value = option.value;
+            o.textContent = option.label;
+            input.appendChild(o);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = 'number';
+          if (field.min !== null && field.min !== undefined) input.min = String(field.min);
+          if (field.max !== null && field.max !== undefined) input.max = String(field.max);
+          input.step = field.step === null || field.step === undefined ? 'any' : String(field.step);
+        }
+        input.id = `extra_${field.code}`;
+        wrap.append(title, input);
+        if (field.help) {
+          const help = document.createElement('div');
+          help.className = 'small';
+          help.textContent = field.help;
+          wrap.append(help);
+        }
+        box.appendChild(wrap);
+      });
+    }
+
+    // Affiche les champs supplémentaires que l'isotope utilise, masque les autres ; « facultatif » est précisé dans le titre.
+    function updateExtraFields(isotopeCode) {
+      const inputs = inputsFor(isotopeCode);
+      extraFields().forEach((field) => {
+        const wrap = document.querySelector(`[data-extra-field="${field.code}"]`);
+        if (!wrap) return;
+        const need = inputs[field.code] || 'ignored';
+        wrap.hidden = need === 'ignored';
+        wrap.firstChild.textContent = fieldTitle(field) + (need === 'optional' ? ' — facultatif' : '');
+      });
+    }
+
+    // Valeurs saisies des champs supplémentaires utilisés par l'isotope : code → nombre, texte ou null (champ vide).
+    function extraPayload(isotopeCode) {
+      const inputs = inputsFor(isotopeCode);
+      const out = {};
+      extraFields().forEach((field) => {
+        if ((inputs[field.code] || 'ignored') === 'ignored' || !$(`extra_${field.code}`)) return;
+        out[field.code] = field.type === 'choice' ? ($(`extra_${field.code}`).value || null) : getNumberOrNull(`extra_${field.code}`);
+      });
+      return out;
+    }
+
+    // Un champ obligatoire est-il renseigné ? (les champs de base doivent être strictement positifs ; un champ supplémentaire,
+    // nombre ou choix, doit simplement être rempli : sa validité est contrôlée par le moteur)
+    function fieldIsFilled(id) {
+      if (!id.startsWith('extra_')) return getNumberOrNull(id) > 0;
+      const field = extraFields().find((candidate) => `extra_${candidate.code}` === id);
+      if (!field || !$(id)) return true;
+      return field.type === 'choice' ? $(id).value !== '' : getNumberOrNull(id) !== null;
+    }
+
     function getRequiredFieldIds(isotopeCode) {
       const inputs = inputsFor(isotopeCode);
       return [
@@ -278,14 +366,16 @@
         ...(inputs.benign_activity_mbq === 'required' ? ['benignActivityMbq'] : []),
         ...(inputs.benign_fixation_pct === 'required' ? ['benignFixation'] : []),
         ...(inputs.user_period_days === 'required' ? ['userPeriodDays'] : []),
+        ...extraFields().filter((field) => inputs[field.code] === 'required').map((field) => `extra_${field.code}`),
       ];
     }
 
     function applyRequiredHighlight(isotopeCode) {
       const requiredIds = getRequiredFieldIds(isotopeCode);
-      ['doseRate', 'patientSize', 'benignActivityMbq', 'benignFixation', 'userPeriodDays']
+      ['doseRate', 'patientSize', 'benignActivityMbq', 'benignFixation', 'userPeriodDays', ...extraFields().map((field) => `extra_${field.code}`)]
         .forEach((id) => {
-          const stillEmpty = requiredIds.includes(id) && !(getNumberOrNull(id) > 0);
+          if (!$(id)) return;
+          const stillEmpty = requiredIds.includes(id) && !fieldIsFilled(id);
           $(id).classList.toggle('required-field', stillEmpty);
         });
 
@@ -314,9 +404,9 @@
         benignFixation: 'Taux de fixation (%)',
         userPeriodDays: 'Période effective (j)'
       };
+      extraFields().forEach((field) => { labels[`extra_${field.code}`] = fieldTitle(field); });
       getRequiredFieldIds(code).forEach((id) => {
-        const value = getNumberOrNull(id);
-        if (!(value > 0)) missingLabels.push(labels[id]);
+        if (!fieldIsFilled(id)) missingLabels.push(labels[id]);
       });
 
       if (!missingLabels.length) return [];
@@ -345,15 +435,13 @@
         user_limit: getNumberOrNull('userLimit'),
         benign_activity_mbq: getNumberOrNull('benignActivityMbq'),
         benign_fixation_pct: getNumberOrNull('benignFixation'),
+        ...extraPayload(isotopeCode),
         cure_count: selectedCureCount
       };
     }
 
     function hasAllRequiredFields(isotopeCode) {
-      return getRequiredFieldIds(isotopeCode).every((id) => {
-        const value = getNumberOrNull(id);
-        return value !== null && value > 0;
-      });
+      return getRequiredFieldIds(isotopeCode).every((id) => fieldIsFilled(id));
     }
 
     function clearDisplayedResults() {
@@ -407,6 +495,7 @@
       const isBenign = usesActivityInputs(selectedCode);
       toggleBenignRows(isBenign);
       togglePeriodRow(periodRequired(selectedCode));
+      updateExtraFields(selectedCode);
       applyRequiredHighlight(selectedCode);
       setReferenceText($('referenceText'), selected?.reference || '-');
       $('remarkText').textContent = selected?.remark || '-';
@@ -425,6 +514,7 @@
       const isBenign = usesActivityInputs(selected.api_code);
       toggleBenignRows(isBenign);
       togglePeriodRow(periodRequired(selected.api_code));
+      updateExtraFields(selected.api_code);
       applyRequiredHighlight(selected.api_code);
       const fallbackDoseRate = inputsFor(selected.api_code).dose_rate === 'ignored' ? null : getNumberOrNull('doseRate');
       const displayDoseRate = result.computed_dose_rate ?? fallbackDoseRate;
@@ -697,6 +787,9 @@
         isotopes = orderedIsotopes(config, site && site.isotope_order);
         cureOptionsByIsotope = config.cure_options_by_isotope || {};
         isotopeInputs = config.isotope_inputs || {};
+        declaredFields = config.fields || [];
+        fieldLabels = (site && site.field_labels) || {};
+        renderExtraFields();
         sfmnCalculatorUrl = config.sfmn_calculator_url || '';
         // Le site public ne propose qu'un calcul : sa configuration ne contient aucun mode. Seule la page de test de
         // l'administration en annonce plusieurs (sélecteur construit alors dynamiquement, voir ensureCalculationModeButtons).
