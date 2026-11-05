@@ -75,6 +75,49 @@ modifiable aussi dans `data/settings.json`).
 | `AGENTS.md` | Instructions aux agents et contributeurs : périmètre, règles de rétro-compatibilité, versionnement, tests à lancer. |
 | `VERSION` | Version du moteur. |
 
+## Ajouter un isotope, un scénario ou une règle de calcul
+
+Trois évolutions courantes, de la plus simple à la plus profonde. Dans les trois cas, les sites qui utilisent le moteur reprennent le
+changement dès qu'ils ont la nouvelle version : leur menu, leur tableau et leurs champs se construisent d'après les données.
+
+**1. Ajouter un isotope** (aucun code) : ajouter une entrée à la fin de `data/isotopes.json`.
+
+```json
+{
+  "api_code": "exemple_177lu",
+  "label": "Exemple-177Lu",
+  "period_hours": 40,
+  "reference": "Auteur et al., Revue 2026;12:34-56 — DOI : 10.xxxx/xxxxx",
+  "remark": "Période effective",
+  "situation": ""
+}
+```
+
+`api_code` est définitif (identifiant utilisé par les sites). La période se donne en heures (`period_hours`) ou en jours
+(`period_days`), ou `null` si l'appelant la fournit. `profile` (facultatif) choisit une règle existante (`standard` par défaut,
+`benign_iodine`, `free_period`) ; `cures` (facultatif) liste les nombres de cures autorisés. **La valeur et sa source doivent venir d'une
+publication vérifiable**, citée dans `reference` et résumée dans `data/SOURCES.md`.
+
+**2. Ajouter un scénario d'exposition** (aucun code) : ajouter une entrée **à la fin** de `data/scenarios.json` (identifiant, libellé,
+une ou plusieurs expositions « heures par jour à une distance », limite de dose en mSv). Chaque résultat gagne une ligne. Guide complet
+et exemple : `data/SCENARIOS.md`.
+
+**3. Ajouter une règle de calcul** (un peu de code, au seul endroit prévu) : une règle propre à certains isotopes s'écrit comme un
+*profil* dans `src/profiles.php`. Le guide en 4 étapes et un exemple commenté se trouvent **en tête de ce fichier** : (a) si la règle
+a besoin d'un champ nouveau (une masse, un volume, un choix…), le décrire dans `data/fields.json` (guide : `data/FIELDS.md`) ; (b) copier
+l'exemple de profil et le compléter ; (c) ajouter `"profile": "nom"` aux isotopes concernés ; (d) tester. Les sites affichent le champ
+nouveau sans modification.
+
+**Après chaque évolution** (voir `AGENTS.md` pour le détail) :
+
+1. `node core/tests/test-calcul.js` : les 381 cas figés. Un isotope ajouté change la liste des codes valides citée dans les messages
+   d'erreur, un scénario ajouté ajoute une ligne aux résultats : c'est normal. `node core/tests/update-golden.js` montre quels champs
+   changent ; relisez-les, puis `node core/tests/update-golden.js --write` met le fichier de référence à jour. **Les durées déjà
+   calculées pour les isotopes et les scénarios existants ne doivent pas changer** (sinon : version majeure).
+2. `php core/tests/test-profiles.php`, `test-scenarios.php`, `test-fields.php` : isotopes, scénarios et règle d'exemple.
+3. Incrémenter `VERSION` : ajout d'un isotope, d'un scénario ou d'un champ = version **mineure** ; toute valeur existante qui change = **majeure**.
+4. Citer la source (valeur, référence, choix éventuel) dans `data/SOURCES.md`.
+
 ## Lire le moteur
 
 Le code est court et chaque fichier se lit seul. Ordre conseillé : `data/` (ce que le moteur sait), puis `src/calculate.php`

@@ -43,6 +43,7 @@ Règles :
 node core/tests/test-calcul.js   # 381 cas figés, deux modes d'arrondi : doit afficher 0 écart
 php core/tests/test-profiles.php # profils de calcul (isotopes ajoutés dans les données)
 php core/tests/test-scenarios.php # scénarios déclarés dans les données (ajout, génération des conditions, contrôles)
+node core/tests/update-golden.js # montre ce qui changerait dans les cas figés (--write pour les réécrire après relecture)
 php core/tests/test-fields.php   # champs de saisie (data/fields.json) et ajout d'une règle de calcul, d'après l'exemple du guide de src/profiles.php
 ```
 
