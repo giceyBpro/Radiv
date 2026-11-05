@@ -697,6 +697,8 @@
               <div class="field-title" id="effectivePeriodLabel">Période effective à saisir, en jours (requise pour ce choix)</div>
               <input id="userPeriodDays" type="number" min="0" step="0.01" placeholder="ex. 3,5">
             </div>
+            <!-- Champs de saisie ajoutés par le moteur pour de nouvelles règles de calcul : construits par app.js d'après GET /api/config (fields). -->
+            <div id="extraFieldsBlock"></div>
           </div>
         </div>
       </div>
@@ -847,6 +849,6 @@
         .catch(function () { /* injoignable : l'avis reste affiché */ });
     })();
   </script><!--/MAINTENANCE-GATE-->
-  <script src="app.js?v=73d3f21e"></script>
+  <script src="app.js?v=2c35ce61"></script>
 </body>
 </html>

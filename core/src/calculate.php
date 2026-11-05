@@ -3,7 +3,7 @@
 // Copyright (c) 2026 Projet RadIV et contributeurs
 // ===== VALIDATION DES ENTRÉES ET ASSEMBLAGE DU RÉSULTAT =====
 // calculate($payload) est l'unique fonction à appeler. Elle fait quatre choses, chacune dans sa fonction ci-dessous :
-//   1. read_entries()    lit et convertit les champs reçus (tout ce qui est illisible devient null)
+//   1. read_entries()    lit et convertit les champs reçus (tout ce qui est illisible devient null), dont les champs de data/fields.json
 //   2. entry_errors()    liste les erreurs de saisie, en phrases lisibles
 //   3. scenario_rows()   calcule une durée de restriction par scénario (data/scenarios.json), plus le scénario utilisateur
 //   4. calculate()       assemble la réponse : « ok », les durées (rows, recommendations_days) ou les erreurs
@@ -37,16 +37,31 @@ function normalize_cure_count(array $isotope, mixed $enteredCount): array
 // 1. Lecture des entrées
 // ---------------------------------------------------------------------------------------------------------------------
 
+// Champs de saisie déclarés dans data/fields.json (voir catalog.php), lus dans le corps de la requête : code → valeur.
+//   type "number" : un nombre (float), ou null si le champ est absent ou illisible ;
+//   type "choice" : le texte d'une des options, ou null si absent ; une valeur qui n'est pas une option est conservée telle quelle
+//                   (texte) pour que entry_errors() la signale.
+function read_fields(array $payload): array
+{
+    $fields = [];
+    foreach (input_fields() as $field) {
+        $entered = $payload[$field['code']] ?? null;
+        if ($field['type'] === 'number') {
+            $fields[$field['code']] = to_number_or_null($entered);
+        } else {
+            $fields[$field['code']] = is_string($entered) && $entered !== '' ? $entered : (is_int($entered) || is_float($entered) ? (string) $entered : null);
+        }
+    }
+    return $fields;
+}
+
 // Entrées du calcul, converties. Les champs numériques absents ou illisibles valent null (voir to_number_or_null).
 function read_entries(array $payload): array
 {
     $isotopeCode = $payload['isotope_code'] ?? null;
     $isotope = get_isotope($isotopeCode);   // retombe sur le premier isotope si le code est inconnu : voir « recognized »
     $profile = profile_of($isotope);
-
-    $userPeriodDays = to_number_or_null($payload['user_period_days'] ?? null);
-    $benignActivityMbq = to_number_or_null($payload['benign_activity_mbq'] ?? null);
-    $benignFixationPct = to_number_or_null($payload['benign_fixation_pct'] ?? null);
+    $fields = read_fields($payload);
 
     // Scénario utilisateur : durée 1 à la distance X, durée 2 à 1 m, limite de dose. Tout ou rien.
     $user = [
@@ -65,12 +80,11 @@ function read_entries(array $payload): array
         // ferait pour le mauvais isotope et renverrait ok:true avec un résultat d'apparence correcte, mais faux.
         'recognized' => is_string($isotopeCode) && in_array($isotopeCode, array_column(isotopes(), 'api_code'), true),
         'cure' => normalize_cure_count($isotope, $payload['cure_count'] ?? null),
-        'benignActivityMbq' => $benignActivityMbq,
-        'benignFixationPct' => $benignFixationPct,
-        'doseRate' => compute_dose_rate($isotope, $benignActivityMbq, $benignFixationPct, $payload['dose_rate'] ?? null),
+        'fields' => $fields,
+        'doseRate' => compute_dose_rate($isotope, $fields),
         'patientSizeCm' => to_number_or_null($payload['patient_size_cm'] ?? null),
         // Période retenue : celle saisie par l'appelant, sinon celle de l'isotope (null si l'appelant doit la fournir).
-        'effectiveDays' => $userPeriodDays ?? $profile['default_period_days']($isotope),
+        'effectiveDays' => $fields['user_period_days'] ?? $profile['default_period_days']($isotope, $fields),
         'user' => $user,
         'userComplete' => $filledCount === count($user),
         'userEmpty' => $filledCount === 0,
@@ -93,9 +107,10 @@ function entry_errors(array $in): array
         $validCodes = implode(', ', array_column(isotopes(), 'api_code'));
         $errors[] = 'isotope_code inconnu ou manquant : ' . js_json_stringify($in['isotopeCode']) . ". Codes valides : {$validCodes}.";
     }
-    array_push($errors, ...$profile['dose_rate_errors']($code, $in['benignActivityMbq'], $in['benignFixationPct'], $in['doseRate']));
+    array_push($errors, ...$profile['dose_rate_errors']($code, $in['fields'], $in['doseRate']));
     if (!($in['patientSizeCm'] > 0)) $errors[] = 'patient_size_cm doit être strictement positif.';
-    array_push($errors, ...$profile['period_errors']($code, $in['effectiveDays']));
+    array_push($errors, ...$profile['period_errors']($code, $in['effectiveDays'], $in['fields']));
+    array_push($errors, ...choice_errors($in));
     if (!$in['cure']['valid']) $errors[] = "Pour {$code}, cure_count doit être l'une des valeurs suivantes : " . implode(', ', $in['cure']['allowed']) . '.';
     if ($in['effectiveDays'] !== null && !($in['effectiveDays'] > 0)) $errors[] = 'La période effective retenue doit être strictement positive.';
 
@@ -106,6 +121,26 @@ function entry_errors(array $in): array
         if (!($user['hours1'] >= 0) || !($user['hours2'] > 0)) $errors[] = 'Les durées du scénario utilisateur doivent être valides et la durée n°2 doit être strictement positive.';
         if (!($user['distance1'] > 0)) $errors[] = 'La distance X du scénario utilisateur doit être strictement positive.';
         if (!($user['limit'] > 0)) $errors[] = 'La limite dosimétrique du scénario utilisateur doit être strictement positive.';
+    }
+    return $errors;
+}
+
+// Contrôle des champs « choice » (listes de choix) de data/fields.json : obligatoire si le profil l'exige, et valeur parmi les options.
+// Les champs « number » sont contrôlés par le profil (profiles.php), qui sait quelles bornes s'appliquent.
+function choice_errors(array $in): array
+{
+    $code = (string) $in['isotope']['api_code'];
+    $inputs = profile_inputs($in['isotope']);
+    $errors = [];
+    foreach (input_fields() as $field) {
+        if ($field['type'] !== 'choice' || $inputs[$field['code']] === 'ignored') continue;
+        $value = $in['fields'][$field['code']];
+        $allowed = array_column($field['options'], 'value');
+        if ($value === null) {
+            if ($inputs[$field['code']] === 'required') $errors[] = "Pour {$code}, {$field['code']} est obligatoire (valeurs possibles : " . implode(', ', $allowed) . ').';
+        } elseif (!in_array($value, $allowed, true)) {
+            $errors[] = "Pour {$code}, {$field['code']} doit être l'une des valeurs suivantes : " . implode(', ', $allowed) . '.';
+        }
     }
     return $errors;
 }

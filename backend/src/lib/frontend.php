@@ -10,6 +10,7 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 
 use RivEngine as Calculation;
 use Radiv\Config;
+use Radiv\FieldLabels;
 use Radiv\IsotopeLabels;
 use Radiv\Maintenance;
 use Radiv\Updater;
@@ -24,7 +25,8 @@ function config(bool $sfmn, bool $announceMaintenance = true): array
         'cure_options_by_isotope' => Calculation\cure_options_by_isotope(),
         // Scénarios déclarés par le moteur : la page d'information de l'API s'en sert pour rester à jour seule.
         'scenarios' => array_map(function ($s) { return ['audience_code' => $s['audience_code'], 'label' => $s['label'], 'condition' => $s['condition']]; }, Calculation\scenarios()),
-    ] + (function_exists('RivEngine\\isotope_inputs') ? ['isotope_inputs' => Calculation\isotope_inputs()] : []) // moteur < 2.3.0 (épinglé) : la page retombe sur ses règles intégrées
+    ] + (function_exists('RivEngine\\input_fields') ? ['fields' => Calculation\input_fields()] : []) // moteur sans table des champs (épinglé) : la page garde ses champs intégrés
+     + (function_exists('RivEngine\\isotope_inputs') ? ['isotope_inputs' => Calculation\isotope_inputs()] : []) // moteur < 2.3.0 (épinglé) : la page retombe sur ses règles intégrées
      + ($announceMaintenance && !$sfmn && Maintenance\mode() !== 'off' ? ['maintenance' => Maintenance\mode()] : []) // absent hors maintenance et sur la page de test
     + ($sfmn ? [
         // Page de test de l'administration seulement : l'API publique ne connaît qu'un calcul.
@@ -38,7 +40,8 @@ function public_config(bool $announceMaintenance = true): array
 {
     // Intitulés des isotopes propres à RadIV et leur ordre d'affichage (surcouche du site, voir isotope_labels.php).
     [$labels, $order] = IsotopeLabels\display(Calculation\isotopes());
-    $isotopeDisplay = ['isotope_labels' => $labels, 'isotope_order' => $order];
+    $isotopeDisplay = ['isotope_labels' => $labels, 'isotope_order' => $order]
+        + (function_exists('RivEngine\\input_fields') ? ['field_labels' => FieldLabels\labels(Calculation\input_fields())] : []); // noms des champs de saisie (voir field_labels.php)
     return [
         'recaptcha_site_key' => Config\env('RECAPTCHA_SITE_KEY'),
         // Reflète la config de journalisation actuelle: sert à générer une page RGPD qui

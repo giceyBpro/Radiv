@@ -25,6 +25,7 @@ jobs:
           php core/tests/test-api.php
           php core/tests/test-profiles.php
           php core/tests/test-scenarios.php
+          php core/tests/test-fields.php
       - name: Contrat du site envers le moteur partagé (version et cas figés)
         run: node tests/test-core-contract.js
       - name: Zone de test du moteur (candidats, application, retour arrière)

@@ -54,7 +54,9 @@ function sanitize_input(mixed $payload): object
 {
     $safe = [];
     if (!is_array($payload)) return (object) $safe;
-    foreach (LOGGED_INPUT_FIELDS as $field) {
+    // Champs communs, plus ceux que le moteur déclare dans core/data/fields.json (un champ ajouté au moteur est journalisé sans modifier ce fichier).
+    $declared = function_exists('RivEngine\\input_fields') ? array_column(Calculation\input_fields(), 'code') : [];
+    foreach (array_unique([...LOGGED_INPUT_FIELDS, ...$declared]) as $field) {
         $value = $payload[$field] ?? null;
         if ($value === null) continue;
         if (is_int($value) || is_float($value) || is_bool($value)) {

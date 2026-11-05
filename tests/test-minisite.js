@@ -16,6 +16,17 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'minisite-'));
 fs.cpSync(path.join(root, 'core'), dir, { recursive: true, filter: (src) => !/[\\/]tests([\\/]|$)/.test(src) });
 const iso = path.join(dir, 'data/isotopes.json');
 fs.writeFileSync(iso, JSON.stringify([...JSON.parse(fs.readFileSync(iso, 'utf8')), { api_code: 'essai_benin', label: 'Essai bénin', period_hours: 122.4, reference: 'essai', remark: '-', situation: '', profile: 'benign_iodine' }]));
+// Nouvelle règle de calcul : le profil EXEMPLE du guide de src/profiles.php (décommenté) et le champ « poids_kg » qu'il utilise.
+const ff = path.join(dir, 'data/fields.json');
+fs.writeFileSync(ff, JSON.stringify([...JSON.parse(fs.readFileSync(ff, 'utf8')), { code: 'poids_kg', label: 'Poids du patient (kg)', unit: 'kg', type: 'number', min: 1, step: 'any', help: 'Poids au moment de la mesure.' }]));
+fs.writeFileSync(iso, JSON.stringify([...JSON.parse(fs.readFileSync(iso, 'utf8')), { api_code: 'essai_poids', label: 'Essai poids', period_hours: 100, reference: 'essai', remark: '-', situation: '', profile: 'poids_reference' }]));
+const profilesFile = path.join(dir, 'src/profiles.php');
+{ const src = fs.readFileSync(profilesFile, 'utf8').split('\n'); const ex = []; let inside = false;
+  for (const line of src) { if (line.includes('$poidsReference = [')) inside = true; if (inside) ex.push(line.replace(/^\s*\/\/   ?/, '')); if (inside && line.includes('] + $standard;')) break; }
+  const reg = "    return $profiles = ['standard' => $standard, 'benign_iodine' => $benignIodine, 'free_period' => $freePeriod];";
+  const text = src.join('\n');
+  if (!text.includes(reg) || !ex.length) throw new Error('exemple du guide introuvable dans profiles.php');
+  fs.writeFileSync(profilesFile, text.replace(reg, ex.join('\n') + '\n    return $profiles = [\'standard\' => $standard, \'benign_iodine\' => $benignIodine, \'free_period\' => $freePeriod, \'poids_reference\' => $poidsReference];')); }
 const sc = path.join(dir, 'data/scenarios.json');
 fs.writeFileSync(sc, JSON.stringify([...JSON.parse(fs.readFileSync(sc, 'utf8')), { audience_code: 'voisin_palier', label: 'Voisin de palier', exposures: [{ hours: 1, distance: 1, unit_factor_at_1m: true }], limit: 1 }]));
 
@@ -36,6 +47,15 @@ const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, path.join(dir, 'api/inde
   t('iode bénin: activité/fixation demandées, pas de débit', await page.locator('#benignFields').isVisible() && !(await page.locator('#doseRateField').isVisible()));
   await page.selectOption('#isotope', 'essai_benin');
   t('isotope ajouté (profil iode bénin): mêmes champs, sans modifier la page', await page.locator('#benignFields').isVisible() && !(await page.locator('#doseRateField').isVisible()));
+  t('règle ajoutée dans le moteur : son champ n\'apparaît pas pour les autres isotopes', !(await page.locator('[data-extra-field="poids_kg"]').isVisible()));
+  await page.selectOption('#isotope', 'essai_poids');
+  t('…il apparaît pour l\'isotope dont le profil l\'utilise, avec son libellé et son unité, sans modifier la page', await page.locator('[data-extra-field="poids_kg"]').isVisible() && /Poids du patient \(kg\)/.test(await page.locator('[data-extra-field="poids_kg"]').innerText()));
+  await page.fill('#doseRate', '50'); await page.fill('#patientSize', '170'); await page.click('#submit');
+  await page.waitForSelector('#errors:not([hidden])');
+  t('…champ obligatoire vide : l\'erreur du moteur est affichée', /poids_kg/.test(await page.locator('#errors').innerText()));
+  await page.fill('#extra_poids_kg', '70'); await page.click('#submit');
+  await page.waitForSelector('#results:not([hidden]) tbody tr');
+  t('…renseigné : le calcul utilise la nouvelle règle', (await page.locator('#results tbody tr').count()) >= 7);
   await page.selectOption('#isotope', 'non_defini');
   t('« non défini »: libellé « période obligatoire »', /obligatoire pour cet isotope/.test(await page.locator('[data-label="periodDays"]').innerText()));
   await page.selectOption('#isotope', 'psma_177lu');
