@@ -300,6 +300,12 @@ async function update(c, ref, token) {
 
   console.log('\n— Onglet « Mini-site » : la page minimale du moteur, dans l\'administration');
   { t('GET /auth/minisite sans session → 404 (page, config.js, API)', (await new Client().req('GET', `${BASE}/auth/minisite`)).status === 404 && (await new Client().req('GET', `${BASE}/auth/minisite/config.js`)).status === 404 && (await new Client().req('GET', `${BASE}/auth/minisite/api/config`)).status === 404 && (await new Client().req('POST', `${BASE}/auth/minisite/api/calculate`, { form: {} })).status === 404);
+    { // page non installée (site mis à jour par un ancien outil) : explication, pas de 404
+      const dir = path.join(WWW, 'backend/demo/web'); const saved = path.join(WWW, 'backend/demo/web.sauve');
+      fs.renameSync(dir, saved);
+      const missing = await c.req('GET', `${BASE}/auth/minisite`);
+      t('page du mini-site absente : explication affichée (200) et non un 404', missing.status === 200 && /pas encore installée/.test(missing.text) && /class="tab on"[^>]*>Mini-site</.test(missing.text));
+      fs.renameSync(saved, dir); }
     page = await c.req('GET', `${BASE}/auth/minisite`);
     const nonce = (/script-src 'self' 'nonce-([^']+)'/.exec(page.headers.get('content-security-policy') || '') || [])[1];
     t('page du moteur dans l\'administration : onglet actif, config.js redirigé, script en ligne autorisé par nonce', page.status === 200 && /class="tab on"[^>]*>Mini-site</.test(page.text) && /id="isotope"/.test(page.text) && /<script src="\/auth\/minisite\/config\.js"/.test(page.text) && !!nonce && page.text.includes(`<script nonce="${nonce}">`));

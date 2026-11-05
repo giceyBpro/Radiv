@@ -17,25 +17,36 @@ use Radiv\Session;
 
 const MINISITE_BASE = '/auth/minisite';
 
-// Dossier de l'application simple : backend/demo/ une fois le site installé, demo/ à la racine du dépôt en développement.
-function minisite_dir(): string
+// Dossier qui contient web/index.html de la page minimale, ou null s'il n'y en a pas : backend/demo/ une fois le site installé ;
+// à défaut, backend/core/ (ancien emplacement, que d'anciennes mises à jour ont pu installer) ; demo/ à la racine du dépôt en développement.
+function minisite_dir(): ?string
 {
-    $installed = dirname(__DIR__, 2) . '/demo';
-    return is_file($installed . '/web/index.html') ? $installed : dirname(__DIR__, 3) . '/demo';
+    foreach ([dirname(__DIR__, 2) . '/demo', dirname(__DIR__, 2) . '/core', dirname(__DIR__, 3) . '/demo'] as $dir) {
+        if (is_file($dir . '/web/index.html')) return $dir;
+    }
+    return null;
 }
 
-// Contenu d'un fichier de la page minimale (demo/web/), ou null s'il est absent.
+// Contenu d'un fichier de la page minimale (web/), ou null s'il est absent.
 function minisite_file(string $name): ?string
 {
-    $content = @file_get_contents(minisite_dir() . '/web/' . $name);
+    $dir = minisite_dir();
+    $content = $dir === null ? false : @file_get_contents($dir . '/web/' . $name);
     return $content === false ? null : $content;
 }
 
 function do_minisite_page(): bool
 {
     $admin = Session\admin();
-    $html = $admin === null ? null : minisite_file('index.html');
-    if ($html === null) return false;
+    if ($admin === null) return false;
+    $html = minisite_file('index.html');
+    if ($html === null) {
+        // Page absente du site (mise à jour faite par un ancien outil de mise à jour, qui ne la connaissait pas) : explication plutôt qu'un 404.
+        page('minisite', 'Mini-site', '<section class="card"><h2>Mini-site</h2><p>La page minimale du moteur n\'est pas encore installée sur ce site. '
+            . 'Lancez une <strong>mise à jour</strong> depuis l\'onglet Site : la première met à jour l\'outil de mise à jour lui-même, '
+            . 'la suivante installe cette page.</p></section>');
+        return true;
+    }
 
     // Nonce : autorise le seul script en ligne de la page du moteur, sans ouvrir la porte à d'autres scripts.
     $nonce = base64_encode(random_bytes(16));
