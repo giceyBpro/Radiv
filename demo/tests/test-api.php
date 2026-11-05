@@ -14,9 +14,9 @@ $t = static function (string $name, bool $ok) use (&$fail): void { echo ($ok ? '
 [$s, $d] = Api\handle('GET', '/config');
 $t('config : 200 et isotopes', $s === 200 && count($d['isotopes']) === 15 && $d['cure_options_by_isotope']['psma_177lu'] === [1, 4, 6]);
 $t('config : saisie attendue par isotope (iode bénin, période libre, standard)', $d['isotope_inputs']['iode131_benin']['dose_rate'] === 'ignored' && $d['isotope_inputs']['iode131_benin']['benign_activity_mbq'] === 'required'
-    && $d['isotope_inputs']['non_defini']['user_period_days'] === 'required' && $d['isotope_inputs']['radium223'] === ['dose_rate' => 'required', 'benign_activity_mbq' => 'ignored', 'benign_fixation_pct' => 'ignored', 'user_period_days' => 'optional']
+    && $d['isotope_inputs']['non_defini']['user_period_days'] === 'required' && $d['isotope_inputs']['radium223'] === ['dose_rate' => 'required', 'benign_activity_mbq' => 'ignored', 'benign_fixation_pct' => 'ignored', 'user_period_days' => 'optional', 'patient_size_cm' => 'required']
     && count($d['isotope_inputs']) === count($d['isotopes']));
-$t('config : champs de saisie décrits (libellé, unité, type), dont les quatre champs de base et la taille du patient (commun)', count($d['fields']) === 5 && $d['fields'][0]['code'] === 'dose_rate' && $d['fields'][2]['max'] === 100 && $d['fields'][1]['unit'] === 'MBq' && $d['fields'][3]['type'] === 'number');
+$t('config : champs de saisie décrits (libellé, unité, type), dont les quatre champs de base et la taille du patient', count($d['fields']) === 5 && $d['fields'][0]['code'] === 'dose_rate' && $d['fields'][2]['max'] === 100 && $d['fields'][1]['unit'] === 'MBq' && $d['fields'][3]['type'] === 'number');
 $t('config : scénarios déclarés (code, libellé, condition)', count($d['scenarios']) === 7 && $d['scenarios'][0]['audience_code'] === 'conjoint_plus_60' && $d['scenarios'][6]['condition'] === 'Exposition : 6 h à 1 m · limite de dose : 1 mSv');
 [$s, $d] = Api\handle('POST', 'calculate', '{"isotope_code":"radium223","dose_rate":100,"patient_size_cm":150}');
 $t('calcul valide : 200 et 7 scénarios + utilisateur', $s === 200 && $d['ok'] === true && count($d['rows']) === 8);

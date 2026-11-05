@@ -82,7 +82,7 @@ function read_entries(array $payload): array
         'cure' => normalize_cure_count($isotope, $payload['cure_count'] ?? null),
         'fields' => $fields,
         'doseRate' => compute_dose_rate($isotope, $fields),
-        'patientSizeCm' => $fields['patient_size_cm'],   // champ commun : toujours lu et contrôlé ici
+        'patientSizeCm' => $fields['patient_size_cm'],
         // Période retenue : celle saisie par l'appelant, sinon celle de l'isotope (null si l'appelant doit la fournir).
         'effectiveDays' => $fields['user_period_days'] ?? $profile['default_period_days']($isotope, $fields),
         'user' => $user,
@@ -133,7 +133,7 @@ function choice_errors(array $in): array
     $inputs = profile_inputs($in['isotope']);
     $errors = [];
     foreach (input_fields() as $field) {
-        if ($field['common'] || $field['type'] !== 'choice' || $inputs[$field['code']] === 'ignored') continue;
+        if ($field['type'] !== 'choice' || $inputs[$field['code']] === 'ignored') continue;
         $value = $in['fields'][$field['code']];
         $allowed = array_column($field['options'], 'value');
         if ($value === null) {

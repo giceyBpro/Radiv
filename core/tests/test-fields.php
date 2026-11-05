@@ -47,7 +47,7 @@ foreach ($lines as $line) {
 $example = implode("\n", $example);
 $withChoice = <<<'PHP'
     $avecVoie = [
-        'inputs' => ['dose_rate' => 'required', 'voie' => 'required', 'user_period_days' => 'optional'],
+        'inputs' => ['dose_rate' => 'required', 'voie' => 'required', 'patient_size_cm' => 'required', 'user_period_days' => 'optional'],
     ] + $standard;
 PHP;
 $register = "    return \$profiles = ['standard' => \$standard, 'benign_iodine' => \$benignIodine, 'free_period' => \$freePeriod];";
@@ -66,7 +66,7 @@ $declared = array_column(RivEngine\input_fields(), null, 'code');
 $t('table des champs : les champs de base et les champs ajoutés sont décrits', count($declared) === $baseCount + 2 && $declared['poids_kg']['unit'] === 'kg' && $declared['poids_kg']['type'] === 'number' && $declared['voie']['options'][1]['value'] === 'oral');
 $inputs = RivEngine\isotope_inputs();
 $t('saisie annoncée : le champ ajouté est « required » pour l\'isotope qui l\'utilise, « ignored » pour tous les autres', $inputs['essai_poids']['poids_kg'] === 'required' && $inputs['essai_poids']['dose_rate'] === 'required' && $inputs['radium223']['poids_kg'] === 'ignored' && $inputs['iode131_benin']['voie'] === 'ignored');
-$t('champ commun (taille du patient) : décrit dans la table, marqué « common », absent de la saisie par isotope', $declared['patient_size_cm']['common'] === true && $declared['patient_size_cm']['unit'] === 'cm' && $declared['dose_rate']['common'] === false && !isset($inputs['radium223']['patient_size_cm']) && !isset($inputs['essai_poids']['patient_size_cm']));
+$t('taille du patient : champ comme les autres de la table, obligatoire pour tous les isotopes', $declared['patient_size_cm']['unit'] === 'cm' && $declared['patient_size_cm']['min'] === 1 && $inputs['radium223']['patient_size_cm'] === 'required' && $inputs['iode131_benin']['patient_size_cm'] === 'required' && $inputs['essai_poids']['patient_size_cm'] === 'required' && $inputs['essai_standard']['patient_size_cm'] === 'required');
 $t('…les isotopes existants ne changent pas pour les champs de base', $inputs['iode131_benin']['benign_activity_mbq'] === 'required' && $inputs['radium223']['dose_rate'] === 'required');
 
 // --- 4. Règle de l'exemple : débit ramené à 70 kg -------------------------------------------------------------------------
@@ -98,7 +98,7 @@ $good = array_slice($fields, 0, $baseCount);
 $extra = ['code' => 'x_test', 'label' => 'X', 'type' => 'number'];
 $check('doublon de code refusé', [...$good, $extra, $extra], 'en double');
 $check('code invalide refusé', [...$good, ['code' => 'Poids Kg'] + $extra], 'code manquant ou invalide');
-$check('champ commun du calcul refusé comme code', [...$good, ['code' => 'patient_size_cm'] + $extra], 'champ commun');
+$check('champ du calcul refusé comme code', [...$good, ['code' => 'cure_count'] + $extra], 'déjà un champ du calcul');
 $check('label manquant refusé', [...$good, ['label' => ''] + $extra], 'label manquant');
 $check('type inconnu refusé', [...$good, ['type' => 'texte'] + $extra], 'type doit être');
 $check('liste de choix sans options refusée', [...$good, ['type' => 'choice'] + $extra], 'options');
@@ -107,10 +107,8 @@ $check('borne non numérique refusée', [...$good, ['min' => 'abc'] + $extra], '
 $check('champ de base retiré : refusé', array_slice($good, 1), 'champ de base');
 $check('fichier valide accepté', [...$good, $extra], 'OK');
 $noSize = array_values(array_filter($good, static fn (array $f): bool => $f['code'] !== 'patient_size_cm'));
-$sizeField = array_values(array_filter($good, static fn (array $f): bool => $f['code'] === 'patient_size_cm'))[0];
 $check('taille du patient absente : refusée', $noSize, 'patient_size_cm');
-$check('taille du patient sans « common » : refusée', [...$noSize, array_diff_key($sizeField, ['common' => 1])], 'déjà un champ commun');
-$check('« common » sur un autre champ : refusé', [...$good, ['common' => true] + $extra], 'réservé aux champs communs');
+$check('champ du calcul (isotope_code) refusé comme code', [...$good, ['code' => 'isotope_code'] + $extra], 'déjà un champ du calcul');
 
 foreach (['src', 'data'] as $dir) { array_map('unlink', glob("{$tmp}/{$dir}/*")); rmdir("{$tmp}/{$dir}"); }
 unlink("{$tmp}/VERSION"); rmdir($tmp);
