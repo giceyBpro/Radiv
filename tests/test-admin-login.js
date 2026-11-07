@@ -19,8 +19,15 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   const secret = b32(crypto.randomBytes(20));
   const hash = execFileSync('php', ['-r', "echo password_hash('Un mot de passe solide', PASSWORD_DEFAULT);"], { encoding: 'utf8' });
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'login-data-'));
-  const env = { ...process.env, DATA_DIR: data, SITE_PUBLIC_URL: BASE, ADMIN_ALLOW_INSECURE_HTTP: 'true', ADMIN_LOGIN_USER: 'admin', ADMIN_LOGIN_PASSWORD_HASH: hash, ADMIN_TOTP_SECRET: secret, GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', ADMIN_GOOGLE_EMAILS: '' };
-  const srv = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'public'), path.join(ROOT, 'tests/dev-router.php')], { env, stdio: 'ignore' });
+  // Copie du site dans un dossier temporaire : la page d'administration écrit config/local.env.
+  const site = path.join(data, 'site'); fs.mkdirSync(path.join(site, 'tests'), { recursive: true });
+  for (const d of ['public', 'backend', 'core']) fs.cpSync(path.join(ROOT, d), path.join(site, d), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'tests/dev-router.php'), path.join(site, 'tests/dev-router.php'));
+  fs.mkdirSync(path.join(site, 'backend/config'), { recursive: true });
+  const localEnv = path.join(site, 'backend/config/local.env');
+  fs.writeFileSync(localEnv, `ADMIN_LOGIN_USER="admin"\nADMIN_LOGIN_PASSWORD_HASH='${hash}'\nADMIN_TOTP_SECRET="${secret}"\n`);
+  const env = { ...process.env, DATA_DIR: path.join(data, 'var'), SITE_PUBLIC_URL: BASE, ADMIN_ALLOW_INSECURE_HTTP: 'true', GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', ADMIN_GOOGLE_EMAILS: '' };
+  const srv = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(site, 'public'), path.join(site, 'tests/dev-router.php')], { env, stdio: 'ignore' });
   await new Promise((r) => setTimeout(r, 1200));
   let cookie = '';
   const req = async (method, url, form) => {
@@ -49,6 +56,34 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   t('session ouverte : page d\'administration', home.status === 200 && /Se déconnecter/.test(home.text) && !/name="password"/.test(home.text));
   cookie = ''; r = await login();
   t('même code rejoué : refusé (usage unique)', r.res.status === 401, String(r.res.status));
+
+  // Page « Connexion » de l'administration : remplacement du mot de passe et du secret, puis connexion avec les nouveaux.
+  const rl = (function walk(d) { return fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : /^ratelimit-adminlogin/.test(e.name) ? [path.join(d, e.name)] : [])); })(data);
+  t('limite de tentatives en vigueur (5 par minute)', rl.length > 0);
+  rl.forEach((f) => fs.unlinkSync(f)); // remise à zéro pour la suite
+  cookie = ''; await login({ code: totp(secret, Date.now() / 1000 + 30) }); // pas suivant : le précédent est déjà consommé
+  const sec = await req('GET', '/auth/securite');
+  t('onglet Connexion : état activé, formulaire de remplacement', sec.status === 200 && /activée/.test(sec.text) && /name="password2"/.test(sec.text));
+  const csrf1 = (sec.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  let p = await req('POST', '/auth/securite/preparer', { csrf: csrf1, login: 'nouveau', password: 'court', password2: 'court' });
+  t('mot de passe trop court refusé', p.status === 303 && /trop court/.test((await req('GET', '/auth/securite')).text));
+  const csrf2 = (((await req('GET', '/auth/securite')).text).match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  await req('POST', '/auth/securite/preparer', { csrf: csrf2, login: 'nouveau', password: 'Autre mot de passe 123', password2: 'Autre mot de passe 123' });
+  const step2 = (await req('GET', '/auth/securite')).text;
+  const uri = (step2.match(/data-uri="([^"]+)"/) || [])[1] || '';
+  const newSecret = (uri.match(/secret=([A-Z2-7]+)/) || [])[1] || '';
+  t('étape 2 : QR code (otpauth) et script de dessin', /^otpauth:\/\/totp\//.test(uri.replace(/&amp;/g, '&')) && newSecret.length === 32 && /securite\.js/.test(step2));
+  const csrf3 = (step2.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  await req('POST', '/auth/securite/activer', { csrf: csrf3, code: '000000' });
+  t('mauvais code : rien n\'est écrit', /admin/.test(fs.readFileSync(localEnv, 'utf8')) && !/nouveau/.test(fs.readFileSync(localEnv, 'utf8')));
+  const csrf4 = (((await req('GET', '/auth/securite')).text).match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  await req('POST', '/auth/securite/activer', { csrf: csrf4, code: totp(newSecret, Date.now() / 1000) });
+  const written = fs.readFileSync(localEnv, 'utf8');
+  t('bon code : réglages écrits (identifiant, empreinte, secret), droits 0600', /ADMIN_LOGIN_USER="nouveau"/.test(written) && /ADMIN_LOGIN_PASSWORD_HASH='\$2y\$/.test(written) && written.includes(newSecret) && (fs.statSync(localEnv).mode & 0o077) === 0);
+  cookie = ''; r = await login({ login: 'nouveau', password: 'Autre mot de passe 123', code: totp(newSecret, Date.now() / 1000) });
+  t('connexion avec les nouveaux identifiants', r.res.status === 303, String(r.res.status));
+  cookie = ''; r = await login({ login: 'admin' });
+  t('anciens identifiants refusés', r.res.status === 401);
   srv.kill(); fs.rmSync(data, { recursive: true, force: true });
   console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });
