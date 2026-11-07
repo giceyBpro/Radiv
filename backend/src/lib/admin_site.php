@@ -10,6 +10,7 @@ namespace Radiv\AdminSite;
 
 if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécutable hors de l'API
 
+use Radiv\AdminLogin;
 use Radiv\AdminMeasures;
 use Radiv\Config;
 use Radiv\Disk;
@@ -29,6 +30,7 @@ const ROUTES = [
     'GET /auth' => 'home',
     'GET /auth/' => 'home',
     'GET /auth/callback' => 'callback',
+    'POST /auth/connexion' => 'login_local',
     'GET /auth/mesures' => 'measurements',
     'GET /auth/mesures.csv' => 'measurements_csv',
     'GET /auth/radiv' => 'radiv_page',
@@ -101,16 +103,62 @@ function handle(string $method, string $path): bool
     return ('Radiv\\AdminSite\\' . 'do_' . $action)();
 }
 
-// /auth: sans session valide (ou avec ?reauth=1) on part vers Google, sinon on affiche la page.
+// /auth: sans session valide (ou avec ?reauth=1) on propose les méthodes de connexion configurées : Google et/ou
+// identifiant + mot de passe + code TOTP (s'il n'y en a qu'une, on y va directement). Sinon on affiche la page.
 function do_home(): bool
 {
     $reauth = ($_GET['reauth'] ?? '') === '1';
     if (Session\admin() === null || $reauth) {
-        if (!Store\rate_limit_hit('admin', Http\client_ip(), 10)) return false;
-        Http\redirect(Google\begin_login($reauth));
-        return true;
+        $google = Config\admin_google_enabled();
+        $local = AdminLogin\enabled();
+        $method = (string) ($_GET['methode'] ?? '');
+        if ($google && ($method === 'google' || (!$local && $method === ''))) {
+            if (!Store\rate_limit_hit('admin', Http\client_ip(), 10)) return false;
+            Http\redirect(Google\begin_login($reauth));
+            return true;
+        }
+        return login_form($google, $local && ($method === 'local' || !$google || $method === ''), $reauth);
     }
     return do_site();
+}
+
+// Page de connexion : choix de la méthode, puis formulaire local (jamais d'indication sur la cause d'un échec).
+function login_form(bool $google, bool $local, bool $reauth, string $error = ''): bool
+{
+    $body = '<h1>Connexion à l\'administration</h1>';
+    if ($error !== '') $body .= '<p class="bad" role="alert">' . h($error) . '</p>';
+    if ($google) {
+        $body .= '<p><a class="btn" href="' . h(home_url()) . '?methode=google' . ($reauth ? '&amp;reauth=1' : '') . '">Se connecter avec Google</a></p>';
+    }
+    if ($local) {
+        $body .= ($google ? '<p class="muted">ou</p>' : '')
+            . '<form method="post" action="/auth/connexion" autocomplete="off"><input type="hidden" name="csrf" value="' . h(Session\csrf_token()) . '">'
+            . '<label>Identifiant<input name="login" type="text" required autocomplete="username"></label>'
+            . '<label>Mot de passe<input name="password" type="password" required autocomplete="current-password"></label>'
+            . '<label>Code de l\'application d\'authentification (6 chiffres)<input name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code"></label>'
+            . '<button type="submit">Se connecter</button></form>';
+    } elseif (AdminLogin\enabled()) {
+        $body .= '<p><a href="' . h(home_url()) . '?methode=local">Identifiant, mot de passe et code</a></p>';
+    }
+    render('Connexion', $body, $error !== '' ? 401 : 200);
+    return true;
+}
+
+// Connexion par identifiant + mot de passe + code TOTP. Réponse identique pour toute cause d'échec.
+function do_login_local(): bool
+{
+    if (!AdminLogin\enabled()) return false;
+    if (!Session\csrf_valid()) return false;
+    if (!AdminLogin\attempt_allowed()) return false;
+    $login = (string) ($_POST['login'] ?? '');
+    $ok = AdminLogin\verify($login, (string) ($_POST['password'] ?? ''), preg_replace('/\s+/', '', (string) ($_POST['code'] ?? '')) ?? '');
+    if (!$ok) {
+        error_log('[ADMIN] Connexion locale refusée depuis ' . Http\client_ip());
+        return login_form(Config\admin_google_enabled(), true, false, 'Identifiants ou code incorrects.');
+    }
+    Session\login(AdminLogin\user());
+    Http\redirect(home_url(), 303);
+    return true;
 }
 
 function do_callback(): bool
@@ -147,7 +195,8 @@ function config_groups(): array
 function config_optional(): array
 {
     return ['SITE_NAME', 'COPYRIGHT_OWNER', 'API_PUBLIC_URL', 'DISK_QUOTA_MB', 'DISK_MIN_FREE_MB', 'LOGS_RETENTION_MONTHS', 'LOGS_MAX_BYTES', 'MEASUREMENT_LOGGING_LEVEL',
-        'RESTRICTION_ROUNDING_MODE', 'TRUSTED_PROXIES', 'CALCULATE_RATE_LIMIT'];
+        'RESTRICTION_ROUNDING_MODE', 'TRUSTED_PROXIES', 'CALCULATE_RATE_LIMIT',
+        'ADMIN_LOGIN_USER', 'ADMIN_LOGIN_PASSWORD_HASH', 'ADMIN_TOTP_SECRET'];
 }
 
 function config_card(): string

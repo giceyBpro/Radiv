@@ -251,9 +251,13 @@ function admin_google_emails(): array
 // La page d'administration n'existe (ne répond autre chose que 404) que si tout est configuré.
 function admin_site_enabled(): bool
 {
-    return flag('ADMIN_SITE_ENABLED')
-        && env('GOOGLE_CLIENT_ID') !== '' && env('GOOGLE_CLIENT_SECRET') !== ''
-        && site_public_url() !== '' && admin_google_emails() !== [];
+    return flag('ADMIN_SITE_ENABLED') && site_public_url() !== '' && (admin_google_enabled() || \Radiv\AdminLogin\enabled());
+}
+
+// Connexion Google configurée (au moins une des deux méthodes de connexion doit l'être).
+function admin_google_enabled(): bool
+{
+    return env('GOOGLE_CLIENT_ID') !== '' && env('GOOGLE_CLIENT_SECRET') !== '' && admin_google_emails() !== [];
 }
 
 // Les mises à jour depuis l'interface sont désactivées tant qu'on ne les active pas explicitement.
