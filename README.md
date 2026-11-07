@@ -366,7 +366,7 @@ node tests/check-runtime-layout.js     # mise en forme de config/runtime.env
 utilisent Playwright et `php -S`, sans Apache. Les tests d'intégration (`test-install.js`, `test-admin-site.js`, `test-browser-admin.js`)
 ont besoin d'un Apache avec mod_php et des faux services `fake-services.js` / `fake-smtp.js`.
 
-### Administration du site (`/auth` : connexion Google, mesures, mises à jour)
+### Administration du site (`/auth` : connexion Google ou identifiant + TOTP, mesures, mises à jour)
 
 Une seule page d'administration, à l'adresse **`https://<votre-domaine>/auth`**. Aucune page du site n'y renvoie, aucun raccourci, et `/admin` n'existe pas : seule la personne qui connaît l'adresse la trouve. Sans session, `/auth` envoie directement vers la **connexion Google** ; avec une session valide, elle affiche la page.
 
@@ -383,6 +383,8 @@ Une seule page d'administration, à l'adresse **`https://<votre-domaine>/auth`**
 | `/auth/xplore/<fichier>.xml` | Téléchargement des modèles Xplore par un administrateur, même quand l'accès public est coupé. |
 
 Après la déconnexion, la page affiche un lien « Se reconnecter ».
+
+**Connexion alternative : identifiant + mot de passe + code TOTP** (facultative, en plus ou à la place de Google). Si les deux méthodes sont configurées, `/auth` propose le choix ; s'il n'y en a qu'une, elle est utilisée directement ; `/auth` n'existe (404) que si au moins une est configurée. Mise en place : sur **votre poste** (pas sur le site), `php tools/admin-login.php <identifiant> [nom-du-site]` demande le mot de passe (12 caractères au moins, sans écho) et affiche trois lignes à ajouter à `config/runtime.env` : `ADMIN_LOGIN_USER`, `ADMIN_LOGIN_PASSWORD_HASH` (empreinte `password_hash`, jamais le mot de passe) et `ADMIN_TOTP_SECRET`, ainsi que l'adresse `otpauth://` à enregistrer dans une application d'authentification (TOTP RFC 6238, SHA-1, 6 chiffres, 30 s). Garde-fous : même message pour toute cause d'échec, vérification du mot de passe à durée constante, 5 essais par minute et par adresse IP (30 par quart d'heure au total), jeton CSRF, code utilisable une seule fois (pas de rejeu), tolérance d'horloge d'un pas ; la session et la règle « connexion récente » pour les actions sensibles sont les mêmes que pour Google. Perte du téléphone : retirer les trois lignes (ou régénérer avec le script) dans `runtime.env`, ou se connecter avec Google.
 
 **Mise en place Google** : console Google Cloud → *API et services* → *Identifiants* → client OAuth de type *Application Web*, avec pour URI de redirection `https://<votre-domaine>/auth/callback`. En mode « Test » de l'écran de consentement, ajoutez vos adresses comme utilisateurs de test : aucune validation par Google n'est nécessaire. Renseignez `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_GOOGLE_EMAILS` et `SITE_PUBLIC_URL` (voir `.env.example`). `install.php` ajoute la règle `/auth` au `.htaccess`. `ADMIN_MEASUREMENTS_ENABLED=false` retire la section Mesures ; `ADMIN_SITE_ENABLED=false` coupe toute l'administration. Les mises à jour exigent en plus `ADMIN_UPDATE_ENABLED=true`.
 

@@ -66,11 +66,15 @@ BACKEND_DIR|Dossier du backend (code, configuration, données), de préférence 
 DATA_DIR|Dossier des journaux et de l'état du site (sessions, version installée, sauvegarde). Facultatif :
 |par défaut le dossier data/ du backend. Chemin absolu, ou relatif au backend ; jamais lisible depuis le web.
 |Modifié, il est déplacé de la même façon par update.php (journaux et sessions conservés).
-== Administration du site (/auth, connexion Google)
+== Administration du site (/auth, connexion Google ou identifiant + TOTP)
 GOOGLE_CLIENT_ID|Identifiant du client OAuth créé dans Google Cloud (type « Application Web »).
 GOOGLE_CLIENT_SECRET|Secret du client OAuth (confidentiel).
 ADMIN_GOOGLE_EMAILS|Adresses Google autorisées à se connecter à /auth, séparées par des virgules.
 |Comparaison exacte : ni domaine entier, ni joker.
+ADMIN_LOGIN_USER|Connexion alternative à Google : identifiant. Les trois réglages ADMIN_LOGIN_* / ADMIN_TOTP_SECRET se génèrent avec
+|« php tools/admin-login.php » sur votre poste. Si Google ET cette méthode sont configurés, /auth propose les deux.
+ADMIN_LOGIN_PASSWORD_HASH|Empreinte du mot de passe (password_hash, jamais le mot de passe), entre apostrophes.
+ADMIN_TOTP_SECRET|Secret du code à usage unique (TOTP, 6 chiffres, 30 s), à enregistrer dans une application d'authentification.
 ADMIN_SITE_ENABLED|true ou false. false coupe entièrement /auth (réponse 404). Défaut : true.
 ADMIN_MEASUREMENTS_ENABLED|true ou false. false retire la consultation des mesures de /auth. Défaut : true.
 == Mises à jour depuis /auth

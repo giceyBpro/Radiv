@@ -40,6 +40,8 @@ jobs:
           php tests/test-config-store.php
       - name: Contrôles anti-robots (ALTCHA) côté serveur
         run: node tests/test-captcha.js
+      - name: Connexion alternative de /auth (TOTP)
+        run: node tests/test-admin-login.js
       - name: Cohérence de la mise en forme de runtime.env
         run: node tests/check-runtime-layout.js
       - name: Aucun fichier PHP du backend ne s'exécute seul
