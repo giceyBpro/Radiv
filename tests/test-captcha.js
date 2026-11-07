@@ -1,0 +1,30 @@
+// Anti-robots du formulaire de contact (ALTCHA local) : défi signé, solution, expiration, délai minimal, usage unique, falsification.
+// Usage: node tests/test-captcha.js
+const { execFileSync } = require('child_process'); const crypto = require('crypto'); const fs = require('fs'); const os = require('os'); const path = require('path');
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'captcha-'));
+const cli = (...a) => execFileSync('php', [path.join(__dirname, 'captcha-cli.php'), dir, ...a], { encoding: 'utf8' });
+let pass = 0; let fail = 0;
+const t = (n, c) => { if (c) { pass += 1; console.log(`OK    ${n}`); } else { fail += 1; console.log(`ÉCHEC ${n}`); } };
+const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+const solve = (c) => { for (let n = 0; n <= c.maxnumber; n++) if (sha(c.salt + n) === c.challenge) return n; return -1; };
+const payload = (c, number, over = {}) => Buffer.from(JSON.stringify({ algorithm: c.algorithm, challenge: c.challenge, number, salt: c.salt, signature: c.signature, ...over })).toString('base64');
+const T = 1_800_000_000;
+const c = JSON.parse(cli('challenge', String(T)));
+const n = solve(c);
+t('défi : format ALTCHA (SHA-256, sel daté, signature)', c.algorithm === 'SHA-256' && /^[0-9a-f]{64}$/.test(c.challenge) && /\?expires=\d+&issued=\d+/.test(c.salt) && /^[0-9a-f]{64}$/.test(c.signature) && c.maxnumber > 0);
+t('défi : solvable dans la plage annoncée', n >= 0);
+t('clé de signature créée (droits restreints)', fs.existsSync(path.join(dir, 'var/captcha-secret.key')));
+t('solution trop rapide refusée (moins de 2 s)', cli('verify', payload(c, n), String(T + 1)) === 'non');
+t('solution correcte acceptée', cli('verify', payload(c, n), String(T + 5)) === 'oui');
+t('même solution rejouée : refusée (usage unique)', cli('verify', payload(c, n), String(T + 6)) === 'non');
+const c2 = JSON.parse(cli('challenge', String(T)));
+t('mauvais nombre refusé', cli('verify', payload(c2, (solve(c2) + 1) % 50000), String(T + 5)) === 'non');
+t('signature falsifiée refusée', cli('verify', payload(c2, solve(c2), { signature: 'a'.repeat(64) }), String(T + 5)) === 'non');
+const c3 = JSON.parse(cli('challenge', String(T)));
+t('défi expiré refusé', cli('verify', payload(c3, solve(c3)), String(T + 901)) === 'non');
+const forged = { ...c3, salt: c3.salt.replace(/issued=\d+/, 'issued=1') };
+forged.challenge = sha(forged.salt + 7);
+t('défi forgé par le navigateur refusé (hors signature)', cli('verify', payload(forged, 7), String(T + 5)) === 'non');
+t('charge illisible ou vide refusée', cli('verify', 'pas-du-base64!!', String(T)) === 'non' && cli('verify', '', String(T)) === 'non');
+fs.rmSync(dir, { recursive: true, force: true });
+console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);

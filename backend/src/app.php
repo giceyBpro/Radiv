@@ -28,6 +28,7 @@ require __DIR__ . '/lib/seo.php';
 require __DIR__ . '/lib/maintenance.php';
 require __DIR__ . '/lib/xplore_access.php';
 require __DIR__ . '/lib/sfmn.php';
+require __DIR__ . '/lib/captcha.php';
 require __DIR__ . '/lib/contact.php';
 require __DIR__ . '/lib/session.php';
 require __DIR__ . '/lib/google.php';
@@ -47,6 +48,7 @@ require __DIR__ . '/lib/admin_site.php';
 
 use Radiv\AdminSite;
 use RivEngine as Calculation;
+use Radiv\Captcha;
 use Radiv\Config;
 use Radiv\Contact;
 use Radiv\Frontend;
@@ -152,6 +154,23 @@ try {
         exit;
     }
 
+    // Défi anti-robots du formulaire de contact (preuve de travail locale : voir lib/captcha.php).
+    if ($method === 'GET' && $path === '/api/captcha') {
+        if (!Store\rate_limit_hit('captcha', Http\client_ip(), 30)) {
+            Http\send_json(429, ['ok' => false, 'error' => 'Trop de demandes. Réessayez dans une minute.']);
+            exit;
+        }
+        header('Cache-Control: no-store');
+        $challenge = Captcha\challenge();
+        if ($challenge === null) {
+            error_log('[CAPTCHA] clé de signature indisponible (dossier de données non accessible en écriture ?).');
+            Http\send_json(503, ['ok' => false, 'error' => 'Vérification anti-robots indisponible.']);
+            exit;
+        }
+        Http\send_json(200, $challenge);
+        exit;
+    }
+
     if ($method === 'POST' && $path === '/api/contact') {
         $body = Http\read_body();
         if ($body === null) {
@@ -169,7 +188,8 @@ try {
         }
         $email = Contact\clean_field($payload['email'] ?? null);
         $message = Contact\clean_field($payload['message'] ?? null);
-        $recaptchaToken = Contact\clean_field($payload['recaptcha_token'] ?? null);
+        $captcha = Contact\clean_field($payload['captcha'] ?? null);
+        $honeypot = Contact\clean_field($payload['website'] ?? null);   // champ piège, invisible : un robot le remplit
         $ip = Http\client_ip();
         if ($email === '' || $message === '') {
             Http\send_json(400, ['ok' => false, 'error' => 'email et message sont obligatoires.']);
@@ -183,8 +203,8 @@ try {
             Http\send_json(429, ['ok' => false, 'error' => 'Trop de demandes. Réessayez dans une minute.']);
             exit;
         }
-        if (!Contact\verify_recaptcha($recaptchaToken, $ip)) {
-            Http\send_json(400, ['ok' => false, 'error' => 'Échec vérification reCAPTCHA.']);
+        if ($honeypot !== '' || !Captcha\verify($captcha)) {
+            Http\send_json(400, ['ok' => false, 'error' => 'Échec de la vérification anti-robots : relancez-la et renvoyez le message.']);
             exit;
         }
         $sent = Contact\send_contact_email($email, $message, $ip, Measurements\now_iso());

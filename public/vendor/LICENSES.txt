@@ -337,3 +337,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+
+===== ALTCHA (altcha 2.3.0, widget d'anti-robots) — MIT =====
+Fichiers : vendor/altcha/ (altcha.js, altcha.css, worker.js, fr-fr.js) ; texte complet de la licence : vendor/altcha/LICENSE.txt
+Éditeur : BAU Software s.r.o. (Union européenne). Aucun appel à un service externe : le défi est émis et vérifié par ce site.

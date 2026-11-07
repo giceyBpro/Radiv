@@ -42,10 +42,10 @@ $REQUIRED_FILES = array(
     'backend/src/app.php', 'core/src/bootstrap.php', 'core/src/calculate.php', 'core/data/isotopes.json', 'backend/src/lib/config.php',
     'backend/src/lib/updater.php', 'backend/src/lib/admin_site.php', 'backend/src/lib/google.php', 'backend/src/lib/session.php',
 );
-$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'recaptcha_site', 'recaptcha_secret', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir', 'disk_mb');
+$TEXT_FIELDS = array('repo', 'ref', 'site_url', 'google_id', 'google_secret', 'admin_emails', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest', 'rounding', 'logging', 'retention', 'logs_mb', 'sfmn_url', 'backend_dir', 'disk_mb');
 $BOOL_FIELDS = array('update_enabled', 'smtp_secure');
 // Variables du .env transmises telles quelles à config/runtime.env (réglages sans champ de formulaire).
-$PASSTHROUGH_VARS = array('CORE_GITHUB_REPO', 'CORE_GITHUB_TOKEN', 'API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'RECAPTCHA_MIN_SCORE', 'DISK_MIN_FREE_MB', 'API_KEY_REQUIRED', 'PROVIDER_RATE_LIMIT');
+$PASSTHROUGH_VARS = array('CORE_GITHUB_REPO', 'CORE_GITHUB_TOKEN', 'API_CORS_ORIGIN', 'API_PUBLIC_URL', 'TRUSTED_PROXIES', 'ADMIN_MEASUREMENTS_ENABLED', 'ADMIN_SITE_ENABLED', 'CALCULATE_RATE_LIMIT', 'RATE_LIMIT_BACKEND', 'SFMN_DEBUG', 'SMTP_TIMEOUT_MS', 'SITE_NAME', 'COPYRIGHT_OWNER', 'DATA_DIR', 'DISK_MIN_FREE_MB', 'API_KEY_REQUIRED', 'PROVIDER_RATE_LIMIT');
 // Description de config/runtime.env (dans le backend) : sections, variables dans l'ordre, commentaires (lignes « | » = suite du
 // commentaire). Seul install.php la produit (tests/check-runtime-layout.js vérifie qu'elle est lisible par le backend).
 $RUNTIME_LAYOUT = <<<'LAYOUT'
@@ -82,9 +82,6 @@ CORE_GITHUB_REPO|Dépôt GitHub du moteur de calcul (propriétaire/nom), propos�
 CORE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel) pour télécharger le moteur de calcul depuis un dépôt privé distinct
 |(zone de test /auth/moteur). Non défini = UPDATE_GITHUB_TOKEN, puis la saisie dans la page (non conservée).
 == Formulaire de contact
-RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
-RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
-RECAPTCHA_MIN_SCORE|Score minimal reCAPTCHA v3 accepté, de 0 (robot) à 1 (humain). Défaut : 0.5.
 SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
 SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
 SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
@@ -449,7 +446,7 @@ function diagnostics($docroot)
         $rows[] = array($label, $ok, $detail, $critical);
     };
     $add('PHP 8.0 ou plus', version_compare(PHP_VERSION, '8.0.0', '>='), 'PHP ' . PHP_VERSION);
-    foreach (array('curl' => 'cURL (téléchargements, e-mail, reCAPTCHA)', 'mbstring' => 'mbstring', 'openssl' => 'OpenSSL (SMTP, HTTPS)', 'json' => 'JSON') as $ext => $label) {
+    foreach (array('curl' => 'cURL (téléchargements, e-mail)', 'mbstring' => 'mbstring', 'openssl' => 'OpenSSL (SMTP, HTTPS)', 'json' => 'JSON') as $ext => $label) {
         $add('Extension ' . $label, extension_loaded($ext), extension_loaded($ext) ? 'présente' : 'absente');
     }
     $add('Extension zip (installation et mises à jour)', class_exists('ZipArchive'), class_exists('ZipArchive') ? 'présente' : 'absente : installation par FTP nécessaire');
@@ -501,8 +498,6 @@ function render_form($key, $values, $errors)
         . '<label>Adresses autorisées (séparées par des virgules)</label><input type="text" name="admin_emails" value="' . $v('admin_emails') . '">'
         . '<label class="inline"><input type="checkbox" name="update_enabled" value="1"' . (isset($values['update_enabled']) || !$values ? ' checked' : '') . '> Autoriser les mises à jour depuis la page d\'administration</label>';
     $out .= '<h2>Formulaire de contact</h2><p class="small">Laissez vide pour ne pas configurer le formulaire de contact.</p>'
-        . '<label>Clé du site reCAPTCHA</label><input type="text" name="recaptcha_site" value="' . $v('recaptcha_site') . '">'
-        . '<label>Clé secrète reCAPTCHA</label><input type="password" name="recaptcha_secret">'
         . '<label>Serveur SMTP</label><input type="text" name="smtp_host" value="' . $v('smtp_host') . '">'
         . '<label>Port SMTP</label><input type="text" name="smtp_port" value="' . $v('smtp_port', '587') . '">'
         . '<label class="inline"><input type="checkbox" name="smtp_secure" value="1"' . (isset($values['smtp_secure']) ? ' checked' : '') . '> Connexion TLS directe (port 465) au lieu de STARTTLS (587)</label>'
@@ -540,7 +535,6 @@ function error_groups($errors)
         elseif (strpos($m, 'Version') === 0 || strpos($m, 'Jeton') === 0 || strpos($m, 'Un jeton') === 0 || strpos($m, 'Dossier du backend') === 0) $g['always'] = true; // toujours demandés
         elseif (strpos($m, 'Adresse du site') === 0) $g['site'] = true;
         elseif (strpos($m, 'Connexion Google') === 0 || strpos($m, 'Identifiant client Google') === 0 || strpos($m, 'Secret client Google') === 0 || strpos($m, 'Adresse administrateur') === 0) $g['google'] = true;
-        elseif (strpos($m, 'reCAPTCHA') === 0) $g['recaptcha'] = true;
         elseif (strpos($m, 'SMTP') === 0 || strpos($m, 'Port SMTP') === 0 || strpos($m, 'Adresse destinataire') === 0) $g['smtp'] = true;
         elseif (strpos($m, 'Espace disque') === 0 || strpos($m, 'Arrondi') === 0 || strpos($m, 'Niveau de journalisation') === 0 || strpos($m, 'Conservation') === 0 || strpos($m, 'Taille de journal') === 0) $g['options'] = true;
         elseif (strpos($m, 'Adresse SFMN') === 0) $g['sfmn'] = true;
@@ -561,10 +555,6 @@ function render_missing_fields($groups, $d)
             . '<label>Identifiant client Google</label><input type="text" name="google_id" value="' . $v('google_id') . '">'
             . '<label>Secret client Google</label><input type="password" name="google_secret">'
             . '<label>Adresses autorisées (séparées par des virgules)</label><input type="text" name="admin_emails" value="' . $v('admin_emails') . '">';
-    }
-    if (isset($groups['recaptcha'])) {
-        $out .= '<h2>reCAPTCHA</h2><label>Clé du site reCAPTCHA</label><input type="text" name="recaptcha_site" value="' . $v('recaptcha_site') . '">'
-            . '<label>Clé secrète reCAPTCHA</label><input type="password" name="recaptcha_secret">';
     }
     if (isset($groups['smtp'])) {
         $out .= '<h2>Envoi des messages du formulaire de contact</h2>'
@@ -597,7 +587,6 @@ function render_env_summary($key, $d, $extras, $errors, $needToken, $inside)
         array('Adresses administrateur', $d['admin_emails'] !== '' ? $d['admin_emails'] : '—'),
         array('Mises à jour depuis /auth', $d['update_enabled'] ? 'autorisées' : 'désactivées'),
         array('Contact (SMTP)', $d['smtp_host'] !== '' ? $d['smtp_host'] . ':' . $d['smtp_port'] . ($d['smtp_secure'] ? ' (TLS direct)' : ' (STARTTLS)') . ', utilisateur ' . $d['smtp_user'] . ', mot de passe ' . mask($d['smtp_pass']) . ', vers ' . $d['contact_dest'] : '—'),
-        array('reCAPTCHA', $d['recaptcha_site'] !== '' ? 'clé du site ' . $d['recaptcha_site'] . ', clé secrète ' . mask($d['recaptcha_secret']) : '—'),
         array('Arrondi / journalisation', $d['rounding'] . ' / ' . $d['logging'] . ', conservation ' . ($d['retention'] === '' ? '12 mois (défaut)' : ($d['retention'] === '0' ? 'illimitée' : $d['retention'] . ' mois')) . ', journal ' . $d['logs_mb'] . ' Mo'),
         array('Espace disque', $d['disk_mb'] !== '' ? $d['disk_mb'] . ' Mo (purge des journaux anciens à 85 %)' : 'non défini : mesure du disque du serveur'),
         array('Autres variables transmises', $extras ? implode(', ', array_keys($extras)) : '—'),
@@ -799,7 +788,7 @@ function env_to_source($env)
         'repo' => $repo, 'ref' => $get('GIT_BRANCH', 'main'), 'site_url' => $get('SITE_PUBLIC_URL'),
         'google_id' => $get('GOOGLE_CLIENT_ID'), 'google_secret' => $get('GOOGLE_CLIENT_SECRET'), 'admin_emails' => $get('ADMIN_GOOGLE_EMAILS'),
         'update_enabled' => strtolower($get('ADMIN_UPDATE_ENABLED', 'false')) === 'true',
-        'recaptcha_site' => $get('RECAPTCHA_SITE_KEY'), 'recaptcha_secret' => $get('RECAPTCHA_SECRET_KEY'),
+       
         'smtp_host' => $get('SMTP_HOST'), 'smtp_port' => $get('SMTP_PORT', '587'), 'smtp_secure' => strtolower($get('SMTP_SECURE', 'false')) === 'true',
         'smtp_user' => $get('SMTP_USER'), 'smtp_pass' => $get('SMTP_PASS'), 'smtp_from' => $get('SMTP_FROM'), 'contact_dest' => $get('CONTACT_DEST'),
         'rounding' => $get('RESTRICTION_ROUNDING_MODE', 'round'), 'logging' => $get('MEASUREMENT_LOGGING_LEVEL', 'full'),
@@ -867,7 +856,6 @@ function validate_inputs($src)
             if (!filter_var($mail, FILTER_VALIDATE_EMAIL)) $e[] = 'Adresse administrateur invalide : ' . $mail;
         }
     }
-    if (($d['recaptcha_site'] === '') !== ($d['recaptcha_secret'] === '')) $e[] = 'reCAPTCHA : renseignez les deux clés (ou aucune).';
     if ($d['smtp_host'] !== '') {
         if (!preg_match('/^\d{1,5}$/', $d['smtp_port'])) $e[] = 'Port SMTP invalide.';
         foreach (array('smtp_user' => 'identifiant SMTP', 'smtp_pass' => 'mot de passe SMTP', 'smtp_from' => 'expéditeur', 'contact_dest' => 'destinataire') as $f => $label) {
@@ -1038,7 +1026,7 @@ if (isset($_POST['use_env']) && $_POST['use_env'] === '1') {
     // (groupes en erreur). Tout le reste vient du fichier et ne peut pas être remplacé depuis le navigateur.
     list($d0, $errors0) = validate_inputs($src);
     $groupFields = array('repo' => array('repo'), 'site' => array('site_url'), 'google' => array('google_id', 'google_secret', 'admin_emails'),
-        'recaptcha' => array('recaptcha_site', 'recaptcha_secret'), 'smtp' => array('smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest'),
+        'smtp' => array('smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'contact_dest'),
         'options' => array('rounding', 'logging', 'retention', 'logs_mb', 'disk_mb'), 'sfmn' => array('sfmn_url'));
     $overridable = array('ref', 'backend_dir');
     foreach (array_keys(error_groups($errors0)) as $g) {
@@ -1194,7 +1182,6 @@ try {
         'GOOGLE_CLIENT_ID' => $d['google_id'], 'GOOGLE_CLIENT_SECRET' => $d['google_secret'], 'ADMIN_GOOGLE_EMAILS' => $d['admin_emails'],
         'ADMIN_UPDATE_ENABLED' => $d['update_enabled'] ? 'true' : 'false',
         'UPDATE_GITHUB_REPO' => $d['repo'],
-        'RECAPTCHA_SITE_KEY' => $d['recaptcha_site'], 'RECAPTCHA_SECRET_KEY' => $d['recaptcha_secret'],
         'SMTP_HOST' => $d['smtp_host'], 'SMTP_PORT' => $d['smtp_host'] !== '' ? $d['smtp_port'] : '', 'SMTP_SECURE' => $d['smtp_host'] !== '' ? ($d['smtp_secure'] ? 'true' : 'false') : '',
         'SMTP_USER' => $d['smtp_user'], 'SMTP_PASS' => $d['smtp_pass'], 'SMTP_FROM' => $d['smtp_from'], 'CONTACT_DEST' => $d['contact_dest'],
         'SFMN_CALCULATOR_URL' => $d['sfmn_url'],

@@ -1,8 +1,6 @@
 <?php
-// Formulaire de contact: vérification reCAPTCHA et envoi par SMTP authentifié. Port de
-// Envoi du formulaire de contact: variables (SMTP_*, CONTACT_DEST,
-// RECAPTCHA_SECRET_KEY), mêmes garde-fous (STARTTLS obligatoire, certificat vérifié, mode
-// fermé sans clé reCAPTCHA), sans dépendance externe.
+// Formulaire de contact : envoi par SMTP authentifié (variables SMTP_*, CONTACT_DEST), avec les garde-fous
+// STARTTLS obligatoire et certificat vérifié, sans dépendance externe. La vérification anti-robots est dans captcha.php.
 declare(strict_types=1);
 
 namespace Radiv\Contact;
@@ -10,7 +8,6 @@ namespace Radiv\Contact;
 if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécutable hors de l'API
 
 use Radiv\Config;
-use Radiv\Http;
 use Radiv\Measurements;
 
 // String(value || '').trim() côté JS: les valeurs "fausses" donnent '' ; trim couvre aussi
@@ -31,48 +28,6 @@ function valid_email_shape(string $email): bool
 {
     // \z et non $: en PCRE, $ accepterait aussi un saut de ligne final.
     return preg_match('/^[^\s@\r\n]{1,64}@[^\s@\r\n]{1,255}\z/u', $email) === 1;
-}
-
-// Mode fermé: une clé absente ou mal orthographiée doit bloquer l'envoi, sinon le formulaire
-// de contact devient un relais d'envoi ouvert.
-function verify_recaptcha(string $token, string $ip): bool
-{
-    $secret = Config\env('RECAPTCHA_SECRET_KEY');
-    if ($secret === '') {
-        error_log('[CONTACT] RECAPTCHA_SECRET_KEY absente: envoi refusé.');
-        return false;
-    }
-    $params = ['secret' => $secret, 'response' => $token];
-    if ($ip !== '') $params['remoteip'] = $ip;
-    $response = Http\fetch(Config\env('RECAPTCHA_VERIFY_URL', 'https://www.google.com/recaptcha/api/siteverify'), [
-        'method' => 'POST',
-        'headers' => ['Content-Type: application/x-www-form-urlencoded'],
-        'body' => http_build_query($params, '', '&', PHP_QUERY_RFC1738),
-        'timeout_ms' => 10000,
-    ]);
-    if (!$response || $response['status'] < 200 || $response['status'] > 299) return false;
-    $data = json_decode($response['body'], true);
-    if (!is_array($data) || ($data['success'] ?? null) !== true) return false;
-    // reCAPTCHA v3 renseigne action, score et hostname : un jeton obtenu pour une autre action, un autre site ou
-    // jugé « robot » est refusé. Les champs absents (clé v2) ne sont pas exigés.
-    if (isset($data['action']) && $data['action'] !== 'contact_form') return false;
-    if (isset($data['hostname'])) {
-        $siteHost = parse_url(Config\site_public_url(), PHP_URL_HOST);
-        if (is_string($siteHost) && $siteHost !== '' && !hostname_matches((string) $data['hostname'], $siteHost)) return false;
-    }
-    if (isset($data['score'])) {
-        $raw = trim(Config\env('RECAPTCHA_MIN_SCORE', '0.5'));
-        $min = is_numeric($raw) ? max(0.0, min(1.0, (float) $raw)) : 0.5;
-        if (!is_numeric($data['score']) || (float) $data['score'] < $min) return false;
-    }
-    return true;
-}
-
-// Le jeton vaut pour le site déclaré, avec ou sans « www. ».
-function hostname_matches(string $given, string $site): bool
-{
-    $strip = static fn (string $h): string => preg_replace('/^www\./i', '', strtolower($h)) ?? $h;
-    return $strip($given) === $strip($site);
 }
 
 // Lit une réponse SMTP complète (lignes "250-..." puis "250 ..."). Lève une exception sur

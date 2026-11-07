@@ -43,7 +43,6 @@ function public_config(bool $announceMaintenance = true): array
     $isotopeDisplay = ['isotope_labels' => $labels, 'isotope_order' => $order]
         + (function_exists('RivEngine\\input_fields') ? ['field_labels' => FieldLabels\labels(Calculation\input_fields())] : []); // noms des champs de saisie (voir field_labels.php)
     return [
-        'recaptcha_site_key' => Config\env('RECAPTCHA_SITE_KEY'),
         // Reflète la config de journalisation actuelle: sert à générer une page RGPD qui
         // reste correcte sans édition manuelle à chaque changement de .env.
         'measurement_logging_level' => Config\logging_level(),

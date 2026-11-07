@@ -36,13 +36,13 @@ try {
   const phpOut = execFileSync('php', [phpFile, jsonFile]).toString();
 
   t('en-tête: le générateur est nommé', /install\.php/.test(phpOut.split('\n')[1]));
-  t('variables définies écrites, les autres en commentaire « #NOM= »', phpOut.includes('SITE_PUBLIC_URL="https://www.exemple.fr"') && phpOut.includes(`SMTP_PASS='p@ss"w0rd'`) && phpOut.includes('TRUSTED_PROXIES=""') && /^#RECAPTCHA_SECRET_KEY=$/m.test(phpOut) && !/^RECAPTCHA_SECRET_KEY=/m.test(phpOut));
+  t('variables définies écrites, les autres en commentaire « #NOM= »', phpOut.includes('SITE_PUBLIC_URL="https://www.exemple.fr"') && phpOut.includes(`SMTP_PASS='p@ss"w0rd'`) && phpOut.includes('TRUSTED_PROXIES=""') && /^#SMTP_USER=$/m.test(phpOut) && !/^SMTP_USER=/m.test(phpOut));
   t('sections lisibles (titres encadrés, lignes blanches)', (phpOut.match(/^# -{20,}$/gm) || []).length === 2 * (phpLayout.match(/^== /gm) || []).length && /\n\n# URL publique du site/.test(phpOut));
 
   // relecture par le chargeur de backend/src/lib/config.php
   const loader = path.join(tmp, 'load.php'); const out = path.join(tmp, 'runtime.env'); fs.writeFileSync(out, phpOut);
-  fs.writeFileSync(loader, `<?php define('RADIV_ENTRY', true); require '${root}/backend/src/lib/config.php'; Radiv\\Config\\load_dotenv($argv[1]); $r = []; foreach (array_keys(json_decode(file_get_contents($argv[2]), true)) as $n) { $r[$n] = getenv($n); } $r['_RECAPTCHA_SECRET_KEY'] = getenv('RECAPTCHA_SECRET_KEY'); echo json_encode($r);`);
+  fs.writeFileSync(loader, `<?php define('RADIV_ENTRY', true); require '${root}/backend/src/lib/config.php'; Radiv\\Config\\load_dotenv($argv[1]); $r = []; foreach (array_keys(json_decode(file_get_contents($argv[2]), true)) as $n) { $r[$n] = getenv($n); } $r['_SMTP_USER'] = getenv('SMTP_USER'); echo json_encode($r);`);
   const read = JSON.parse(execFileSync('php', [loader, out, jsonFile]).toString());
-  t('relu à l\'identique par le site (guillemets, vide défini, commentaires ignorés)', Object.keys(values).every((k) => read[k] === values[k]) && read._RECAPTCHA_SECRET_KEY === false, JSON.stringify(read));
+  t('relu à l\'identique par le site (guillemets, vide défini, commentaires ignorés)', Object.keys(values).every((k) => read[k] === values[k]) && read._SMTP_USER === false, JSON.stringify(read));
 } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);

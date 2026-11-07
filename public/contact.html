@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Contact - Dosimétrie RIV</title>
+  <link rel="stylesheet" href="vendor/altcha/altcha.css">
   <style>
     :root { --border:#1f1f1f; --paper:#fff; --bg:#eef1f3; --link:#1637b8; --ok:#1f7a3a; --err:#9b2c2c; }
     body { margin:0; padding:24px; background:var(--bg); font-family:Arial, Helvetica, sans-serif; }
@@ -19,8 +20,8 @@
     .status { margin-top:10px; font-weight:700; }
     .status.ok { color:var(--ok); }
     .status.err { color:var(--err); }
-    .consent { display:flex; gap:10px; align-items:flex-start; font-weight:400; margin-top:16px; }
-    .consent input { width:auto; margin-top:4px; }
+    .trap { position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden; }   /* champ piège : invisible pour les humains, rempli par les robots */
+    altcha-widget { display:block; margin-top:16px; }
     .privacy { font-size:.9rem; color:#444; margin-top:12px; }
     button:disabled { opacity:.55; cursor:not-allowed; }
   </style>
@@ -36,10 +37,11 @@
       <label for="message">Message</label>
       <textarea id="message" name="message" required></textarea>
 
-      <label class="consent" id="consentRow" for="recaptchaConsent" hidden>
-        <input id="recaptchaConsent" type="checkbox">
-        <span>J'accepte le chargement de Google reCAPTCHA (protection anti-spam) pour envoyer ce message. Mon adresse IP et des données techniques de mon navigateur seront transmises à Google, qui peut déposer des cookies. Sans cet accord, le message ne peut pas être envoyé.</span>
-      </label>
+      <!-- Champ piège : laissé vide par les humains (invisible) ; un robot qui le remplit est refusé. -->
+      <div class="trap" aria-hidden="true"><label for="website">Ne pas remplir</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+
+      <!-- Vérification anti-robots locale (ALTCHA, logiciel libre) : un court calcul dans le navigateur, sans service tiers ni cookie. -->
+      <altcha-widget id="captcha" challengeurl="api/captcha" workerurl="/vendor/altcha/worker.js" language="fr-fr" auto="onfocus" hidefooter hidelogo></altcha-widget>
 
       <button type="submit" id="sendBtn">Envoyer</button>
       <div id="status" class="status"></div>
@@ -48,11 +50,12 @@
   </main>
 
   <script src="config.js"></script>
+  <script type="module" src="vendor/altcha/fr-fr.js"></script>
+  <script type="module" src="vendor/altcha/altcha.js"></script>
   <script>
     const API_BASE = (window.RADIOPROTECTION_API_URL || 'api').replace(/\/+$/, '');
-    let recaptchaSiteKey = '';
-    let recaptchaReady = false;
-    let recaptchaInitPromise = null;
+    // L'adresse du défi suit l'adresse de l'API (page servie dans un sous-dossier, API sur un autre domaine...).
+    document.getElementById('captcha').setAttribute('challengeurl', `${API_BASE}/captcha`);
 
     function setStatus(message, ok) {
       const el = document.getElementById('status');
@@ -60,50 +63,21 @@
       el.className = `status ${ok ? 'ok' : 'err'}`;
     }
 
-    async function loadPublicConfig() {
-      const res = await fetch(`${API_BASE}/public-config`);
-      if (!res.ok) throw new Error('Impossible de charger la configuration publique');
-      const data = await res.json();
-      recaptchaSiteKey = data.recaptcha_site_key || '';
-    }
-
-    function loadRecaptchaV3() {
+    // Solution du défi anti-robots : déjà calculée si l'utilisateur a rempli le formulaire tranquillement, sinon calculée maintenant.
+    function captchaPayload() {
+      const widget = document.getElementById('captcha');
       return new Promise((resolve, reject) => {
-        window.onRecaptchaLoaded = () => {
-          if (!window.grecaptcha?.ready || !window.grecaptcha?.execute) {
-            reject(new Error('reCAPTCHA indisponible: type de clé/site key invalide.'));
-            return;
-          }
-          window.grecaptcha.ready(() => {
-            recaptchaReady = true;
-            resolve();
-          });
+        let timer;
+        const done = (fn, value) => { clearTimeout(timer); widget.removeEventListener('statechange', onState); fn(value); };
+        const onState = (ev) => {
+          if (ev.detail.state === 'verified' && ev.detail.payload) done(resolve, ev.detail.payload);
+          if (ev.detail.state === 'error') done(reject, new Error('Vérification anti-robots indisponible, merci de réessayer.'));
         };
-        const script = document.createElement('script');
-        script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=${encodeURIComponent(recaptchaSiteKey)}`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = () => reject(new Error('Impossible de charger le script reCAPTCHA.'));
-        document.head.appendChild(script);
+        widget.addEventListener('statechange', onState);
+        timer = setTimeout(() => done(reject, new Error('Vérification anti-robots trop longue, merci de réessayer.')), 60000);
+        if (widget.getState && widget.getState() === 'verified') { onState({ detail: { state: 'verified', payload: widget.getPayload ? widget.getPayload() : (document.querySelector('input[name="altcha"]') || {}).value } }); return; }
+        widget.verify();
       });
-    }
-
-    async function getRecaptchaToken() {
-      if (!recaptchaReady) throw new Error('reCAPTCHA non prêt.');
-      return window.grecaptcha.execute(recaptchaSiteKey, { action: 'contact_form' });
-    }
-
-    // Le script de Google n'est chargé qu'après l'accord de l'utilisateur (case à cocher), jamais à l'ouverture de la page.
-    let recaptchaConsent = false;
-    async function ensureRecaptchaReady() {
-      if (!recaptchaSiteKey) return;
-      if (recaptchaReady) return;
-      if (!recaptchaConsent) throw new Error('Cochez la case d\'accord reCAPTCHA pour envoyer le message.');
-      if (!recaptchaInitPromise) {
-        recaptchaInitPromise = loadRecaptchaV3();
-        recaptchaInitPromise.catch(() => { recaptchaInitPromise = null; });
-      }
-      await recaptchaInitPromise;
     }
 
     async function sendContact(payload) {
@@ -117,62 +91,33 @@
 
     document.getElementById('contactForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const send = document.getElementById('sendBtn');
+      send.disabled = true;
       try {
-        await ensureRecaptchaReady();
-      } catch (err) {
-        setStatus(err.message || 'reCAPTCHA non initialisé.', false);
-        return;
-      }
+        setStatus('Vérification anti-robots en cours…', true);
+        let captcha;
+        try { captcha = await captchaPayload(); } catch (err) { setStatus(err.message, false); return; }
 
-      let recaptchaToken = '';
-      if (recaptchaSiteKey) {
-        try {
-          recaptchaToken = await getRecaptchaToken();
-        } catch (err) {
-          setStatus('Validation anti-spam indisponible, merci de réessayer.', false);
+        const response = await sendContact({
+          name: 'Formulaire web',
+          email: document.getElementById('email').value.trim(),
+          subject: 'Contact formulaire web',
+          message: document.getElementById('message').value.trim(),
+          website: document.getElementById('website').value,
+          captcha
+        });
+        // Une solution ne sert qu'une fois : on relance le widget pour le message suivant (ou une nouvelle tentative).
+        document.getElementById('captcha').reset();
+        if (!response.ok || !response.data.ok) {
+          setStatus(response.data.error || 'Échec envoi du message.', false);
           return;
         }
+        setStatus('Message envoyé avec succès.', true);
+        document.getElementById('contactForm').reset();
+      } finally {
+        send.disabled = false;
       }
-
-      const payload = {
-        name: 'Formulaire web',
-        email: document.getElementById('email').value.trim(),
-        subject: 'Contact formulaire web',
-        message: document.getElementById('message').value.trim(),
-        recaptcha_token: recaptchaToken
-      };
-
-      const response = await sendContact(payload);
-      if (!response.ok || !response.data.ok) {
-        setStatus(response.data.error || 'Échec envoi du message.', false);
-        return;
-      }
-
-      setStatus('Message envoyé avec succès.', true);
-      document.getElementById('contactForm').reset();
-      document.getElementById('recaptchaConsent').checked = recaptchaConsent; // l'accord donné reste valable pour cette visite
     });
-
-    (async () => {
-      try {
-        await loadPublicConfig();
-      } catch (err) {
-        // configuration indisponible: l'envoi échouera avec un message d'erreur de l'API
-      }
-      if (!recaptchaSiteKey) return;
-      const row = document.getElementById('consentRow');
-      const box = document.getElementById('recaptchaConsent');
-      const send = document.getElementById('sendBtn');
-      row.hidden = false;
-      send.disabled = true;
-      box.addEventListener('change', async () => {
-        recaptchaConsent = box.checked;
-        send.disabled = !recaptchaConsent;
-        if (recaptchaConsent) {
-          try { await ensureRecaptchaReady(); } catch (err) { setStatus(err.message || 'reCAPTCHA indisponible.', false); }
-        }
-      });
-    })();
   </script>
 </body>
 </html>

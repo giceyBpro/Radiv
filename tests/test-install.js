@@ -21,7 +21,7 @@ const listing = () => { const out = []; const walk = (d) => { for (const n of fs
 const snapshot = () => crypto.createHash('sha256').update(listing().map((f) => f + fs.readFileSync(path.join(WWW, f))).join('\0')).digest('hex');
 const form = (over = {}) => ({ step: 'install', key: KEY, repo: 'giceyBpro/Radiv', ref: 'v1.1', token: TOKEN, site_url: BASE,
   google_id: 'cid.apps.googleusercontent.com', google_secret: GSECRET, admin_emails: 'admin@example.org, second@example.org', update_enabled: '1',
-  recaptcha_site: 'sitekey', recaptcha_secret: 'recaptchasecret', smtp_host: 'smtp.example.org', smtp_port: '587', smtp_user: 'contact@example.org', smtp_pass: SECRET_SMTP,
+  smtp_host: 'smtp.example.org', smtp_port: '587', smtp_user: 'contact@example.org', smtp_pass: SECRET_SMTP,
   smtp_from: 'Site <no-reply@example.org>', contact_dest: 'dest@example.org', rounding: 'round', logging: 'full', retention: '3', logs_mb: '5', disk_mb: '100', ...over });
 const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
 
@@ -47,7 +47,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   console.log('\n— Saisies invalides (rien ne doit être écrit)');
   const cases = [['dépôt invalide', { repo: 'pas un depot' }], ['version invalide', { ref: '../x' }], ['jeton de forme invalide', { token: 'court' }], ['adresse sans https', { site_url: 'http://exemple.fr' }],
     ['adresse avec chemin', { site_url: 'https://exemple.fr/chemin' }], ['e-mail administrateur invalide', { admin_emails: 'pas-un-mail' }], ['Google incomplet', { google_secret: '' }],
-    ['reCAPTCHA incomplet', { recaptcha_secret: '' }], ['SMTP incomplet', { smtp_user: '' }], ['port SMTP invalide', { smtp_port: 'abc' }], ['destinataire invalide', { contact_dest: 'x' }],
+    ['SMTP incomplet', { smtp_user: '' }], ['port SMTP invalide', { smtp_port: 'abc' }], ['destinataire invalide', { contact_dest: 'x' }],
     ['arrondi invalide', { rounding: 'ceil' }], ['journalisation invalide', { logging: 'tout' }], ['conservation invalide', { retention: '-1' }], ['espace disque invalide', { disk_mb: 'abc' }], ['saut de ligne dans une valeur', { smtp_from: 'a\nINJECT=1' }]];
   for (const [label, over] of cases) { r = await post(form(over)); t(`${label} → refusé, formulaire réaffiché`, r.status === 400 && /name="step" value="install"/.test(r.text) && listing().join() === 'install.php', `${r.status} ${msg(r.text)}`); }
   t('les secrets saisis ne sont pas renvoyés dans le formulaire réaffiché', !(await post(form({ repo: 'x' }))).text.includes(GSECRET) && !(await post(form({ repo: 'x' }))).text.includes(TOKEN));
@@ -144,7 +144,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   const baseEnv = (extra = '') => ['# déploiement', 'GIT_REPO=https://github.com/giceyBpro/Radiv.git', 'GIT_BRANCH=v1.1', `SITE_PUBLIC_URL="${BASE}"   # commentaire en fin de ligne`,
     'GOOGLE_CLIENT_ID=cid.apps.googleusercontent.com', `GOOGLE_CLIENT_SECRET=${GSECRET}`, 'ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"', 'ADMIN_UPDATE_ENABLED=true',
     'SMTP_HOST=smtp.example.org', 'SMTP_PORT=587', 'SMTP_USER=contact@example.org', `SMTP_PASS='${SECRET_SMTP}'`, 'SMTP_FROM=Site <no-reply@example.org>', 'CONTACT_DEST=dest@example.org',
-    'RECAPTCHA_SITE_KEY=sitekey', 'RECAPTCHA_SECRET_KEY=recaptchasecret', 'SFMN_CALCULATOR_URL=https://sfmn.example.org/calc',
+    'SFMN_CALCULATOR_URL=https://sfmn.example.org/calc',
     'CORE_GITHUB_REPO=acme/riv-core-prive', 'CORE_GITHUB_TOKEN=ghp_privatecoretokenprivate12345',
     'RESTRICTION_ROUNDING_MODE=floor', 'MEASUREMENT_LOGGING_LEVEL=user', 'LOGS_RETENTION_MONTHS=6', 'LOGS_MAX_BYTES=3145728', 'CALCULATE_RATE_LIMIT=33', 'TRUSTED_PROXIES=', 'RATE_LIMIT_BACKEND=file', extra].join('\n') + '\n';
   const writeEnv = (text, file = ENVF) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); require('child_process').execSync(`chown -R www-data:www-data ${path.dirname(file)}; chmod 640 ${file}`); };
@@ -154,7 +154,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   deployInstaller(); writeEnv(baseEnv());
   r = await post({ step: 'check', key: KEY }); html = r.text;
   t('.env trouvé: configuration affichée', /Configuration lue dans le fichier de configuration/.test(html) && html.includes('giceyBpro/Radiv') && html.includes('v1.1') && html.includes(BASE));
-  t('secrets masqués, jamais renvoyés au navigateur', ![GSECRET, SECRET_SMTP, 'p@ss', 'recaptchasecret'].some((x) => html.includes(x)) && /●●●/.test(html));
+  t('secrets masqués, jamais renvoyés au navigateur', ![GSECRET, SECRET_SMTP, 'p@ss'].some((x) => html.includes(x)) && /●●●/.test(html));
   t('seuls la version et le jeton sont demandés', /name="use_env" value="1"/.test(html) && /name="ref"/.test(html) && /name="token"/.test(html) && !/name="smtp_host"/.test(html) && !/name="google_secret"/.test(html));
   const beforeEnv = snapshot();
   r = await post(envForm({ ref: 'v1.1' })); t('sans jeton → refusé, rien écrit', r.status === 400 && /jeton/i.test(r.text) && snapshot() === beforeEnv, msg(r.text));
@@ -205,7 +205,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   console.log('\n— Informations manquantes du fichier de configuration: demandées à l\'installation');
   deployInstaller(); writeEnv(baseEnv().replace('ADMIN_GOOGLE_EMAILS="admin@example.org, second@example.org"\n', '').replace(/^SMTP_PASS.*$/m, ''));
   r = await post({ step: 'check', key: KEY });
-  t('adresses admin et mot de passe SMTP manquants → champs demandés (secrets non préremplis)', /Complétez les informations/.test(r.text) && /name="admin_emails"/.test(r.text) && /name="smtp_pass"/.test(r.text) && !r.text.includes(GSECRET) && !/value="sitekey"[^>]*name="recaptcha_secret"/.test(r.text));
+  t('adresses admin et mot de passe SMTP manquants → champs demandés (secrets non préremplis)', /Complétez les informations/.test(r.text) && /name="admin_emails"/.test(r.text) && /name="smtp_pass"/.test(r.text) && !r.text.includes(GSECRET));
   const snap4 = snapshot();
   r = await post(envForm({ ref: 'v1.1', token: TOKEN, admin_emails: 'pas-un-mail', smtp_pass: 'x' })); t('saisie invalide → refusée, rien écrit', r.status === 400 && /Adresse administrateur invalide/.test(r.text) && snapshot() === snap4);
   r = await post(envForm({ ref: 'v1.1', token: TOKEN, admin_emails: 'nouveau@example.org', smtp_pass: 'mdp-saisi', site_url: 'https://evil.example', repo: 'evil/repo' }));
@@ -216,7 +216,7 @@ const msg = (html) => (html.match(/<p class="msg">([^<]*)</) || [])[1] || '';
   console.log('\n— Ancien config/runtime.env copié dans la racine du site (sert de .env)');
   deployInstaller(); dropEnv();
   const oldRuntime = ['# ancien runtime.env', `SITE_PUBLIC_URL="${BASE}"`, `UPDATE_GITHUB_REPO="giceyBpro/Radiv"`, 'GOOGLE_CLIENT_ID="cid.apps.googleusercontent.com"', `GOOGLE_CLIENT_SECRET="${GSECRET}"`,
-    'ADMIN_GOOGLE_EMAILS="admin@example.org"', 'ADMIN_UPDATE_ENABLED="true"', 'RESTRICTION_ROUNDING_MODE="floor"', '#RECAPTCHA_SITE_KEY=', 'SITE_NAME="Mon site"', 'COPYRIGHT_OWNER="Mon asso"', ''].join('\n');
+    'ADMIN_GOOGLE_EMAILS="admin@example.org"', 'ADMIN_UPDATE_ENABLED="true"', 'RESTRICTION_ROUNDING_MODE="floor"', 'SITE_NAME="Mon site"', 'COPYRIGHT_OWNER="Mon asso"', ''].join('\n');
   writeEnv(oldRuntime, path.join(WWW, '.runtime.env'));
   r = await post({ step: 'check', key: KEY });
   t('.runtime.env de la racine reconnu comme fichier de configuration (dépôt déduit de UPDATE_GITHUB_REPO)', /Configuration lue dans le fichier de configuration/.test(r.text) && r.text.includes('giceyBpro/Radiv') && /dossier public/.test(r.text) && /name="token"/.test(r.text));
