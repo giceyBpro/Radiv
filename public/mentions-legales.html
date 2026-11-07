@@ -128,7 +128,8 @@
       l'éditeur du site, uniquement pour vous répondre (base légale : votre démarche volontaire /
       intérêt légitime à répondre). Le site ne les enregistre pas ; ils restent dans la boîte de
       réception de l'éditeur le temps nécessaire au traitement de votre demande. L'envoi est
-      protégé par Google reCAPTCHA, chargé seulement si vous cochez la case d'accord prévue à cet effet.
+      protégé contre les robots par ALTCHA, un petit calcul exécuté dans votre navigateur et vérifié par ce
+      site : aucun service tiers n'est appelé et aucune donnée personnelle n'est transmise pour cela.
     </p>
 
     <h2>Durée de conservation</h2>
@@ -139,10 +140,8 @@
 
     <h2>Cookies et stockage local</h2>
     <p>
-      Ce site ne dépose aucun cookie de suivi ni de mesure d'audience. Seul le formulaire de contact
-      peut, <strong>après votre accord</strong> (case à cocher), charger Google reCAPTCHA, qui peut
-      déposer des cookies et collecter des données techniques de votre navigateur ; sans accord, rien
-      n'est chargé. Les polices et bibliothèques utilisées par les pages sont hébergées sur ce site :
+      Ce site ne dépose aucun cookie de suivi ni de mesure d'audience. Le formulaire de contact
+      utilise ALTCHA (logiciel libre hébergé sur ce site), sans cookie ni traceur. Les polices et bibliothèques utilisées par les pages sont hébergées sur ce site :
       aucun service tiers n'est appelé au simple affichage d'une page. Un stockage local (<code>localStorage</code> /
       <code>sessionStorage</code>) est utilisé uniquement pour transmettre le résultat d'un calcul
       entre les pages de ce site (ex. vue imprimable) : il reste sur votre appareil et n'est jamais
@@ -188,16 +187,11 @@
       return 'Aucune durée de conservation automatique n’est actuellement configurée pour ces données.';
     }
 
-    function describeRecipients(level, recaptchaEnabled) {
+    function describeRecipients(level) {
       const items = [];
       if (level !== 'none') {
         items.push(
           'Services de géolocalisation d’adresse IP (ipwho.is, puis ipapi.co et ip-api.com en secours) : votre adresse IP leur est transmise pour en déduire une localisation approximative. Ces services tiers peuvent être établis hors de l’Union européenne ; seule l’adresse IP leur est communiquée, sans autre donnée.'
-        );
-      }
-      if (recaptchaEnabled) {
-        items.push(
-          'Google reCAPTCHA (Google, États-Unis), sur le formulaire de contact uniquement et seulement après votre accord, pour la protection anti-spam : votre adresse IP et des données techniques de votre navigateur lui sont transmises.'
         );
       }
       items.push('Hébergeur du site (O2SWITCH) et prestataire de messagerie qui achemine les messages du formulaire de contact, en tant que sous-traitants techniques.');
@@ -222,7 +216,6 @@
     (async () => {
       let level = 'full';
       let retentionMonths = null;
-      let recaptchaEnabled = false;
 
       try {
         const res = await fetch(`${API_BASE}/public-config`);
@@ -230,7 +223,6 @@
           const data = await res.json();
           level = data.measurement_logging_level || 'full';
           retentionMonths = data.logs_retention_months || null;
-          recaptchaEnabled = Boolean(data.recaptcha_site_key);
         }
       } catch (e) {
         // Config indisponible: les descriptions par défaut (le plus complet) restent affichées.
@@ -239,7 +231,7 @@
 
       document.getElementById('donneesCollectees').textContent = describeLoggingLevel(level);
       document.getElementById('dureeConservation').textContent = describeRetention(retentionMonths);
-      renderList(document.getElementById('destinataires'), describeRecipients(level, recaptchaEnabled));
+      renderList(document.getElementById('destinataires'), describeRecipients(level));
     })();
   </script>
 </body>

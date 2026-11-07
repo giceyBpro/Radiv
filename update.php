@@ -75,9 +75,6 @@ CORE_GITHUB_REPO|Dépôt GitHub du moteur de calcul (propriétaire/nom), propos�
 CORE_GITHUB_TOKEN|Jeton GitHub en lecture seule (confidentiel) pour télécharger le moteur de calcul depuis un dépôt privé distinct
 |(zone de test /auth/moteur). Non défini = UPDATE_GITHUB_TOKEN, puis la saisie dans la page (non conservée).
 == Formulaire de contact
-RECAPTCHA_SITE_KEY|Clé publique reCAPTCHA v3 (chargée dans la page de contact).
-RECAPTCHA_SECRET_KEY|Clé secrète reCAPTCHA v3 (confidentielle). Sans elle, le formulaire refuse d'envoyer.
-RECAPTCHA_MIN_SCORE|Score minimal reCAPTCHA v3 accepté, de 0 (robot) à 1 (humain). Défaut : 0.5.
 SMTP_HOST|Serveur SMTP qui envoie les messages du formulaire.
 SMTP_PORT|Port SMTP : 587 (STARTTLS) ou 465 (TLS direct).
 SMTP_SECURE|true = TLS direct (port 465), false = STARTTLS (port 587).
