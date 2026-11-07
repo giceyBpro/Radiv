@@ -31,6 +31,10 @@ const ROUTES = [
     'GET /auth/' => 'home',
     'GET /auth/callback' => 'callback',
     'POST /auth/connexion' => 'login_local',
+    'GET /auth/securite' => 'security',
+    'POST /auth/securite/preparer' => 'security_prepare',
+    'POST /auth/securite/activer' => 'security_activate',
+    'POST /auth/securite/retirer' => 'security_remove',
     'GET /auth/mesures' => 'measurements',
     'GET /auth/mesures.csv' => 'measurements_csv',
     'GET /auth/radiv' => 'radiv_page',
@@ -409,6 +413,8 @@ function do_asset(string $name): bool
         'mesures.js' => ['application/javascript; charset=utf-8', 'mesures.js'],
         'test-sfmn.js' => ['application/javascript; charset=utf-8', 'test-sfmn.js'],
         'test-sfmn.css' => ['text/css; charset=utf-8', 'test-sfmn.css'],
+        'qrcode.js' => ['application/javascript; charset=utf-8', 'qrcode.js'],
+        'securite.js' => ['application/javascript; charset=utf-8', 'securite.js'],
     ];
     if (Session\admin() === null || !isset($files[$name])) return false;
     $path = Config\base_dir() . '/assets/' . $files[$name][1];
@@ -608,7 +614,7 @@ function tabs_html(string $active): string
     $tabs .= $tab('fournisseurs', '/auth/fournisseurs', 'Fournisseurs');
     $tabs .= $tab('moteur', '/auth/moteur', 'Moteur');
     $tabs .= $tab('minisite', '/auth/minisite', 'Mini-site');
-    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN');
+    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN') . $tab('connexion', '/auth/securite', 'Connexion');
 }
 
 // Page complète de l'administration : en-tête, onglets, contenu. $active : 'site' ou 'mesures'.
@@ -630,6 +636,8 @@ function page(string $active, string $title, string $body, array $opts = [], int
     $css = CSS;
     $head = $map ? '<link rel="stylesheet" href="/auth/assets/leaflet.css">' : '';
     $scripts = $map ? '<script src="/auth/assets/leaflet.js"></script><script src="/auth/assets/mesures.js"></script>' : '';
+    $extra = array_values(array_filter((array) ($opts['scripts'] ?? []), static fn ($n) => preg_match('/^[a-z0-9.-]+\.js$/', (string) $n) === 1));
+    foreach ($extra as $name) $scripts .= '<script src="/auth/assets/' . $name . '"></script>';
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="fr">
@@ -650,7 +658,7 @@ HTML;
     // et seules les images de tuiles OpenStreetMap en plus ; la politique de référent envoie l'origine du site
     // (exigée par OpenStreetMap pour ses tuiles), jamais le chemin.
     header("Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
-        . ($map ? "; script-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org" : ''));
+        . ($map || $extra ? "; script-src 'self'" : '') . ($map ? "; img-src 'self' data: https://*.tile.openstreetmap.org" : ''));
     // « same-origin » (et non no-referrer, hérité des autres routes) : avec no-referrer les navigateurs envoient
     // « Origin: null » sur les formulaires, et rien ne partait vers l'extérieur de toute façon. Les pages avec
     // carte envoient en plus l'origine du site aux tuiles (exigée par OpenStreetMap), jamais le chemin.

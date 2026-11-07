@@ -109,3 +109,40 @@ function otpauth_uri(string $account, string $secret, string $issuer): string
 {
     return 'otpauth://totp/' . rawurlencode($issuer . ':' . $account) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&digits=' . DIGITS . '&period=' . PERIOD;
 }
+
+// --- Enregistrement depuis la page d'administration -------------------------------------------------------------------------
+// Les trois réglages sont écrits dans config/local.env (jamais écrasé par les mises à jour), de façon atomique, droits 0600.
+const KEYS = ['ADMIN_LOGIN_USER', 'ADMIN_LOGIN_PASSWORD_HASH', 'ADMIN_TOTP_SECRET'];
+
+function local_env_file(): string { return Config\config_dir() . '/local.env'; }
+
+// Vrai si les réglages sont (aussi) définis dans runtime.env : ils l'emporteraient sur local.env, la page ne peut pas les remplacer.
+function defined_in_runtime_env(): bool
+{
+    $text = (string) @file_get_contents(Config\config_dir() . '/runtime.env');
+    return preg_match('/^\s*(ADMIN_LOGIN_USER|ADMIN_LOGIN_PASSWORD_HASH|ADMIN_TOTP_SECRET)\s*=\s*\S/m', $text) === 1;
+}
+
+// Remplace (valeur) ou retire (null) les réglages, en conservant le reste du fichier.
+function write_local_env(array $values): bool
+{
+    $file = local_env_file();
+    if (!is_dir(dirname($file)) && !@mkdir(dirname($file), 0750, true)) return false;
+    $lines = is_file($file) ? preg_split('/\r?\n/', rtrim((string) file_get_contents($file), "\r\n")) : [];
+    $kept = [];
+    foreach ($lines as $line) {
+        if (preg_match('/^\s*(ADMIN_LOGIN_USER|ADMIN_LOGIN_PASSWORD_HASH|ADMIN_TOTP_SECRET)\s*=/', $line) === 1) continue;
+        $kept[] = $line;
+    }
+    if ($kept === ['']) $kept = [];
+    foreach ($values as $name => $value) {
+        if ($value === null || !in_array($name, KEYS, true)) continue;
+        if (strpbrk((string) $value, "\r\n'\"") !== false && $name !== 'ADMIN_LOGIN_PASSWORD_HASH') return false;
+        $kept[] = $name === 'ADMIN_LOGIN_PASSWORD_HASH' ? "{$name}='{$value}'" : "{$name}=\"{$value}\"";
+    }
+    $tmp = $file . '.tmp' . bin2hex(random_bytes(4));
+    if (@file_put_contents($tmp, implode("\n", $kept) . ($kept ? "\n" : '')) === false) return false;
+    @chmod($tmp, 0600);
+    if (!@rename($tmp, $file)) { @unlink($tmp); return false; }
+    return true;
+}
