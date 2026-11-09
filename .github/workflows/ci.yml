@@ -42,6 +42,8 @@ jobs:
         run: node tests/test-captcha.js
       - name: Connexion alternative de /auth (TOTP)
         run: node tests/test-admin-login.js
+      - name: Accueil servi aux robots (sans portail de maintenance)
+        run: node tests/test-seo-gate.js
       - name: Cohérence de la mise en forme de runtime.env
         run: node tests/check-runtime-layout.js
       - name: Aucun fichier PHP du backend ne s'exécute seul
