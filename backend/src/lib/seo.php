@@ -39,6 +39,9 @@ function render(string $publicPath): ?string
     $file = rtrim(Config\web_root(), '/') . '/' . (PAGES[$publicPath][0] ?? '');
     $html = is_file($file) ? @file_get_contents($file) : false;
     if (!is_string($html) || $html === '') return null;
+    // Ici le site est en service (en maintenance, app.php répond avant d'arriver ici) : le « portail » de maintenance de l'accueil
+    // (avis + style qui masque la page, levé par un script) est retiré, pour que les robots sans JavaScript lisent le vrai contenu.
+    $html = (string) preg_replace('#<!--MAINTENANCE-GATE-->.*?<!--/MAINTENANCE-GATE-->#s', '', $html);
     $site = Config\site_public_url();
     if ($site === '' || preg_match('#^https?://[^/\s]+$#', $site) !== 1) return $html;
     $name = Config\site_name();
