@@ -248,7 +248,7 @@ function do_site(): bool
     $v = $status['version'];
     $out .= '<section class="card"><h2>Version installée</h2>';
     $out .= $v
-        ? '<p class="big"><code>' . h(substr((string) $v['sha'], 0, 7)) . '</code> <span class="muted">(' . h($v['ref'] ?? '') . ')</span></p>'
+        ? '<p class="big"><code>' . h(substr((string) $v['sha'], 0, 7)) . '</code> <span class="muted">(' . h($v['ref'] ?? '') . ')</span>' . update_badge($token) . '</p>'
             . '<p class="small">Installée le ' . h($v['at'] ?? '') . ' par ' . h($v['by'] ?? '') . '</p>'
         : '<p>Inconnue (installation initiale, antérieure à ce système de mise à jour).</p>';
     $out .= '<p class="small">Dépôt : ' . h($status['repo']) . ' · PHP ' . h($status['php']) . ' · extension zip : ' . ($status['zip'] ? 'oui' : 'non') . '</p></section>';
@@ -313,6 +313,15 @@ function do_site(): bool
     return true;
 }
 
+// Pastille à côté de la version installée : « À jour » ou « Mise à jour disponible » (rien si le contrôle n'est pas possible).
+function update_badge(array $token): string
+{
+    $check = $token['check'] ?? null;
+    if (!$token['ok'] || !is_array($check) || empty($check['ok'])) return '';
+    if ($check['status'] === 'identical') return ' <span class="badge good">✔ À jour : la version installée est la dernière</span>';
+    return ' <span class="badge warn">Mise à jour disponible : ' . h($check['ref']) . '</span>';
+}
+
 // Résultat du contrôle automatique : à jour, ou liste des modifications de la version disponible.
 function update_check_html(array $token, ?array $installed): string
 {
@@ -324,7 +333,7 @@ function update_check_html(array $token, ?array $installed): string
     if (empty($check['ok'])) return '<p class="msg ko">' . h($check['error'] ?? 'Contrôle impossible.') . '</p>';
     $ref = h($check['ref']); $short = h(substr((string) $check['sha'], 0, 7));
     if ($check['status'] === 'identical') {
-        return '<p class="msg ok">✔ À jour : la version installée est la dernière (<code>' . $ref . '</code>, ' . $short . ').</p><p class="small">Vérification automatique à l\'ouverture de la page' . $when . '.</p>';
+        return '<p class="small">À jour (<code>' . $ref . '</code>, ' . $short . ') : vérification automatique à l\'ouverture de la page' . $when . '.</p>';
     }
     $out = '<p class="msg warn"><strong>Mise à jour disponible</strong> : <code>' . $ref . '</code> (' . $short . ')'
         . ($check['status'] === 'behind' ? ' — attention, cette version est <em>plus ancienne</em> que celle installée' : '') . '.</p>';
