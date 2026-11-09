@@ -26,5 +26,8 @@ const forged = { ...c3, salt: c3.salt.replace(/issued=\d+/, 'issued=1') };
 forged.challenge = sha(forged.salt + 7);
 t('défi forgé par le navigateur refusé (hors signature)', cli('verify', payload(forged, 7), String(T + 5)) === 'non');
 t('charge illisible ou vide refusée', cli('verify', 'pas-du-base64!!', String(T)) === 'non' && cli('verify', '', String(T)) === 'non');
+const link = (txt) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); require '${path.join(__dirname, '../backend/src/lib/contact.php')}'; echo Radiv\\Contact\\contains_link(${JSON.stringify(txt)}) ? 'oui' : 'non';`], { encoding: 'utf8' }) === 'oui';
+t('filtre de liens : le spam reçu en production est détecté', link('Quand le calculateur sera-t-il de nouveau disponible ? https://jepartage.online/fr/san/radiv') && link('voir www.exemple.fr') && link('jepartage.online/fr/san'));
+t('filtre de liens : une vraie question passe (abréviations, points, e-mail)', !link("Bonjour, après une cure d'iode 131 (env. 3,7 GBq), quelle durée pour le conjoint ? Dr.Martin, ex. 2 jours. Merci.") && !link('Contactez-moi : jean.dupont@hopital.fr'));
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);

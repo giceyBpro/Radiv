@@ -24,6 +24,13 @@ function escape_html(string $value): string
     return strtr($value, ['&' => '&amp;', '<' => '&lt;', '>' => '&gt;', '"' => '&quot;', "'" => '&#39;']);
 }
 
+// Lien dans le message : adresse « http(s):// », « www. » ou nom de domaine suivi d'un chemin. Les spams (souvent rédigés pour paraître
+// légitimes) en contiennent presque toujours ; un patient ou un professionnel n'en a pas besoin pour poser une question.
+function contains_link(string $text): bool
+{
+    return preg_match('~(?:https?://|ftp://|www\.)|\b[a-z0-9-]+\.(?:com|net|org|fr|online|io|ru|xyz|top|site|club|info|biz|shop|live|cc|me|id|app|dev|link|click)/~i', $text) === 1;
+}
+
 function valid_email_shape(string $email): bool
 {
     // \z et non $: en PCRE, $ accepterait aussi un saut de ligne final.

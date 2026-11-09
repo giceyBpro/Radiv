@@ -205,6 +205,15 @@ try {
             Http\send_json(429, ['ok' => false, 'error' => 'Trop de demandes. Réessayez dans une minute.']);
             exit;
         }
+        if (Contact\contains_link($message)) {
+            error_log('[CONTACT] Message refusé : lien dans le texte (' . $ip . ')');
+            Http\send_json(400, ['ok' => false, 'error' => 'Les liens ne sont pas acceptés dans ce formulaire : retirez-les et renvoyez le message.']);
+            exit;
+        }
+        if (!Store\rate_limit_hit('contact-hour', $ip, 3, 3600)) {
+            Http\send_json(429, ['ok' => false, 'error' => 'Trop de messages depuis votre adresse. Réessayez dans une heure.']);
+            exit;
+        }
         if ($honeypot !== '' || !Captcha\verify($captcha)) {
             Http\send_json(400, ['ok' => false, 'error' => 'Échec de la vérification anti-robots : relancez-la et renvoyez le message.']);
             exit;
