@@ -276,6 +276,7 @@ function do_site(): bool
         $out .= '<p>Les mises à jour depuis cette page sont désactivées sur ce site.</p>';
     } else {
         $default = $token['tags'][0] ?? 'main';
+        $out .= update_check_html($token, $v);
         $out .= '<form method="post" action="/auth/update" autocomplete="off" class="stack">';
         $out .= '<input type="hidden" name="csrf" value="' . $csrf . '">';
         $out .= '<label>Version (tag, branche ou commit)<input name="ref" value="' . h($default) . '" list="refs" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\/\-]*"></label>';
@@ -312,21 +313,56 @@ function do_site(): bool
     return true;
 }
 
+// Résultat du contrôle automatique : à jour, ou liste des modifications de la version disponible.
+function update_check_html(array $token, ?array $installed): string
+{
+    $check = $token['check'] ?? null;
+    if (!$token['ok'] || !is_array($check)) {
+        return '<p class="small">Contrôle automatique indisponible : ' . ($token['ok'] ? 'GitHub injoignable.' : 'renseignez <code>UPDATE_GITHUB_TOKEN</code> dans la configuration pour que cette page vérifie seule les nouvelles versions.') . '</p>';
+    }
+    $when = $token['checked'] > 0 ? ' · vérifié à ' . gmdate('H:i', $token['checked']) . ' UTC · <a href="/auth?verifier=1">revérifier</a>' : '';
+    if (empty($check['ok'])) return '<p class="msg ko">' . h($check['error'] ?? 'Contrôle impossible.') . '</p>';
+    $ref = h($check['ref']); $short = h(substr((string) $check['sha'], 0, 7));
+    if ($check['status'] === 'identical') {
+        return '<p class="msg ok">✔ À jour : la version installée est la dernière (<code>' . $ref . '</code>, ' . $short . ').</p><p class="small">Vérification automatique à l\'ouverture de la page' . $when . '.</p>';
+    }
+    $out = '<p class="msg warn"><strong>Mise à jour disponible</strong> : <code>' . $ref . '</code> (' . $short . ')'
+        . ($check['status'] === 'behind' ? ' — attention, cette version est <em>plus ancienne</em> que celle installée' : '') . '.</p>';
+    if ($check['commits']) {
+        $out .= '<details open><summary>' . count($check['commits']) . ' modification(s) à appliquer</summary><ul class="small">';
+        foreach (array_slice(array_reverse($check['commits']), 0, 40) as [$sha, $title, $date, $author]) {
+            $out .= '<li><code>' . h($sha) . '</code> ' . h($title) . ' <span class="muted">(' . h($date) . ($author !== '' ? ', ' . h($author) : '') . ')</span></li>';
+        }
+        if (count($check['commits']) > 40) $out .= '<li class="muted">… et ' . (count($check['commits']) - 40) . ' autre(s)</li>';
+        $out .= '</ul></details>';
+    } elseif ($check['current'] === null) {
+        $out .= '<p class="small">Version installée inconnue : le détail des modifications ne peut pas être comparé.</p>';
+    } else {
+        $out .= '<p class="small">Le détail des commits n\'est pas disponible (comparaison refusée par GitHub).</p>';
+    }
+    if ($check['files']) {
+        $out .= '<details><summary class="small">' . count($check['files']) . ' fichier(s) du site modifié(s)' . ($check['files_other'] ? ' (+ ' . (int) $check['files_other'] . ' hors site : tests, documentation…)' : '') . '</summary><p class="small"><code>'
+            . implode('</code>, <code>', array_map('Radiv\\AdminSite\\h', array_slice($check['files'], 0, 60))) . '</code></p></details>';
+    }
+    return $out . '<p class="small">Vérification automatique à l\'ouverture de la page' . $when . '.</p>';
+}
+
 // Le jeton de config/runtime.env est vérifié auprès de GitHub (résultat gardé 5 min en session); s'il manque ou
 // n'est plus accepté, le formulaire affiche simplement un champ pour en saisir un.
 function token_state(): array
 {
-    if (!Config\admin_update_enabled()) return ['ok' => false, 'tags' => []];
+    if (!Config\admin_update_enabled()) return ['ok' => false, 'tags' => [], 'check' => null, 'checked' => 0];
     $envToken = Config\env('UPDATE_GITHUB_TOKEN');
-    if ($envToken === '') return ['ok' => false, 'tags' => []];
+    if ($envToken === '') return ['ok' => false, 'tags' => [], 'check' => null, 'checked' => 0];
     Session\start();
     $cache = $_SESSION['gh'] ?? null;
-    if (!is_array($cache) || $cache['until'] < time()) {
+    if (!is_array($cache) || $cache['until'] < time() || ($_GET['verifier'] ?? '') === '1') {
         $ok = Updater\token_valid($envToken);
-        $cache = ['ok' => $ok, 'tags' => $ok ? Updater\recent_tags($envToken) : [], 'until' => time() + 300];
+        $tags = $ok ? Updater\recent_tags($envToken) : [];
+        $cache = ['ok' => $ok, 'tags' => $tags, 'check' => $ok ? Updater\check_update($envToken, $tags[0] ?? 'main') : null, 'checked' => time(), 'until' => time() + 300];
         $_SESSION['gh'] = $cache;
     }
-    return ['ok' => (bool) $cache['ok'], 'tags' => $cache['tags']];
+    return ['ok' => (bool) $cache['ok'], 'tags' => $cache['tags'], 'check' => $cache['check'] ?? null, 'checked' => (int) ($cache['checked'] ?? 0)];
 }
 
 // Contrôles communs des actions qui modifient le site.
@@ -576,7 +612,7 @@ h1{font-size:1.55rem;margin:0 0 14px}h2{font-size:1.05rem;margin:0 0 10px}
 input,select{display:block;width:100%;padding:8px 10px;margin-top:4px;font:inherit;border:1px solid #b9c4cf;border-radius:8px;background:#fff}
 button,.btn{display:inline-block;padding:9px 16px;border:0;border-radius:8px;background:var(--brand);color:var(--brand-ink);font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
 button.secondary,.btn.secondary{background:#e6ebf0;color:#14202b}.top button.secondary{background:rgba(255,255,255,.14);color:#fff}
-.msg{padding:10px 14px;border-radius:8px;margin:0 0 16px}.msg.ok{background:var(--goodbg);border:1px solid #9bd0a6}.msg.ko{background:var(--badbg);border:1px solid #e0a0a0}
+.msg{padding:10px 14px;border-radius:8px;margin:0 0 16px}.msg.ok{background:var(--goodbg);border:1px solid #9bd0a6}.msg.ko{background:var(--badbg);border:1px solid #e0a0a0}.msg.warn{background:#fff4d6;border:1px solid #e6c36a}
 .small{font-size:.85rem;color:var(--muted)}.muted{color:var(--muted)}.big{font-size:1.3rem;margin:0 0 4px}.warnt{color:var(--warn);font-weight:600}.nowrap{white-space:nowrap}
 .toolbar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between;margin-bottom:8px}.toolbar h2{margin:0}
 .inline{display:flex;gap:8px;align-items:center;margin:0}.inline label{font-weight:600;font-size:.9rem}.inline select{width:auto;margin:0}

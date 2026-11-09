@@ -227,6 +227,38 @@ function resolve_sha(string $ref, string $token): ?string
     return preg_match('/^[0-9a-f]{40}$/', $sha) ? $sha : null;
 }
 
+// Contrôle automatique de la page Site : la dernière version (tag le plus récent, à défaut « main ») est-elle installée, et sinon
+// quelles modifications apporte-t-elle ? Compare le commit installé (version.json) à la dernière version via l'API de comparaison de GitHub.
+// Résultat : ['ok'=>true, 'ref', 'sha', 'current', 'status' ('identical'|'ahead'|'behind'|'diverged'|'unknown'), 'commits'=>[[sha7, titre, date, auteur]],
+// 'ignored' (nombre de commits de fusion masqués), 'files'=>[chemins du site modifiés], 'files_other' (autres fichiers : tests, docs…)]
+// ou ['ok'=>false, 'error'=>message].
+function check_update(string $token, string $ref): array
+{
+    $latest = resolve_sha($ref, $token);
+    if ($latest === null) return ['ok' => false, 'error' => 'Version « ' . $ref . ' » introuvable sur GitHub.'];
+    $out = ['ok' => true, 'ref' => $ref, 'sha' => $latest, 'current' => null, 'status' => 'unknown', 'commits' => [], 'ignored' => 0, 'files' => [], 'files_other' => 0];
+    $installed = (string) (current_version()['sha'] ?? '');
+    if (preg_match('/^[0-9a-f]{40}$/', $installed) !== 1) return $out;
+    $out['current'] = $installed;
+    if ($installed === $latest) return ['status' => 'identical'] + $out;
+    $response = github_get('/repos/' . repo() . '/compare/' . $installed . '...' . $latest, $token);
+    $data = $response && $response['status'] === 200 ? json_decode($response['body'], true) : null;
+    if (!is_array($data)) return ['status' => 'unknown'] + $out; // version installée inconnue de GitHub : on propose quand même la mise à jour
+    $out['status'] = in_array($data['status'] ?? '', ['identical', 'ahead', 'behind', 'diverged'], true) ? $data['status'] : 'unknown';
+    foreach ((array) ($data['commits'] ?? []) as $commit) {
+        $title = trim(strtok((string) ($commit['commit']['message'] ?? ''), "\n"));
+        if ($title === '') continue;
+        if (preg_match('/^Merge (branch|pull request|remote-tracking)/', $title) === 1 || preg_match('/^Merge .+ into /', $title) === 1) { $out['ignored']++; continue; }
+        $out['commits'][] = [substr((string) ($commit['sha'] ?? ''), 0, 7), $title, substr((string) ($commit['commit']['author']['date'] ?? ''), 0, 10), (string) ($commit['commit']['author']['name'] ?? '')];
+    }
+    foreach ((array) ($data['files'] ?? []) as $file) {
+        $name = (string) ($file['filename'] ?? '');
+        if ($name === '') continue;
+        if (allowed($name)) $out['files'][] = $name; else $out['files_other']++;
+    }
+    return $out;
+}
+
 // --- Archive --------------------------------------------------------------------------------
 
 // Extrait dans $staging les seuls fichiers de la liste blanche. Lève RuntimeException au moindre
