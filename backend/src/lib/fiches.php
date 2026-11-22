@@ -46,6 +46,13 @@ function body_html(array $fiche): string
         $out .= "<h2>Questions fréquentes</h2>\n";
         foreach ($fiche['faq'] as $qa) $out .= '<h3>' . esc((string) $qa['q']) . "</h3>\n<p>" . $qa['a'] . "</p>\n";
     }
+    if (!empty($fiche['links'])) {
+        $out .= "<h2>Pour aller plus loin</h2>\n<ul>";
+        foreach ($fiche['links'] as $link) {
+            $out .= '<li><a href="' . esc((string) $link['url']) . '" target="_blank" rel="noopener noreferrer">' . esc((string) $link['label']) . '</a></li>';
+        }
+        $out .= "</ul>\n";
+    }
     return $out;
 }
 
