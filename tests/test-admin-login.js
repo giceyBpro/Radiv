@@ -62,6 +62,13 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   t('limite de tentatives en vigueur (5 par minute)', rl.length > 0);
   rl.forEach((f) => fs.unlinkSync(f)); // remise à zéro pour la suite
   cookie = ''; await login({ code: totp(secret, Date.now() / 1000 + 30) }); // pas suivant : le précédent est déjà consommé
+  // Fiches d'information (brouillons) : visibles seulement connecté, jamais publiquement.
+  const fl = await req('GET', '/auth/fiches'); const fp = await req('GET', '/auth/fiches/iode-131');
+  t('onglet Fiches : liste avec l\'iode 131 en brouillon', fl.status === 200 && /iode-131/.test(fl.text) && /brouillon/.test(fl.text));
+  t('aperçu de la fiche : hyperthyroïdie et cancer séparés, bandeau brouillon, points de relecture, noindex', fp.status === 200 && /BROUILLON/.test(fp.text) && /hyperthyroïdie/.test(fp.text) && /cancer de la thyroïde/.test(fp.text) && /Points à vérifier/.test(fp.text) && /noindex/.test(fp.text));
+  const pub = cookie; cookie = '';
+  t('sans session : aperçu et liste en 404', (await req('GET', '/auth/fiches/iode-131')).status === 404 && (await req('GET', '/auth/fiches')).status === 404);
+  cookie = pub;
   const sec = await req('GET', '/auth/securite');
   t('onglet Connexion : état activé, formulaire de remplacement', sec.status === 200 && /activée/.test(sec.text) && /name="password2"/.test(sec.text));
   const csrf1 = (sec.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];

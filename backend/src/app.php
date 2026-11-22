@@ -34,6 +34,8 @@ require __DIR__ . '/lib/session.php';
 require __DIR__ . '/lib/google.php';
 require __DIR__ . '/lib/admin_login.php';
 require __DIR__ . '/lib/admin_security.php';
+require __DIR__ . '/lib/fiches.php';
+require __DIR__ . '/lib/admin_fiches.php';
 require __DIR__ . '/lib/updater.php';
 require __DIR__ . '/lib/core_lab.php';
 require __DIR__ . '/lib/isotope_labels.php';

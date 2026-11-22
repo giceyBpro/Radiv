@@ -8,7 +8,7 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-'));
   // Comme le .htaccess installé : l'accueil passe par la façade PHP (dev-router ne route que /api, /auth, /health).
   const router = path.join(data, 'router.php');
-  fs.writeFileSync(router, `<?php $p = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH); if ($p === '/' || $p === '/informations' || $p === '/informations.html' || $p === '/sitemap.xml') { putenv('RADIV_BACKEND=${ROOT}/backend'); require '${ROOT}/public/api/index.php'; return true; } return require '${ROOT}/tests/dev-router.php';`);
+  fs.writeFileSync(router, `<?php $p = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH); if ($p === '/' || $p === '/informations' || $p === '/informations.html' || $p === '/sitemap.xml' || str_starts_with($p, '/informations/')) { putenv('RADIV_BACKEND=${ROOT}/backend'); require '${ROOT}/public/api/index.php'; return true; } return require '${ROOT}/tests/dev-router.php';`);
   const srv = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'public'), router], { env: { ...process.env, DATA_DIR: data, SITE_PUBLIC_URL: BASE }, stdio: 'ignore' });
   await new Promise((r) => setTimeout(r, 1200));
   let res = await fetch(`${BASE}/`); let html = await res.text();
@@ -20,6 +20,7 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   t('page Informations : contenu public, lien vers le calculateur, pas de calculateur', /Et le risque de contamination/.test(html) && /href="\/"/.test(html) && !/id="resultsBody"/.test(html));
   const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
   t('plan du site : accueil, informations et mentions légales', /<loc>[^<]+\/informations<\/loc>/.test(sm) && /<loc>[^<]+\/legal<\/loc>/.test(sm));
+  t('fiche en brouillon : non publiée (/informations/iode-131 répond 404), absente du plan du site', (await fetch(`${BASE}/informations/iode-131`)).status === 404 && !/iode-131/.test(sm));
   res = await fetch(`${BASE}/`); html = await res.text();
   t('accueil : bandeau vers /informations, plus de texte de présentation', /class="audience-banner[^"]*"[^>]*>[^<]*patient[^<]*<a href="\/informations"/.test(html) && !/id="apropos"/.test(html));
   fs.mkdirSync(path.join(data, 'var'), { recursive: true });
