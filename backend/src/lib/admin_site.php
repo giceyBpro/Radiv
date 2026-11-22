@@ -32,6 +32,7 @@ const ROUTES = [
     'GET /auth/callback' => 'callback',
     'POST /auth/connexion' => 'login_local',
     'GET /auth/securite' => 'security',
+    'GET /auth/fiches' => 'fiches',
     'POST /auth/securite/preparer' => 'security_prepare',
     'POST /auth/securite/activer' => 'security_activate',
     'POST /auth/securite/retirer' => 'security_remove',
@@ -95,6 +96,10 @@ function handle(string $method, string $path): bool
     // Modèles Xplore : GET /auth/xplore/<nom>.xml, réservé aux sessions ouvertes (la règle .htaccess ne les concerne pas ici).
     if ($method === 'GET' && preg_match('#^/auth/xplore/([A-Za-z0-9._-]+\.xml)$#', $path, $m)) {
         return Config\admin_site_enabled() && Session\transport_ok() && do_xplore_file($m[1]);
+    }
+    // Aperçu d'une fiche d'information : GET /auth/fiches/<slug>, réservé aux sessions ouvertes.
+    if ($method === 'GET' && preg_match('#^/auth/fiches/([a-z0-9-]{1,60})$#', $path, $m)) {
+        return Config\admin_site_enabled() && Session\transport_ok() && do_fiche_preview($m[1]);
     }
     $action = ROUTES["{$method} {$path}"] ?? null;
     if ($action === null || !Config\admin_site_enabled()) return false;
@@ -659,7 +664,7 @@ function tabs_html(string $active): string
     $tabs .= $tab('fournisseurs', '/auth/fournisseurs', 'Fournisseurs');
     $tabs .= $tab('moteur', '/auth/moteur', 'Moteur');
     $tabs .= $tab('minisite', '/auth/minisite', 'Mini-site');
-    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN') . $tab('connexion', '/auth/securite', 'Connexion');
+    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN') . $tab('fiches', '/auth/fiches', 'Fiches') . $tab('connexion', '/auth/securite', 'Connexion');
 }
 
 // Page complète de l'administration : en-tête, onglets, contenu. $active : 'site' ou 'mesures'.
