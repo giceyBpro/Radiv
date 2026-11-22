@@ -291,6 +291,7 @@ function do_site(): bool
         if (!$token['ok']) {
             $out .= '<label>Jeton d\'accès<input type="password" name="token" autocomplete="off" required maxlength="255"></label>';
         }
+        $out .= '<label class="inline"><input type="checkbox" name="force" value="1"> Réinstaller même si cette version est déjà installée (recopie tous les fichiers, utile si certains manquent)</label>';
         $out .= '<div><button type="submit">Installer</button></div></form>';
         if (!Session\fresh_login()) {
             $out .= '<p class="small">Une nouvelle connexion Google vous sera demandée avant l\'installation.</p>';
@@ -413,7 +414,7 @@ function do_update(): bool
         Session\flash_set(['ok' => false, 'message' => 'Le jeton n\'est pas valide.']);
         unset($_SESSION['gh']);
     } else {
-        $result = Updater\run($ref, $token, $admin['email']);
+        $result = Updater\run($ref, $token, $admin['email'], ($_POST['force'] ?? '') === '1');
         Session\flash_set($result);
         unset($_SESSION['gh']);
     }
