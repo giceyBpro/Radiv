@@ -126,4 +126,65 @@ return [
             "Effets indésirables : seuls les plus fréquents du RCP sont cités (fatigue, sécheresse buccale, nausées, anémie, baisse d'appétit, constipation) ; faut-il en citer d'autres ?",
         ],
     ],
+    [
+        'slug' => 'lutetium-177-dotatate',
+        'status' => 'draft',
+        'title' => "Lutétium 177 DOTATATE (Lutathera) : consignes pour le patient et l'entourage après un traitement",
+        'h1' => "Traitement par lutétium 177 DOTATATE (Lutathera) : ce qu'il faut savoir pour le patient et l'entourage",
+        'description' => "Traitement par lutétium 177 DOTATATE (Lutathera) d'une tumeur neuroendocrine : déroulement, effets à connaître, consignes de radioprotection pour l'entourage, fertilité et lien vers le RCP.",
+        'lead' => "Le lutétium 177 DOTATATE (nom commercial <strong>Lutathera</strong>) est un médicament de radiothérapie interne utilisé dans certaines tumeurs neuroendocrines. Il associe une molécule qui se fixe sur des <strong>récepteurs de la somatostatine</strong>, présents à la surface des cellules de ces tumeurs, à un atome radioactif, le <strong>lutétium 177</strong> : le rayonnement est ainsi délivré directement au contact des cellules visées.",
+        'blocks' => [
+            ['h' => "Pour quelle situation ce traitement est-il proposé ?", 'level' => 2, 'p' => [
+                "Selon le résumé des caractéristiques du produit (RCP), Lutathera est indiqué chez l'adulte atteint d'une <strong>tumeur neuroendocrine gastro-entéro-pancréatique</strong> (qui naît dans le tube digestif ou le pancréas), <strong>inopérable ou métastatique, progressive, bien différenciée</strong> et exprimant des récepteurs de la somatostatine. Avant le traitement, une <strong>imagerie des récepteurs de la somatostatine</strong> vérifie que la tumeur fixe bien le produit.",
+            ]],
+            ['h' => "Comment se passe le traitement ?", 'level' => 2, 'p' => [
+                "Le médicament est administré par <strong>perfusion dans une veine</strong>, dans un service de médecine nucléaire. Le schéma recommandé est de <strong>4 perfusions, espacées d'environ 8 semaines</strong> ; votre équipe l'adapte à votre situation et à votre tolérance.",
+                "Pour <strong>protéger les reins</strong>, une solution d'acides aminés est perfusée en même temps. Un médicament contre les nausées est donné avant la perfusion. Des <strong>prises de sang</strong> (cellules du sang, reins, foie) sont faites avant chaque perfusion, et la fonction des reins reste surveillée après la fin du traitement.",
+                "Pendant la perfusion, vous êtes <strong>tenu à l'écart de votre entourage</strong>. Vous ne quittez le service que lorsque le rayonnement mesuré est redescendu à un niveau réglementaire. Dans certains cas, l'équipe peut proposer de rester une nuit en observation.",
+            ]],
+            ['h' => "Avant et après la perfusion : ce que l'équipe vous demande", 'level' => 3, 'ul' => [
+                "<strong>Boire régulièrement et uriner souvent</strong> avant la perfusion, le jour même et le lendemain, pour faciliter l'élimination du produit ;",
+                "aller à la selle chaque jour, avec un laxatif si l'équipe vous le conseille ;",
+                "<strong>signaler vos médicaments</strong> : certains traitements (notamment des analogues de la somatostatine ou des corticoïdes) peuvent gêner l'effet de Lutathera ; l'équipe vous dit lesquels adapter, et à quel moment.",
+            ], 'p' => []],
+            ['h' => "Effets à connaître", 'level' => 3, 'p' => [
+                "Les effets les plus fréquents sont les <strong>nausées</strong> et <strong>vomissements</strong> au début de la perfusion (en partie dus à la solution d'acides aminés), la <strong>fatigue</strong>, la <strong>perte d'appétit</strong> et une <strong>baisse des cellules du sang</strong> (plaquettes, globules blancs, globules rouges), d'où les prises de sang régulières. Signalez à l'équipe toute fatigue inhabituelle, pâleur, saignement ou signe d'infection.",
+                "Rarement, des complications tardives du sang ont été observées plusieurs années après le traitement ; c'est une des raisons du suivi prolongé.",
+            ]],
+            ['h' => "Après la perfusion, à la maison", 'level' => 2, 'p' => [
+                "Après le traitement, votre corps émet pendant quelques jours un faible rayonnement et élimine le produit, surtout par les urines. Avant votre sortie, l'équipe de médecine nucléaire vous explique les précautions à suivre et vous indique <strong>une durée de restriction de contact</strong>. Cette durée est <strong>calculée pour vous</strong> à partir de la mesure du rayonnement à votre sortie et de la situation de votre entourage ; elle n'est donc pas la même pour tous, ni forcément d'une perfusion à l'autre.",
+            ], 'ul' => [
+                "garder de la distance avec les autres personnes, surtout les <strong>enfants</strong> et les <strong>femmes enceintes</strong>, pour qui les durées sont plus longues ;",
+                "limiter les contacts rapprochés prolongés pendant la durée indiquée, et dormir séparément si l'équipe vous le demande ;",
+                "suivre les consignes de l'équipe concernant les gestes d'hygiène du quotidien.",
+            ]],
+            ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+            ]],
+            ['h' => "Grossesse, fertilité et déplacements", 'level' => 2, 'p' => [], 'ul' => [
+                "<strong>Grossesse et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse, et l'allaitement est à éviter ; si le traitement est nécessaire pendant l'allaitement, l'enfant doit être sevré. Parlez-en à l'équipe avant de commencer.",
+                "<strong>Fertilité et contraception</strong> : le rayonnement peut avoir un effet sur la fertilité. Si vous avez un projet d'enfant, parlez-en à l'équipe <strong>avant de commencer</strong> : une conservation du sperme ou des ovules peut être envisagée. L'équipe vous précise les mesures à prendre, y compris pour la contraception, pendant le traitement et après.",
+                "<strong>Détections de radioactivité</strong> : pendant un certain temps, les portiques de détection (aéroports, déchetteries, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. N'hésitez pas à demander à l'équipe une attestation si besoin.",
+            ]],
+        ],
+        'faq' => [
+            ['q' => "Combien de perfusions de Lutathera faut-il ?", 'a' => "Le schéma recommandé est de 4 perfusions espacées d'environ 8 semaines, selon l'évolution de la maladie et la tolérance. Votre équipe décide au cas par cas."],
+            ['q' => "Pourquoi reçoit-on une perfusion d'acides aminés en même temps ?", 'a' => "Elle protège les reins : le lutétium 177 est éliminé presque uniquement par les reins, et les acides aminés réduisent la quantité de produit qui y reste."],
+            ['q' => "Puis-je prendre mes petits-enfants dans mes bras après la perfusion ?", 'a' => "Les contacts rapprochés avec les enfants sont limités plus longtemps qu'avec les adultes : la durée vous est indiquée par l'équipe après chaque perfusion. Suivez ses consignes."],
+            ['q' => "Les consignes sont-elles les mêmes à chaque perfusion ?", 'a' => "Pas forcément : elles s'appliquent après chaque perfusion, et la durée est recalculée par l'équipe de médecine nucléaire à partir de la mesure du rayonnement à votre sortie."],
+            ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
+        ],
+        'links' => [
+            ['label' => "Résumé des caractéristiques du produit (RCP) de Lutathera en français (PDF, Agence européenne des médicaments)", 'url' => 'https://www.ema.europa.eu/fr/documents/product-information/lutathera-epar-product-information_fr.pdf'],
+            ['label' => "Fiche européenne de Lutathera (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/lutathera'],
+        ],
+        'review' => [
+            "Contenu vérifié avec le RCP français de l'EMA : indication (4.1, tumeurs neuroendocrines gastro-entéro-pancréatiques), schéma (4 perfusions, environ 8 semaines d'intervalle), acides aminés pour protéger les reins, antiémétique, hydratation et mictions fréquentes, effets les plus fréquents, complications tardives rares du sang, grossesse (contre-indication), allaitement, fertilité (cryoconservation), demi-vie du lutétium 177 (6,647 jours).",
+            "Les durées du RCP ne sont volontairement pas reprises : restriction de contact, contraception (le RCP en indique une), durée de la séparation en sortie de service (le RCP parle de 4 à 5 heures) ; la fiche renvoie aux consignes de l'équipe.",
+            "« Tenu à l'écart de votre entourage pendant la perfusion » et « une nuit en observation dans certains cas » : reformulation du RCP (règles de radioprotection, crises hormonales) ; à confirmer selon votre pratique.",
+            "Médicaments à adapter : le RCP mentionne les analogues de la somatostatine à longue durée d'action et les corticoïdes ; la fiche reste générale, sans délai.",
+            "« Complications tardives du sang » (syndrome myélodysplasique, leucémie aiguë) : sujet sensible ; formulation volontairement sobre et rassurante (« rarement… »). À valider ou à retirer.",
+            "Les deux liens (PDF du RCP et fiche EMA) ont été ouverts avec succès.",
+        ],
+    ],
 ];
