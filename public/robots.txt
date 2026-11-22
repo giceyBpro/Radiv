@@ -1,4 +1,4 @@
-# Pages publiques : accueil, informations (patients et entourage) et mentions légales (les autres pages sont en « noindex »).
+# Pages publiques : accueil, /patient (informations pour les patients et l'entourage) et mentions légales (les autres pages sont en « noindex »).
 User-agent: *
 Allow: /
 # L'API n'est pas destinée aux moteurs de recherche ; la configuration lue par la page d'accueil reste accessible (affichage de la page).
