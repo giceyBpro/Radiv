@@ -66,6 +66,8 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   const fl = await req('GET', '/auth/fiches'); const fp = await req('GET', '/auth/fiches/iode-131');
   t('onglet Fiches : liste avec l\'iode 131 en brouillon', fl.status === 200 && /iode-131/.test(fl.text) && /brouillon/.test(fl.text));
   t('aperçu de la fiche : hyperthyroïdie et cancer séparés, bandeau brouillon, points de relecture, noindex', fp.status === 200 && /BROUILLON/.test(fp.text) && /hyperthyroïdie/.test(fp.text) && /cancer de la thyroïde/.test(fp.text) && /Points à vérifier/.test(fp.text) && /noindex/.test(fp.text));
+  const fi = await req('GET', '/auth/fiches/iode-131'); const fl2 = await req('GET', '/auth/fiches/lutetium-177-psma');
+  t('fiches : renvoi vers le calculateur avec l\'isotope présélectionné (iode : bénin et néoplasie 0 %), pas de calcul dans la page', /href="\/\?isotope=iode131_benin"/.test(fi.text) && /href="\/\?isotope=iode131_0_fixation"/.test(fi.text) && /href="\/\?isotope=psma_177lu"/.test(fl2.text) && !/fiche-calcul|id="fiche-calc"/.test(fi.text + fl2.text) && /professionnels de santé/.test(fi.text));
   const pub = cookie; cookie = '';
   t('sans session : aperçu et liste en 404', (await req('GET', '/auth/fiches/iode-131')).status === 404 && (await req('GET', '/auth/fiches')).status === 404);
   cookie = pub;
