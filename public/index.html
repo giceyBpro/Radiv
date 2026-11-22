@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="index, follow, max-image-preview:large" />
-  <meta name="description" content="Calculateur gratuit des durées de restriction de contact après radiothérapie interne vectorisée (RIV) : iode-131, PSMA-177Lu, radium-223, lutétium-177, microsphères Y-90/Ho-166... Consignes de radioprotection personnalisées pour le patient et son entourage." />
+  <meta name="description" content="Calculez la durée des consignes de radioprotection après un traitement par iode 131, lutétium 177 ou radium 223 : conjoint, enfants, collègues, transports." />
   <!--SEO-HEAD-->
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="fr_FR" />
-  <meta property="og:title" content="Radiothérapie interne vectorisée (RIV) : durées de restriction" />
-  <meta property="og:description" content="Calculateur des durées de restriction de contact après radiothérapie interne vectorisée (RIV), consignes de radioprotection personnalisées pour le patient et son entourage." />
+  <meta property="og:title" content="Durée de restriction après radiothérapie interne : calculateur RIV" />
+  <meta property="og:description" content="Calculez la durée des consignes de radioprotection après un traitement par iode 131, lutétium 177 ou radium 223 : conjoint, enfants, collègues, transports." />
   <meta property="og:image:alt" content="Durées de restriction de contact après radiothérapie interne vectorisée (RIV)" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Radiothérapie interne vectorisée (RIV) : durées de restriction" />
-  <meta name="twitter:description" content="Calculateur gratuit des durées de restriction de contact après radiothérapie interne vectorisée (RIV) : consignes de radioprotection pour le patient et son entourage." />
+  <meta name="twitter:title" content="Durée de restriction après radiothérapie interne : calculateur RIV" />
+  <meta name="twitter:description" content="Calculez la durée des consignes de radioprotection après un traitement par iode 131, lutétium 177 ou radium 223 : conjoint, enfants, collègues, transports." />
   <meta name="theme-color" content="#10223f" />
   <link rel="icon" href="/favicon.ico" />
-  <title>Radiothérapie interne vectorisée (RIV) : durées de restriction</title>
+  <title>Durée de restriction après radiothérapie interne : calculateur RIV</title>
   <link rel="stylesheet" href="vendor/fonts.css">
   <style>
     :root {
@@ -222,6 +222,12 @@
       border: 1px solid var(--border);
       color: var(--muted);
     }
+
+    .about { margin-top: 24px; line-height: 1.55; }
+    .about h2 { margin: 0 0 8px; font-size: 18px; color: var(--text, inherit); }
+    .about h3 { margin: 14px 0 4px; font-size: 15px; color: var(--text, inherit); }
+    .about p { margin: 0 0 8px; }
+    @media print { .about { display: none; } }
 
     .error {
       background: var(--warn-soft);
@@ -818,6 +824,18 @@
       <p>L'article princeps spécifique à chaque radiopharmaceutique est indiqué
       dans le champ « Référence radiopharmaceutique » du calcul.</p>
     </div>
+
+    <section class="note about" id="apropos">
+      <h2>À propos de ce calculateur</h2>
+      <p>Après un traitement par <strong>radiothérapie interne vectorisée (RIV)</strong> &mdash; iode 131, lutétium 177 (PSMA, DOTATATE), radium 223, microsphères d'yttrium 90 ou d'holmium 166 &mdash;, le patient émet pendant un temps un faible rayonnement. Des <strong>consignes de radioprotection</strong> limitent alors l'exposition de son entourage : on parle de <strong>durée de restriction de contact</strong>.</p>
+      <h3>À quoi sert la durée de restriction ?</h3>
+      <p>C'est le nombre de jours pendant lesquels certains contacts rapprochés sont à limiter : dormir dans le même lit, rester près d'un enfant, partager un trajet ou un poste de travail. Elle dépend du radiopharmaceutique, de la façon dont il décroît chez le patient et de la situation de la personne exposée (conjoint, enfant, femme enceinte, collègue, transports en commun).</p>
+      <h3>Comment l'utiliser ?</h3>
+      <p>Choisissez le radiopharmaceutique, saisissez le débit de dose mesuré à un mètre à la sortie du patient et la taille du patient, ainsi que les éventuels champs demandés pour ce produit. Le résultat donne, pour chaque situation, la durée de restriction en jours, avec une version imprimable et une version explicative destinée au patient.</p>
+      <h3>D'où viennent les calculs ?</h3>
+      <p>Le calcul reprend le modèle publié par Carlier et coll. (<em>Médecine Nucléaire</em>, 2026), qui harmonise en France les contraintes d'exposition de l'entourage. Les références complètes figurent juste au-dessus.</p>
+      <p>Les résultats sont <strong>indicatifs</strong> : seule l'exposition externe est prise en compte, et la décision finale appartient à l'équipe de médecine nucléaire qui suit le patient.</p>
+    </section>
 
     <div class="meta">
       <div>Version web pour le calcul des durées de restriction RIV.</div>

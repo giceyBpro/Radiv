@@ -81,7 +81,7 @@ function json_ld(string $publicPath, string $site, string $url, string $name): s
         $graph[] = array_filter([
             '@type' => 'WebApplication', '@id' => $site . '/#calculateur', 'url' => $url,
             'name' => 'Calculateur des durées de restriction de contact après radiothérapie interne vectorisée (RIV)',
-            'description' => 'Calcul gratuit des durées de restriction de contact (conjoint, enfants, collègues, transports) après un traitement par radiothérapie interne vectorisée : iode-131, PSMA-177Lu, radium-223, lutétium-177, microsphères.',
+            'description' => 'Calcul des durées de restriction de contact (conjoint, enfants, collègues, transports) après un traitement par radiothérapie interne vectorisée : iode-131, PSMA-177Lu, radium-223, lutétium-177, microsphères.',
             'applicationCategory' => 'HealthApplication', 'operatingSystem' => 'Tous (navigateur web)', 'inLanguage' => 'fr',
             'isAccessibleForFree' => true, 'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'EUR'],
             'isPartOf' => ['@id' => $site . '/#website'], 'publisher' => ['@id' => $site . '/#publisher'],
