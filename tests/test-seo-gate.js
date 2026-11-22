@@ -18,6 +18,10 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   res = await fetch(`${BASE}/informations`); html = await res.text();
   t('page Informations : 200, titre propre, canonique, indexable', res.status === 200 && /<title>Après une radiothérapie interne/.test(html) && /rel="canonical" href="[^"]+\/informations"/.test(html) && !/noindex/.test(html));
   t('page Informations : contenu public, lien vers le calculateur, pas de calculateur', /Et le risque de contamination/.test(html) && /href="\/"/.test(html) && !/id="resultsBody"/.test(html));
+  const imgs = [...html.matchAll(/<img src="(\/img\/[a-z0-9-]+\.webp)" width="1448" height="1086" alt="([^"]{40,})"/g)];
+  const codes = await Promise.all(imgs.map(async (m) => { const r = await fetch(BASE + m[1]); return r.status === 200 && /image\/webp/.test(r.headers.get('content-type') || '') && (await r.arrayBuffer()).byteLength < 250000; }));
+  t('page Informations : 5 illustrations avec texte alternatif, fichiers WebP servis et légers', imgs.length === 5 && codes.every(Boolean), String(imgs.length));
+  t('illustrations : première image non différée, les autres en chargement différé', !/riv-patient-entourage-informations\.webp"[^>]*loading="lazy"/.test(html) && (html.match(/loading="lazy"/g) || []).length === 4);
   const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
   t('plan du site : accueil, informations et mentions légales', /<loc>[^<]+\/informations<\/loc>/.test(sm) && /<loc>[^<]+\/legal<\/loc>/.test(sm));
   t('fiche en brouillon : non publiée (/informations/iode-131-cancer-thyroide répond 404), absente du plan du site', (await fetch(`${BASE}/informations/iode-131-cancer-thyroide`)).status === 404 && !/iode-131/.test(sm));
