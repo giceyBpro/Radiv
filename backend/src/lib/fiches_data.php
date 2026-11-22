@@ -49,7 +49,7 @@ return [
                 "<strong>Examens avec produit de contraste iodé</strong> : ne réalisez pas d'examen avec injection de produit de contraste iodé (certains scanners, par exemple) avant le traitement, sans en avoir parlé à l'équipe : l'iode du produit de contraste empêche la thyroïde de fixer l'iode radioactif et réduit l'efficacité du traitement. Signalez aussi tout médicament ou produit contenant de l'iode.",
                 "<strong>Contamination</strong> : l'iode éliminé par l'organisme (urine, salive, sueur) peut se retrouver sur la peau, les objets et les sanitaires. Les gestes d'hygiène indiqués par l'équipe (se laver soigneusement les mains, ne pas partager les couverts au cours du repas…) s'ajoutent à la durée de restriction.",
                 "<strong>Hydratation et glandes salivaires</strong> : il est conseillé de boire beaucoup et d'uriner souvent. L'équipe peut aussi vous conseiller de sucer des bonbons acides ou de boire des boissons au citron, pour protéger les glandes salivaires.",
-                "<strong>Grossesse, contraception et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse (la thyroïde du fœtus capte l'iode). Une contraception efficace est à maintenir après le traitement, pour les femmes comme pour les hommes ; l'équipe vous indique la durée et le délai conseillé avant de concevoir. L'allaitement ne doit pas être repris, et les contacts rapprochés entre une mère et un jeune enfant sont limités pendant la durée que l'équipe vous précise. Selon l'activité administrée, la fertilité peut être altérée ; une conservation du sperme est envisagée pour les traitements les plus forts.",
+                "<strong>Grossesse, contraception et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse (la thyroïde du fœtus capte l'iode). Une contraception efficace est à maintenir après le traitement, pour les femmes comme pour les hommes ; l'équipe vous indique la durée et le délai conseillé avant de concevoir. L'allaitement ne doit pas être repris. Les contacts avec les jeunes enfants, y compris entre une mère et son enfant, suivent les consignes de restriction (« éviction ») données par l'équipe. Selon l'activité administrée, la fertilité peut être altérée ; une conservation du sperme est envisagée pour les traitements les plus forts.",
                 "<strong>Détections de radioactivité</strong> : pendant un certain temps, les portiques de détection (aéroports, déchetteries, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. N'hésitez pas à demander à l'équipe une attestation si besoin.",
                 "<strong>Suivi</strong> : des consultations et des examens sont programmés pour vérifier l'efficacité du traitement.",
             ]],
@@ -63,6 +63,12 @@ return [
             ['q' => "Pourquoi mon traitement est-il différent selon la maladie ?", 'a' => "Pour une hyperthyroïdie, on réduit l'activité d'une thyroïde en place avec une activité modérée ; pour un cancer, on détruit les tissus restants après la chirurgie avec une activité plus élevée, ce qui explique le séjour en chambre protégée."],
             ['q' => "La durée donnée est-elle la même pour tout le monde ?", 'a' => "Non : elle dépend du produit, de la mesure du rayonnement à votre sortie et de la situation des personnes qui vous entourent. C'est l'équipe de médecine nucléaire qui la détermine."],
         ],
+        'calc' => [
+            ['code' => 'iode131_benin', 'label' => "Hyperthyroïdie (affection bénigne)"],
+            ['code' => 'iode131_0_fixation', 'label' => "Cancer de la thyroïde (fixation 0 %)"],
+            ['code' => 'iode131_5_fixation', 'label' => "Cancer de la thyroïde (fixation 5 %)"],
+            ['code' => 'iode131_25_fixation', 'label' => "Cancer de la thyroïde (fixation 25 %)"],
+        ],
         'links' => [
             ['label' => "Résumé des caractéristiques du produit (RCP) de l'iodure (131I) de sodium pour thérapie (gélule), base de données publique des médicaments", 'url' => 'https://base-donnees-publique.medicaments.gouv.fr/medicament/67041506/extrait'],
         ],
@@ -70,7 +76,7 @@ return [
             "Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (hyperthyroïdie : maladie de Basedow, goitre multinodulaire toxique, nodules autonomes ; carcinome thyroïdien vésiculaire/papillaire), effet de l'hyperthyroïdie après plusieurs semaines, traitement renouvelable, hydratation et mictions fréquentes, bonbons ou boissons acides pour les glandes salivaires, produits de contraste iodés (le RCP indique un délai de 6 à 8 semaines pour les produits hydrosolubles), arrêt puis reprise de l'hormone thyroïdienne, grossesse (contre-indication), contraception, allaitement, contacts mère-enfant, fertilité.",
             "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même et absence d'hospitalisation pour l'hyperthyroïdie ; séjour de quelques jours en chambre protégée pour le cancer ; stimulation par injections (rhTSH) ; « les contacts brefs restent possibles ».",
             "Les durées (restriction de contact, contraception, contacts mère-enfant) du RCP ne sont volontairement pas reprises : elles sont données par l'équipe (calcul RadIV). La fiche renvoie aux consignes de l'équipe.",
-            "Délai après produit de contraste iodé : la fiche dit « avant le traitement, sans en avoir parlé à l'équipe » sans chiffre (le RCP indique 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
+            "Calculateur intégré (hyperthyroïdie : activité administrée et fixation ; cancer : fixation 0, 5 ou 25 %) : un patient connaît-il ces données ? Les libellés « fixation 0/5/25 % » sont-ils compréhensibles pour le public, ou faut-il restreindre le calculateur ? Délai après produit de contraste iodé : la fiche dit « avant le traitement, sans en avoir parlé à l'équipe » sans chiffre (le RCP indique 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
             "Le RCP vérifié concerne la gélule Curiumpharma ; d'autres présentations d'iode 131 peuvent avoir des textes légèrement différents.",
         ],
     ],
@@ -114,6 +120,7 @@ return [
             ['q' => "Les consignes sont-elles les mêmes à chaque injection ?", 'a' => "Pas forcément : elles s'appliquent après chaque injection, et la durée est recalculée par l'équipe de médecine nucléaire à partir de la mesure du rayonnement à votre sortie."],
             ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
         ],
+        'calc' => [['code' => 'psma_177lu', 'label' => "Lutétium 177 PSMA (Pluvicto)"]],
         'links' => [
             ['label' => "Résumé des caractéristiques du produit (RCP) de Pluvicto en français (PDF, Agence européenne des médicaments)", 'url' => 'https://www.ema.europa.eu/fr/documents/product-information/pluvicto-epar-product-information_fr.pdf'],
             ['label' => "Fiche européenne de Pluvicto (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/pluvicto'],
@@ -174,6 +181,7 @@ return [
             ['q' => "Les consignes sont-elles les mêmes à chaque perfusion ?", 'a' => "Pas forcément : elles s'appliquent après chaque perfusion, et la durée est recalculée par l'équipe de médecine nucléaire à partir de la mesure du rayonnement à votre sortie."],
             ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
         ],
+        'calc' => [['code' => 'lutetium177_net', 'label' => "Lutétium 177 DOTATATE (Lutathera)"]],
         'links' => [
             ['label' => "Résumé des caractéristiques du produit (RCP) de Lutathera en français (PDF, Agence européenne des médicaments)", 'url' => 'https://www.ema.europa.eu/fr/documents/product-information/lutathera-epar-product-information_fr.pdf'],
             ['label' => "Fiche européenne de Lutathera (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/lutathera'],
