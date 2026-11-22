@@ -24,7 +24,7 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   t('illustrations : première image non différée, les cinq autres en chargement différé', !/riv-patient-entourage-informations\.webp"[^>]*loading="lazy"/.test(html) && (html.match(/loading="lazy"/g) || []).length === 5);
   const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
   t('plan du site : accueil, informations et mentions légales', /<loc>[^<]+\/informations<\/loc>/.test(sm) && /<loc>[^<]+\/legal<\/loc>/.test(sm));
-  t('fiche en brouillon : non publiée (/informations/iode-131-cancer-thyroide répond 404), absente du plan du site', (await fetch(`${BASE}/informations/iode-131-cancer-thyroide`)).status === 404 && !/iode-131/.test(sm));
+  t('fiche publiée (hyperthyroïdie) : servie, indexable, dans le plan du site ; fiche en brouillon (cancer) : 404 et absente', (await fetch(`${BASE}/informations/iode-131-hyperthyroidie`)).status === 200 && (await fetch(`${BASE}/informations/iode-131-cancer-thyroide`)).status === 404 && /iode-131-hyperthyroidie</.test(sm) && !/iode-131-cancer|lutetium/.test(sm));
   res = await fetch(`${BASE}/`); html = await res.text();
   t('accueil : bandeau vers /informations, plus de texte de présentation', /class="audience-banner[^"]*"[^>]*>[^<]*patient[^<]*<a href="\/informations"/.test(html) && !/id="apropos"/.test(html));
   fs.mkdirSync(path.join(data, 'var'), { recursive: true });

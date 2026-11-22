@@ -87,8 +87,9 @@ function page_html(array $fiche, bool $preview): string
 {
     $title = esc((string) $fiche['title']);
     $desc = esc((string) $fiche['description']);
-    $banner = $preview
-        ? '<p class="draft"><strong>BROUILLON : non publié.</strong> Cette page n\'est visible que dans l\'administration. <a href="/auth/fiches">← Toutes les fiches</a></p>' : '';
+    $banner = !$preview ? '' : (published($fiche)
+        ? '<p class="draft"><strong>Aperçu administrateur : fiche publiée.</strong> Les points à vérifier (en bas) ne sont visibles que dans l\'administration. <a href="/auth/fiches">← Toutes les fiches</a></p>'
+        : '<p class="draft"><strong>BROUILLON : non publié.</strong> Cette page n\'est visible que dans l\'administration. <a href="/auth/fiches">← Toutes les fiches</a></p>');
     $review = '';
     if ($preview && !empty($fiche['review'])) {
         $review = '<section class="review"><h2>Points à vérifier (non publiés)</h2><ul>'

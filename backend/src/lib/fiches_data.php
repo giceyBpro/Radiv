@@ -12,7 +12,7 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 return [
     [
         'slug' => 'iode-131-hyperthyroidie',
-        'status' => 'draft',
+        'status' => 'published',
         'title' => "Iode 131 et hyperthyroïdie : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement d'une hyperthyroïdie par iode 131 : ce qu'il faut savoir pour le patient et l'entourage",
         'description' => "Traitement d'une hyperthyroïdie (maladie de Basedow, nodule toxique, goitre) par iode 131 : déroulement, effet attendu, consignes de radioprotection pour l'entourage et risque de contamination.",
@@ -51,7 +51,6 @@ return [
         'faq' => [
             ['q' => "Puis-je prendre mes enfants dans mes bras après le traitement ?", 'a' => "Les contacts brefs sont en général possibles ; ce sont les contacts rapprochés et prolongés qui sont limités, surtout avec les jeunes enfants. Suivez la durée de restriction donnée par votre équipe."],
             ['q' => "Pourquoi l'effet du traitement n'est-il pas immédiat ?", 'a' => "Le rayonnement réduit progressivement l'activité de la thyroïde : l'effet se constate au bout de plusieurs semaines, avec un suivi par prises de sang. Votre équipe vous indique quand le contrôler."],
-            ['q' => "Quand pourrai-je reprendre le travail ?", 'a' => "Cela dépend de la durée de restriction qui vous est indiquée et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
             ['q' => "La durée donnée est-elle la même pour tout le monde ?", 'a' => "Non : elle dépend du produit, de l'activité administrée et de la situation des personnes qui vous entourent. C'est l'équipe de médecine nucléaire qui la détermine."],
         ],
         'calc' => [
