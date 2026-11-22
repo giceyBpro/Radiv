@@ -16,27 +16,27 @@ const start = async (tmp) => {
   for (const d of ['public', 'backend', 'core']) fs.cpSync(path.join(ROOT, d), path.join(tmp, d), { recursive: true });
   const dataFile = path.join(tmp, 'backend/src/lib/fiches_data.php');
   const original = fs.readFileSync(dataFile, 'utf8');
-  // 1. Tout en brouillon
+  // 1. État du dépôt : seule la fiche « hyperthyroïdie » est publiée
   let srv = await start(tmp);
   let idx = await (await fetch(`${BASE}/informations`)).text();
   t('page /informations : avis « calculateur destiné aux professionnels de santé » en haut, consignes de l\'équipe', /class="notice"[^>]*>[\s\S]{0,200}professionnels de santé[\s\S]{0,300}consignes données par votre équipe/.test(idx));
-  t('aucune fiche publiée : aucune liste ni lien vers les fiches', !/Fiches par traitement/.test(idx) && !/\/informations\/iode-131-cancer-thyroide/.test(idx) && !/<!--FICHES-->/.test(idx));
+  t('seule la fiche publiée est listée (hyperthyroïdie) ; brouillons ni listés ni liés', /Fiches par traitement/.test(idx) && /href="\/informations\/iode-131-hyperthyroidie"/.test(idx) && !/iode-131-cancer-thyroide|lutetium-177/.test(idx) && !/<!--FICHES-->/.test(idx));
   t('brouillon : /informations/iode-131-cancer-thyroide répond 404', (await fetch(`${BASE}/informations/iode-131-cancer-thyroide`)).status === 404);
   srv.kill(); await new Promise((r) => setTimeout(r, 300));
-  // 2. Une fiche publiée (iode 131), les autres en brouillon
+  // 2. On publie en plus la fiche « cancer de la thyroïde » (les autres restent en brouillon)
   const published = original.replace("'slug' => 'iode-131-cancer-thyroide',\n        'status' => 'draft',", "'slug' => 'iode-131-cancer-thyroide',\n        'status' => 'published',");
-  t('(préparation) statut de la fiche iode passé à « published »', published !== original);
+  t('(préparation) statut de la fiche cancer passé à « published »', published !== original);
   fs.writeFileSync(dataFile, published);
   srv = await start(tmp);
   idx = await (await fetch(`${BASE}/informations`)).text();
-  t('fiche publiée : listée sur /informations avec son lien', /Fiches par traitement/.test(idx) && /href="\/informations\/iode-131-cancer-thyroide"/.test(idx));
+  t('fiches publiées : toutes deux listées sur /informations avec leur lien', /Fiches par traitement/.test(idx) && /href="\/informations\/iode-131-cancer-thyroide"/.test(idx) && /href="\/informations\/iode-131-hyperthyroidie"/.test(idx));
   t('fiches en brouillon : ni listées ni liées', !/lutetium-177-psma|lutetium-177-dotatate/.test(idx));
   const fr = await fetch(`${BASE}/informations/iode-131-cancer-thyroide`); const html = await fr.text();
   t('fiche publiée : 200, indexable, canonique absolue, FAQ structurée', fr.status === 200 && !/noindex/.test(html) && /rel="canonical" href="[^"]+\/informations\/iode-131-cancer-thyroide"/.test(html) && /FAQPage/.test(html));
   t('fiche publiée : pas de bandeau « brouillon » ni de points de relecture', !/BROUILLON/.test(html) && !/Points à vérifier/.test(html));
   t('brouillon voisin : toujours 404', (await fetch(`${BASE}/informations/lutetium-177-psma`)).status === 404);
   const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
-  t('plan du site : la fiche publiée y figure, pas les brouillons', /\/informations\/iode-131-cancer-thyroide</.test(sm) && !/lutetium/.test(sm));
+  t('plan du site : les fiches publiées y figurent, pas les brouillons', /\/informations\/iode-131-cancer-thyroide</.test(sm) && /\/informations\/iode-131-hyperthyroidie</.test(sm) && !/lutetium/.test(sm));
   srv.kill(); fs.rmSync(tmp, { recursive: true, force: true });
   console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });
