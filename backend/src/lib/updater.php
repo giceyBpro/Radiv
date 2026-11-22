@@ -424,7 +424,9 @@ function acquire_lock()
 
 // --- Opérations -----------------------------------------------------------------------------
 
-function run(string $ref, string $token, string $by): array
+// $force : réinstalle même si le commit demandé est déjà celui installé (répare un site dont des fichiers manquent, par exemple des images
+// ajoutées à la liste blanche par cette même mise à jour).
+function run(string $ref, string $token, string $by, bool $force = false): array
 {
     @set_time_limit(180);
     ignore_user_abort(true); // une page fermée en cours de route ne doit pas laisser un état à moitié remplacé
@@ -440,8 +442,8 @@ function run(string $ref, string $token, string $by): array
     try {
         $sha = resolve_sha($ref, $token);
         if ($sha === null) throw new \RuntimeException('Référence introuvable ou accès refusé.');
-        if (($before['sha'] ?? null) === $sha) {
-            return ['ok' => true, 'message' => 'Cette version est déjà installée (' . substr($sha, 0, 7) . ').'];
+        if (!$force && ($before['sha'] ?? null) === $sha) {
+            return ['ok' => true, 'message' => 'Cette version est déjà installée (' . substr($sha, 0, 7) . '). Cochez « Réinstaller » pour recopier tous les fichiers.'];
         }
         Config\ensure_dir($tmp);
         $zipFile = "{$tmp}/repo.zip";
