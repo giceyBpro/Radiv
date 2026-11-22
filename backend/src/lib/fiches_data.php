@@ -69,7 +69,7 @@ return [
     ],
     [
         'slug' => 'iode-131-cancer-thyroide',
-        'status' => 'draft',
+        'status' => 'published',
         'title' => "Iode 131 et cancer de la thyroïde : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement d'un cancer de la thyroïde par iode 131 : ce qu'il faut savoir pour le patient et l'entourage",
         'description' => "Traitement d'un cancer différencié de la thyroïde par iode 131 après chirurgie : préparation, séjour en chambre protégée, consignes de radioprotection pour l'entourage et risque de contamination.",
