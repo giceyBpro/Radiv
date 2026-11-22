@@ -82,6 +82,9 @@ function allowed(string $rel): bool
         $sub = implode('/', array_slice($parts, 1));
         if (in_array($sub, FRONTEND_FILES, true)) return true;
         if ($sub === 'api/index.php' || $sub === 'api/.htaccess') return true; // la façade, et rien d'autre dans api/
+        if ($count === 3 && $parts[1] === 'img') { // illustrations des pages d'information (images WebP uniquement)
+            return preg_match('/^[a-z0-9][a-z0-9-]*\.webp$/', $parts[2]) === 1;
+        }
         if ($count === 3 && $parts[1] === 'downloads') {
             return preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $parts[2]) === 1;
         }
