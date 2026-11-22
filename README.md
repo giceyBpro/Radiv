@@ -41,6 +41,7 @@ install.php, update.php   installation web (seule méthode) et mise à jour de s
 | `explain.html` | Version explicative simplifiée destinée au patient. |
 | `xplore.html` | Page de téléchargement des modèles Xplore RIS (questionnaire QUDEM + insertion automatique). |
 | `contact.html` | Formulaire de contact protégé par ALTCHA (anti-robots local), envoi email côté backend. |
+| `informations.html` | Page grand public (`/informations`) : explications pour les patients et l'entourage (restriction de contact, contamination, origine des calculs). Indexable, servie par le backend comme l'accueil (balises propres à l'adresse du site) ; l'accueil, destiné aux professionnels, y renvoie par un bandeau en haut de page. Futures fiches par radiopharmaceutique : `/informations/<produit>`. |
 | `mentions-legales.html` | Mentions légales (éditeur anonyme, hébergeur O2SWITCH), conditions générales d'utilisation (absence de garantie de justesse et de disponibilité) et protection des données (RGPD) : la section RGPD est générée depuis `GET /api/config` et `GET /api/public-config`, reste donc correcte sans édition manuelle si la configuration change. |
 | `api-fonctionnement.html` | Documentation publique du contrat API ; les tableaux des isotopes et des scénarios sont lus en direct sur `GET /api/config` (rien à maintenir à la main). |
 | `test-api.html` | Page de test manuel des endpoints API. |
@@ -67,7 +68,7 @@ externe pointait vers elles, et elles ne sont liées depuis aucune page publique
   `Organization`, `WebApplication` pour l'accueil avec `dateModified` = date de la version installée, `WebPage` pour les mentions légales) et **nom du site dans
   `og:site_name`** dès le HTML (sans attendre le JavaScript). Réponses avec `ETag`, `Cache-Control: public, max-age=300` et `304`. Si l'adresse du site n'est pas configurée
   ou si le fichier manque, la page est servie telle quelle (aucune erreur visible).
-- **`sitemap.xml`** est servi par le backend (accueil et mentions légales, avec leur date de dernière modification) ; `install.php` en écrit aussi une version statique
+- **`sitemap.xml`** est servi par le backend (accueil, informations et mentions légales, avec leur date de dernière modification) ; `install.php` en écrit aussi une version statique
   de repli.
 - **`robots.txt`** : tout est autorisé sauf `/api/` (les deux adresses `/api/config` et `/api/public-config` restent lisibles pour que les robots puissent afficher la
   page) et `/downloads/` (modèles XML). L'adresse de l'administration n'y figure volontairement pas : le fichier est public. La ligne `Sitemap:` est ajoutée à

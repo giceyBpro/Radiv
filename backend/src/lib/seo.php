@@ -15,7 +15,8 @@ use Radiv\Updater;
 // Pages indexables : adresse publique => [fichier HTML de la racine web, priorité du plan du site, fréquence]
 const PAGES = [
     '/' => ['index.html', '1.0', 'monthly'],
-    '/legal' => ['mentions-legales.html', '0.3', 'yearly'],
+    '/informations' => ['informations.html', '0.8', 'monthly', 'Informations pour le patient et l\'entourage après une radiothérapie interne vectorisée (RIV)'],
+    '/legal' => ['mentions-legales.html', '0.3', 'yearly', 'Mentions légales, conditions d\'utilisation et données personnelles'],
 ];
 
 // Adresse demandée => adresse publique de la page (ou null si ce n'est pas une page gérée ici).
@@ -23,6 +24,7 @@ function page_for_path(string $path): ?string
 {
     return match (rtrim($path, '/') === '' ? '/' : rtrim($path, '/')) {
         '/', '/index.html' => '/',
+        '/informations', '/informations.html' => '/informations',
         '/legal', '/mentions-legales.html' => '/legal',
         default => null,
     };
@@ -89,7 +91,7 @@ function json_ld(string $publicPath, string $site, string $url, string $name): s
         ], static fn ($v) => $v !== null);
     } else {
         $graph[] = array_filter([
-            '@type' => 'WebPage', '@id' => $url . '#page', 'url' => $url, 'name' => 'Mentions légales, conditions d\'utilisation et données personnelles',
+            '@type' => 'WebPage', '@id' => $url . '#page', 'url' => $url, 'name' => PAGES[$publicPath][3] ?? 'Mentions légales, conditions d\'utilisation et données personnelles',
             'inLanguage' => 'fr', 'isPartOf' => ['@id' => $site . '/#website'], 'dateModified' => $modified !== '' ? $modified : null,
         ], static fn ($v) => $v !== null);
     }

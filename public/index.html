@@ -223,11 +223,9 @@
       color: var(--muted);
     }
 
-    .about { margin-top: 24px; line-height: 1.55; }
-    .about h2 { margin: 0 0 8px; font-size: 18px; color: var(--text, inherit); }
-    .about h3 { margin: 14px 0 4px; font-size: 15px; color: var(--text, inherit); }
-    .about p { margin: 0 0 8px; }
-    @media print { .about { display: none; } }
+    .audience-banner { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: #eaf1fc; border: 1px solid #c4d6f2; color: #17458a; font-size: 14px; }
+    .audience-banner a { font-weight: 700; color: inherit; }
+    @media print { .audience-banner { display: none; } }
 
     .error {
       background: var(--warn-soft);
@@ -635,6 +633,7 @@
 <body data-field-style="v2">
 <!--MAINTENANCE-GATE--><div id="maintenanceNotice" role="status"><div><div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px"><svg style="height:56px;width:auto" aria-hidden="true" viewBox="30 20 190 200" xmlns="http://www.w3.org/2000/svg"><polygon points="40,206 40,40 42,46 43,52 44,57 46,63 47,68 49,73 50,78 52,82 53,87 54,91 56,95 57,99 59,103 60,107 62,110 63,114 63,206" fill="#1c4fb0"/><polygon points="63,206 63,114 65,118 67,122 69,126 71,130 73,133 74,137 76,140 78,143 80,146 82,148 84,151 86,154 88,156 89,158 91,161 93,163 93,206" fill="#2f6fe0"/><polygon points="93,206 93,163 96,166 98,168 101,171 104,173 107,175 109,177 112,179 115,181 117,183 120,184 123,186 126,187 128,188 131,189 134,190 136,192 136,206" fill="#6f9fec"/><polygon points="136,206 136,192 141,193 145,194 149,196 154,197 158,198 162,198 167,199 171,200 176,201 180,201 184,202 189,202 193,202 197,203 202,203 206,204 206,206" fill="#c7dcf8"/><path d="M40 40 V206 H210" fill="none" stroke="#10223f" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="40" r="13" fill="#c23a5e" stroke="#fff" stroke-width="4"/></svg><span style="font-size:2rem;font-weight:800;letter-spacing:-.5px;color:#10223f;line-height:1">Rad<span style="color:#2f6fe0">IV</span></span></div><h1>Site en maintenance</h1><p>Le site est momentanément indisponible. Merci de votre compréhension.</p><p>En attendant, vous pouvez calculer les durées de restriction avec l’outil en ligne de la SFMN : <a data-sfmn-link href="https://www.acoramen.net/index.php?option=com_evictionperiod&amp;Itemid=5141&amp;lang=fr" target="_blank" rel="noopener noreferrer">accéder à l’outil de la SFMN</a>.</p><p>Pour nous écrire, le <a href="contact.html">formulaire de contact</a> reste disponible.</p></div></div><!--/MAINTENANCE-GATE-->
   <main class="page">
+    <p class="audience-banner no-print">Vous êtes patient ou proche d'un patient traité par radiothérapie interne ? <a href="/informations">Consultez les informations qui vous sont destinées</a>.</p>
     <header class="site-head">
     <div class="brand"><svg class="brand-mark" viewBox="30 20 190 200" role="img" aria-label="RadIV" xmlns="http://www.w3.org/2000/svg"><polygon points="40,206 40,40 42,46 43,52 44,57 46,63 47,68 49,73 50,78 52,82 53,87 54,91 56,95 57,99 59,103 60,107 62,110 63,114 63,206" fill="#1c4fb0"/><polygon points="63,206 63,114 65,118 67,122 69,126 71,130 73,133 74,137 76,140 78,143 80,146 82,148 84,151 86,154 88,156 89,158 91,161 93,163 93,206" fill="#2f6fe0"/><polygon points="93,206 93,163 96,166 98,168 101,171 104,173 107,175 109,177 112,179 115,181 117,183 120,184 123,186 126,187 128,188 131,189 134,190 136,192 136,206" fill="#6f9fec"/><polygon points="136,206 136,192 141,193 145,194 149,196 154,197 158,198 162,198 167,199 171,200 176,201 180,201 184,202 189,202 193,202 197,203 202,203 206,204 206,206" fill="#c7dcf8"/><path d="M40 40 V206 H210" fill="none" stroke="#10223f" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="40" r="13" fill="#c23a5e" stroke="#fff" stroke-width="4"/></svg><span class="brand-word">Rad<span>IV</span></span></div>
     <h1>Durée de restriction des contacts après radiothérapie interne vectorisée</h1>
@@ -824,20 +823,6 @@
       <p>L'article princeps spécifique à chaque radiopharmaceutique est indiqué
       dans le champ « Référence radiopharmaceutique » du calcul.</p>
     </div>
-
-    <section class="note about" id="apropos">
-      <h2>À propos de ce calculateur</h2>
-      <p>Après un traitement par <strong>radiothérapie interne vectorisée (RIV)</strong> &mdash; iode 131 (I-131), lutétium 177 (Lu-177), radium 223 (Ra-223), microsphères chargées d'yttrium 90 ou d'holmium 166 &mdash;, le patient émet pendant un temps un faible rayonnement. Des <strong>consignes de radioprotection</strong> limitent alors l'exposition de son entourage : on parle de <strong>durée de restriction de contact</strong>.</p>
-      <h3>À quoi sert la durée de restriction ?</h3>
-      <p>C'est le nombre de jours pendant lesquels certains contacts rapprochés sont à limiter : dormir dans le même lit, rester près d'un enfant, partager un trajet ou un poste de travail. Elle dépend du radiopharmaceutique, de la façon dont il décroît chez le patient et de la situation de la personne exposée (conjoint, enfant, femme enceinte, collègue, transports en commun).</p>
-      <h3>Comment l'utiliser ?</h3>
-      <p>Choisissez le radiopharmaceutique, saisissez le débit de dose mesuré à un mètre à la sortie du patient et la taille du patient, ainsi que les éventuels champs demandés pour ce produit. Le résultat donne, pour chaque situation, la durée de restriction en jours, avec une version imprimable et une version explicative destinée au patient.</p>
-      <h3>D'où viennent les calculs ?</h3>
-      <p>Le calcul reprend le modèle publié par Carlier et coll. (<em>Médecine Nucléaire</em>, 2026), qui harmonise en France les contraintes d'exposition de l'entourage. Les références complètes figurent juste au-dessus.</p>
-      <h3>Et le risque de contamination ?</h3>
-      <p>Les durées calculées ici ne concernent que l'<strong>exposition externe</strong> : le rayonnement émis par le corps du patient, qui diminue avec la distance et le temps. Elles ne couvrent pas la <strong>contamination</strong>, c'est-à-dire le contact avec des traces de produit radioactif éliminées par l'organisme (urine, salive, sueur, selles, vomissements), qui peuvent se retrouver sur la peau, le linge, les sanitaires ou les objets partagés. Selon le radiopharmaceutique, ce risque existe pendant une durée différente de celle de la restriction de contact. Il se maîtrise par des gestes d'hygiène que l'équipe de médecine nucléaire précise à chaque patient (par exemple se laver soigneusement les mains ou ne pas partager les couverts au cours du repas). Suivez ces consignes en plus de la durée de restriction affichée ici : elles ne s'y substituent pas.</p>
-      <p>Les résultats sont <strong>indicatifs</strong> : seule l'exposition externe est prise en compte, et la décision finale appartient à l'équipe de médecine nucléaire qui suit le patient.</p>
-    </section>
 
     <div class="meta">
       <div>Version web pour le calcul des durées de restriction RIV.</div>
