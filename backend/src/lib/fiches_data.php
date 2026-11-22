@@ -23,7 +23,7 @@ return [
             ]],
             ['h' => "Comment se passe le traitement ?", 'level' => 3, 'p' => [
                 "Le traitement consiste en <strong>une prise unique par la bouche</strong> (gélule ou liquide). Selon l'activité administrée et l'organisation du service, il se fait le plus souvent <strong>sans hospitalisation</strong> : vous rentrez chez vous le jour même avec des consignes précises.",
-                "L'effet est <strong>progressif</strong> : il se constate en quelques semaines à quelques mois, avec un suivi par prises de sang. Après le traitement, la thyroïde peut devenir insuffisante ; un traitement par hormone thyroïdienne est alors prescrit, ce qui est fréquent et bien maîtrisé.",
+                "L'effet est <strong>progressif</strong> : il n'apparaît qu'au bout de plusieurs semaines, avec un suivi par prises de sang. Si l'hyperthyroïdie persiste, le traitement peut être renouvelé plusieurs mois plus tard. Après le traitement, la thyroïde peut devenir insuffisante ; un traitement par hormone thyroïdienne est alors prescrit, ce qui est fréquent et bien maîtrisé.",
             ]],
             ['h' => "Après la prise, à la maison", 'level' => 3, 'p' => [
                 "Pendant les jours qui suivent, votre corps émet un faible rayonnement et élimine l'iode, surtout par les urines, mais aussi par la salive et la sueur. L'équipe de médecine nucléaire vous indique <strong>une durée de restriction de contact</strong>, adaptée à votre situation et à votre entourage (conjoint, enfants, femme enceinte, travail).",
@@ -38,7 +38,7 @@ return [
                 "Après l'ablation de la thyroïde pour un cancer dit « différencié » (papillaire ou folliculaire), l'iode 131 détruit les petits fragments de tissu thyroïdien qui peuvent rester. Il permet aussi de rechercher, par une image réalisée quelques jours plus tard, d'éventuelles cellules thyroïdiennes ailleurs dans le corps.",
             ]],
             ['h' => "Comment se passe le traitement ?", 'level' => 3, 'p' => [
-                "Le traitement est <strong>préparé</strong> : l'équipe vous explique comment stimuler la thyroïde (par un arrêt temporaire de l'hormone thyroïdienne ou par des injections) et vous demande de suivre un <strong>régime pauvre en iode</strong> pendant une période définie.",
+                "Le traitement est <strong>préparé</strong> : l'équipe vous explique comment stimuler la thyroïde (par un arrêt temporaire de l'hormone thyroïdienne ou par des injections) et peut, selon votre situation, vous demander de suivre un <strong>régime pauvre en iode</strong> pendant une période définie (ce n'est pas systématique). L'hormone thyroïdienne est reprise peu après le traitement.",
                 "L'activité d'iode administrée est <strong>plus élevée</strong> que pour une hyperthyroïdie. Vous séjournez donc en général <strong>quelques jours dans une chambre spécialement protégée</strong> du service de médecine nucléaire. Les visites sont limitées, et vous sortez lorsque le rayonnement mesuré est redescendu à un niveau permettant le retour à domicile.",
             ]],
             ['h' => "Après le séjour, à la maison", 'level' => 3, 'p' => [
@@ -46,9 +46,11 @@ return [
             ]],
 
             ['h' => "Dans les deux cas", 'level' => 2, 'p' => [], 'ul' => [
+                "<strong>Examens avec produit de contraste iodé</strong> : ne réalisez pas d'examen avec injection de produit de contraste iodé (certains scanners, par exemple) avant le traitement, sans en avoir parlé à l'équipe : l'iode du produit de contraste empêche la thyroïde de fixer l'iode radioactif et réduit l'efficacité du traitement. Signalez aussi tout médicament ou produit contenant de l'iode.",
                 "<strong>Contamination</strong> : l'iode éliminé par l'organisme (urine, salive, sueur) peut se retrouver sur la peau, les objets et les sanitaires. Les gestes d'hygiène indiqués par l'équipe (se laver soigneusement les mains, ne pas partager les couverts au cours du repas…) s'ajoutent à la durée de restriction.",
-                "<strong>Grossesse et allaitement</strong> : le traitement n'est pas réalisé en cas de grossesse, et l'allaitement doit être interrompu. L'équipe précise aussi pendant combien de temps éviter une grossesse après le traitement.",
-                "<strong>Déplacements</strong> : pendant un certain temps, les portiques de détection (aéroports, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. Gardez sur vous le document remis par le service.",
+                "<strong>Hydratation et glandes salivaires</strong> : il est conseillé de boire beaucoup et d'uriner souvent. L'équipe peut aussi vous conseiller de sucer des bonbons acides ou de boire des boissons au citron, pour protéger les glandes salivaires.",
+                "<strong>Grossesse, contraception et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse (la thyroïde du fœtus capte l'iode). Une contraception efficace est à maintenir après le traitement, pour les femmes comme pour les hommes ; l'équipe précise la durée (le RCP indique jusqu'à 6 mois pour une maladie bénigne et 12 mois pour un cancer) et le délai conseillé avant de concevoir. L'allaitement ne doit pas être repris, et les contacts rapprochés entre une mère et un jeune enfant sont à éviter pendant au moins une semaine. Selon l'activité administrée, la fertilité peut être altérée ; une conservation du sperme est envisagée pour les traitements les plus forts.",
+                "<strong>Détections de radioactivité</strong> : pendant un certain temps, les portiques de détection (aéroports, déchetteries, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. N'hésitez pas à demander à l'équipe une attestation si besoin.",
                 "<strong>Suivi</strong> : des consultations et des examens sont programmés pour vérifier l'efficacité du traitement.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
@@ -61,13 +63,15 @@ return [
             ['q' => "Pourquoi mon traitement est-il différent selon la maladie ?", 'a' => "Pour une hyperthyroïdie, on réduit l'activité d'une thyroïde en place avec une activité modérée ; pour un cancer, on détruit les tissus restants après la chirurgie avec une activité plus élevée, ce qui explique le séjour en chambre protégée."],
             ['q' => "La durée donnée est-elle la même pour tout le monde ?", 'a' => "Non : elle dépend du produit, de la mesure du rayonnement à votre sortie et de la situation des personnes qui vous entourent. C'est l'équipe de médecine nucléaire qui la détermine."],
         ],
+        'links' => [
+            ['label' => "Résumé des caractéristiques du produit (RCP) de l'iodure (131I) de sodium pour thérapie (gélule), base de données publique des médicaments", 'url' => 'https://base-donnees-publique.medicaments.gouv.fr/medicament/67041506/extrait'],
+        ],
         'review' => [
-            "Hyperthyroïdie : « le plus souvent sans hospitalisation » et « retour le jour même » : confirmer pour votre pratique (selon l'activité et la réglementation locale).",
-            "Cancer : préparation par arrêt de l'hormone ou injections (rhTSH), régime pauvre en iode, séjour « quelques jours » en chambre protégée : confirmer le vocabulaire et la durée habituelle.",
-            "« Les contacts brefs restent possibles » : à valider (formulation à adapter si vos consignes sont plus strictes).",
-            "« Environ huit jours » : demi-vie physique de l'iode 131 (≈ 8 jours) ; ne pas la confondre avec la durée de restriction.",
-            "Grossesse/allaitement : formulation prudente sans durée chiffrée de contraception ; faut-il indiquer une durée ?",
-            "Aucune durée de restriction n'est chiffrée dans la fiche : souhaitez-vous afficher des exemples tirés du calculateur ?",
+            "Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (hyperthyroïdie : maladie de Basedow, goitre multinodulaire toxique, nodules autonomes ; carcinome thyroïdien vésiculaire/papillaire), effet de l'hyperthyroïdie après plusieurs semaines, traitement renouvelable, hydratation et mictions fréquentes, bonbons ou boissons acides pour les glandes salivaires, produits de contraste iodés (le RCP indique un délai de 6 à 8 semaines pour les produits hydrosolubles), arrêt puis reprise de l'hormone thyroïdienne, grossesse (contre-indication), contraception (6 mois bénin, 12 mois cancer), allaitement, contacts mère-enfant (au moins 1 semaine), fertilité.",
+            "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même et absence d'hospitalisation pour l'hyperthyroïdie ; séjour de quelques jours en chambre protégée pour le cancer ; stimulation par injections (rhTSH) ; « les contacts brefs restent possibles ».",
+            "Le RCP ne précise pas de durée de restriction de contact : les durées dépendent de votre service (et du calculateur). Aucune durée n'est chiffrée dans la fiche.",
+            "Durée du délai après produit de contraste iodé : la fiche dit « avant le traitement, sans en avoir parlé à l'équipe » sans chiffre ; faut-il indiquer 6 à 8 semaines ?",
+            "Le RCP vérifié concerne la gélule Curiumpharma ; d'autres présentations d'iode 131 peuvent avoir des textes légèrement différents.",
         ],
     ],
     [
