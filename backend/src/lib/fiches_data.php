@@ -61,7 +61,7 @@ return [
             ['label' => "Résumé des caractéristiques du produit (RCP) de l'iodure (131I) de sodium pour thérapie (gélule), base de données publique des médicaments", 'url' => 'https://base-donnees-publique.medicaments.gouv.fr/medicament/67041506/extrait'],
         ],
         'review' => [
-            "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (maladie de Basedow, goitre multinodulaire toxique, nodules autonomes), effet après plusieurs semaines, traitement renouvelable, arrêt des antithyroïdiens avant la prise, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés (le RCP indique 6 à 8 semaines pour les produits hydrosolubles), grossesse, contraception, allaitement, fertilité.",
+            "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (maladie de Basedow, goitre multinodulaire toxique, nodules autonomes), effet après plusieurs semaines, traitement renouvelable, arrêt des antithyroïdiens avant la prise, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés (le RCP indique 6 à 8 semaines pour les produits hydrosolubles), grossesse, contraception, allaitement.",
             "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même, sans hospitalisation ; « les contacts brefs restent possibles ».",
             "Les durées (restriction de contact, contraception, contacts mère-enfant) du RCP ne sont volontairement pas reprises : elles sont données par l'équipe (calcul RadIV).",
             "Calculateur : renvoi vers l'accueil avec l'isotope « Iode-131-Bénin » présélectionné. Délai après produit de contraste iodé : sans chiffre dans la fiche (RCP : 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
@@ -118,7 +118,7 @@ return [
             ['label' => "Résumé des caractéristiques du produit (RCP) de l'iodure (131I) de sodium pour thérapie (gélule), base de données publique des médicaments", 'url' => 'https://base-donnees-publique.medicaments.gouv.fr/medicament/67041506/extrait'],
         ],
         'review' => [
-            "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indication (carcinome thyroïdien vésiculaire et/ou papillaire, y compris métastases), arrêt puis reprise de l'hormone thyroïdienne, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés, hydratation, glandes salivaires, grossesse, contraception, allaitement, fertilité (altération dose-dépendante).",
+            "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indication (carcinome thyroïdien vésiculaire et/ou papillaire, y compris métastases), arrêt puis reprise de l'hormone thyroïdienne, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés, hydratation, glandes salivaires, grossesse, contraception, allaitement.",
             "Non repris du RCP, donc à confirmer selon votre pratique : séjour de quelques jours en chambre protégée ; stimulation par injections (rhTSH) ; image quelques jours après la prise ; « les contacts brefs restent possibles ».",
             "Les durées (restriction de contact, contraception, contacts mère-enfant) du RCP ne sont volontairement pas reprises : elles sont données par l'équipe (calcul RadIV).",
             "Calculateur : renvoi vers l'accueil avec l'isotope « Iode-131-0 % fixation » présélectionné (néoplasie). Délai après produit de contraste iodé : sans chiffre dans la fiche (RCP : 6 à 8 semaines pour les produits hydrosolubles).",
@@ -153,8 +153,8 @@ return [
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
                 "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
-            ['h' => "Fertilité, vie intime et déplacements", 'level' => 2, 'p' => [], 'ul' => [
-                "<strong>Fertilité et contraception</strong> : ce traitement peut avoir un effet sur la fertilité et sur un éventuel enfant à naître. Si vous avez un projet d'enfant, parlez-en à l'équipe <strong>avant de commencer</strong> ; elle vous précise les mesures à prendre, y compris pour la contraception, pendant le traitement et après.",
+            ['h' => "Contraception, vie intime et déplacements", 'level' => 2, 'p' => [], 'ul' => [
+                "<strong>Contraception</strong> : ce traitement peut avoir un effet sur un éventuel enfant à naître. L'équipe vous précise, avant le début du traitement, les mesures à prendre pour la contraception pendant le traitement et après.",
                 "<strong>Vie intime</strong> : l'équipe vous donne les consignes qui vous concernent. N'hésitez pas à lui poser vos questions, elles sont courantes.",
                 "<strong>Détections de radioactivité</strong> : pendant un certain temps, les portiques de détection (aéroports, déchetteries, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. N'hésitez pas à demander à l'équipe une attestation si besoin.",
             ]],
@@ -174,7 +174,7 @@ return [
             "Les durées de restriction (contacts, sommeil, vie intime) et les durées de contraception du RCP ne sont volontairement pas reprises : elles sont calculées par RadIV / données par l'équipe. La fiche renvoie aux consignes de l'équipe.",
             "Contenu vérifié avec le RCP français de l'EMA : indication (rubrique 4.1), schéma (6 injections au plus, environ toutes les 6 semaines), hydratation et mictions fréquentes, effets les plus fréquents, demi-vie du lutétium 177 (6,647 jours).",
             "Les deux liens (PDF du RCP et fiche EMA) ont été ouverts avec succès. La fiche de la base de données publique des médicaments n'a pas été ajoutée : voulez-vous que je la cherche ?",
-            "Fertilité, vie intime, contraception : formulation volontairement vague, avec renvoi à l'équipe.",
+            "Contraception, vie intime : formulation volontairement vague, avec renvoi à l'équipe.",
             "Effets indésirables : seuls les plus fréquents du RCP sont cités (fatigue, sécheresse buccale, nausées, anémie, baisse d'appétit, constipation) ; faut-il en citer d'autres ?",
         ],
     ],
@@ -183,7 +183,7 @@ return [
         'status' => 'draft',
         'title' => "Lutétium 177 DOTATATE (Lutathera) : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement par lutétium 177 DOTATATE (Lutathera) : ce qu'il faut savoir pour le patient et l'entourage",
-        'description' => "Traitement par lutétium 177 DOTATATE (Lutathera) d'une tumeur neuroendocrine : déroulement, effets à connaître, consignes de radioprotection pour l'entourage, fertilité et lien vers le RCP.",
+        'description' => "Traitement par lutétium 177 DOTATATE (Lutathera) d'une tumeur neuroendocrine : déroulement, effets à connaître, consignes de radioprotection pour l'entourage, contraception et lien vers le RCP.",
         'lead' => "Le lutétium 177 DOTATATE (nom commercial <strong>Lutathera</strong>) est un médicament de radiothérapie interne utilisé dans certaines tumeurs neuroendocrines. Il associe une molécule qui se fixe sur des <strong>récepteurs de la somatostatine</strong>, présents à la surface des cellules de ces tumeurs, à un atome radioactif, le <strong>lutétium 177</strong> : le rayonnement est ainsi délivré directement au contact des cellules visées.",
         'blocks' => [
             ['h' => "Pour quelle situation ce traitement est-il proposé ?", 'level' => 2, 'p' => [
@@ -213,9 +213,9 @@ return [
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
                 "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
-            ['h' => "Grossesse, fertilité et déplacements", 'level' => 2, 'p' => [], 'ul' => [
+            ['h' => "Grossesse, contraception et déplacements", 'level' => 2, 'p' => [], 'ul' => [
                 "<strong>Grossesse et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse, et l'allaitement est à éviter ; si le traitement est nécessaire pendant l'allaitement, l'enfant doit être sevré. Parlez-en à l'équipe avant de commencer.",
-                "<strong>Fertilité et contraception</strong> : le rayonnement peut avoir un effet sur la fertilité. Si vous avez un projet d'enfant, parlez-en à l'équipe <strong>avant de commencer</strong> : une conservation du sperme ou des ovules peut être envisagée. L'équipe vous précise les mesures à prendre, y compris pour la contraception, pendant le traitement et après.",
+                "<strong>Contraception</strong> : le rayonnement peut avoir un effet sur un éventuel enfant à naître. L'équipe vous précise, avant le début du traitement, les mesures à prendre pour la contraception pendant le traitement et après.",
                 "<strong>Détections de radioactivité</strong> : pendant un certain temps, les portiques de détection (aéroports, déchetteries, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. N'hésitez pas à demander à l'équipe une attestation si besoin.",
             ]],
         ],
@@ -232,7 +232,7 @@ return [
             ['label' => "Fiche européenne de Lutathera (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/lutathera'],
         ],
         'review' => [
-            "Contenu vérifié avec le RCP français de l'EMA : indication (4.1, tumeurs neuroendocrines gastro-entéro-pancréatiques), schéma (4 perfusions, environ 8 semaines d'intervalle), acides aminés pour protéger les reins, antiémétique, hydratation et mictions fréquentes, effets les plus fréquents, complications tardives rares du sang, grossesse (contre-indication), allaitement, fertilité (cryoconservation), demi-vie du lutétium 177 (6,647 jours).",
+            "Contenu vérifié avec le RCP français de l'EMA : indication (4.1, tumeurs neuroendocrines gastro-entéro-pancréatiques), schéma (4 perfusions, environ 8 semaines d'intervalle), acides aminés pour protéger les reins, antiémétique, hydratation et mictions fréquentes, effets les plus fréquents, complications tardives rares du sang, grossesse (contre-indication), allaitement, demi-vie du lutétium 177 (6,647 jours).",
             "Les durées du RCP ne sont volontairement pas reprises : restriction de contact, contraception (le RCP en indique une), durée de la séparation en sortie de service (le RCP parle de 4 à 5 heures) ; la fiche renvoie aux consignes de l'équipe.",
             "« Tenu à l'écart de votre entourage pendant la perfusion » et « une nuit en observation dans certains cas » : reformulation du RCP (règles de radioprotection, crises hormonales) ; à confirmer selon votre pratique.",
             "Médicaments à adapter : le RCP mentionne les analogues de la somatostatine à longue durée d'action et les corticoïdes ; la fiche reste générale, sans délai.",
