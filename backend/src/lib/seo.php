@@ -44,6 +44,8 @@ function render(string $publicPath): ?string
     // Ici le site est en service (en maintenance, app.php répond avant d'arriver ici) : le « portail » de maintenance de l'accueil
     // (avis + style qui masque la page, levé par un script) est retiré, pour que les robots sans JavaScript lisent le vrai contenu.
     $html = (string) preg_replace('#<!--MAINTENANCE-GATE-->.*?<!--/MAINTENANCE-GATE-->#s', '', $html);
+    // Page d'index des informations : liste des fiches publiées (rien tant qu'aucune n'est publiée).
+    $html = str_replace('<!--FICHES-->', \Radiv\Fiches\index_html(), $html);
     $site = Config\site_public_url();
     if ($site === '' || preg_match('#^https?://[^/\s]+$#', $site) !== 1) return $html;
     $name = Config\site_name();
@@ -68,6 +70,41 @@ function render(string $publicPath): ?string
     $app = rtrim(Config\web_root(), '/') . '/app.js';
     if (is_file($app)) $html = preg_replace('#(<script src="app\.js)(?:\?v=[0-9A-Za-z]*)?(")#', '$1?v=' . dechex((int) filemtime($app)) . '$2', $html) ?? $html;
     return $html;
+}
+
+// Fiche publiée (statut « published » dans fiches_data.php) demandée à /informations/<slug>, sinon null : un brouillon n'est jamais servi.
+function fiche_for_path(string $path): ?array
+{
+    if (preg_match('#^/informations/([a-z0-9-]{1,60})/?$#', $path, $m) !== 1) return null;
+    $fiche = \Radiv\Fiches\get($m[1]);
+    return ($fiche !== null && \Radiv\Fiches\published($fiche)) ? $fiche : null;
+}
+
+// Page d'une fiche publiée : HTML de fiches.php complété des balises propres à l'adresse du site (canonique, Open Graph, données structurées).
+function render_fiche(array $fiche): string
+{
+    $html = \Radiv\Fiches\page_html($fiche, false);
+    $site = Config\site_public_url();
+    if ($site === '' || preg_match('#^https?://[^/\s]+$#', $site) !== 1) return $html;
+    $url = $site . '/informations/' . $fiche['slug'];
+    $name = Config\site_name();
+    $graph = [
+        ['@type' => 'WebPage', '@id' => $url . '#page', 'url' => $url, 'name' => (string) $fiche['h1'], 'description' => (string) $fiche['description'], 'inLanguage' => 'fr',
+         'isPartOf' => ['@type' => 'WebSite', '@id' => $site . '/#website', 'url' => $site . '/', 'name' => $name]],
+    ];
+    if (!empty($fiche['faq'])) {
+        $graph[] = ['@type' => 'FAQPage', 'mainEntity' => array_map(static fn (array $qa): array => [
+            '@type' => 'Question', 'name' => (string) $qa['q'], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags((string) $qa['a'])],
+        ], $fiche['faq'])];
+    }
+    $head = '<link rel="canonical" href="' . esc($url) . '" />' . "\n"
+        . '<meta property="og:type" content="website" />' . "\n"
+        . '<meta property="og:url" content="' . esc($url) . '" />' . "\n"
+        . '<meta property="og:site_name" content="' . esc($name) . '" />' . "\n"
+        . '<meta property="og:title" content="' . esc((string) $fiche['title']) . '" />' . "\n"
+        . '<meta property="og:description" content="' . esc((string) $fiche['description']) . '" />' . "\n"
+        . '<script type="application/ld+json">' . json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . '</script>' . "\n";
+    return str_replace('</head>', $head . '</head>', $html);
 }
 
 function json_ld(string $publicPath, string $site, string $url, string $name): string
@@ -111,6 +148,10 @@ function sitemap(): ?string
             . '    <lastmod>' . gmdate('Y-m-d', (int) filemtime($full)) . '</lastmod>' . "\n"
             . '    <changefreq>' . $freq . '</changefreq>' . "\n" . '    <priority>' . $priority . '</priority>' . "\n" . '  </url>' . "\n";
     }
+    foreach (\Radiv\Fiches\published_list() as $fiche) {
+        $out .= '  <url>' . "\n" . '    <loc>' . esc($site . '/informations/' . $fiche['slug']) . '</loc>' . "\n"
+            . '    <changefreq>monthly</changefreq>' . "\n" . '    <priority>0.7</priority>' . "\n" . '  </url>' . "\n";
+    }
     return $out . '</urlset>' . "\n";
 }
 
@@ -142,6 +183,8 @@ function handle(string $method, string $path): bool
     if ($method !== 'GET' && $method !== 'HEAD') return false;
     try {
         if ($path === '/sitemap.xml') return send('application/xml; charset=utf-8', sitemap(), $method === 'HEAD');
+        $fiche = fiche_for_path($path);
+        if ($fiche !== null) return send('text/html; charset=utf-8', render_fiche($fiche), $method === 'HEAD');
         $page = page_for_path($path);
         if ($page === null) return false;
         return send('text/html; charset=utf-8', render($page), $method === 'HEAD');
