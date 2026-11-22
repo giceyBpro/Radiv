@@ -63,13 +63,13 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   rl.forEach((f) => fs.unlinkSync(f)); // remise à zéro pour la suite
   cookie = ''; await login({ code: totp(secret, Date.now() / 1000 + 30) }); // pas suivant : le précédent est déjà consommé
   // Fiches d'information (brouillons) : visibles seulement connecté, jamais publiquement.
-  const fl = await req('GET', '/auth/fiches'); const fp = await req('GET', '/auth/fiches/iode-131');
-  t('onglet Fiches : liste avec l\'iode 131 en brouillon', fl.status === 200 && /iode-131/.test(fl.text) && /brouillon/.test(fl.text));
-  t('aperçu de la fiche : hyperthyroïdie et cancer séparés, bandeau brouillon, points de relecture, noindex', fp.status === 200 && /BROUILLON/.test(fp.text) && /hyperthyroïdie/.test(fp.text) && /cancer de la thyroïde/.test(fp.text) && /Points à vérifier/.test(fp.text) && /noindex/.test(fp.text));
-  const fi = await req('GET', '/auth/fiches/iode-131'); const fl2 = await req('GET', '/auth/fiches/lutetium-177-psma');
-  t('fiches : renvoi vers le calculateur avec l\'isotope présélectionné (iode : bénin et néoplasie 0 %), pas de calcul dans la page', /href="\/\?isotope=iode131_benin"/.test(fi.text) && /href="\/\?isotope=iode131_0_fixation"/.test(fi.text) && /href="\/\?isotope=psma_177lu"/.test(fl2.text) && !/fiche-calcul|id="fiche-calc"/.test(fi.text + fl2.text) && /professionnels de santé/.test(fi.text));
+  const fl = await req('GET', '/auth/fiches');
+  const fh = await req('GET', '/auth/fiches/iode-131-hyperthyroidie'); const fc = await req('GET', '/auth/fiches/iode-131-cancer-thyroide'); const fl2 = await req('GET', '/auth/fiches/lutetium-177-psma');
+  t('onglet Fiches : les deux fiches de l\'iode 131 (hyperthyroïdie, cancer) en brouillon', fl.status === 200 && /iode-131-hyperthyroidie/.test(fl.text) && /iode-131-cancer-thyroide/.test(fl.text) && /brouillon/.test(fl.text) && !/\/informations\/iode-131</.test(fl.text));
+  t('aperçus : bandeau brouillon, points de relecture, noindex ; chaque fiche traite sa maladie', fh.status === 200 && fc.status === 200 && /BROUILLON/.test(fh.text) && /Points à vérifier/.test(fc.text) && /noindex/.test(fh.text) && /hyperthyroïdie/.test(fh.text) && !/Si vous êtes traité pour un cancer/.test(fh.text) && /cancer de la thyroïde/.test(fc.text) && !/maladie de Basedow, nodule/.test(fc.text));
+  t('fiches : renvoi vers le calculateur avec l\'isotope présélectionné (hyperthyroïdie : bénin ; cancer : néoplasie 0 %), pas de calcul dans la page', /href="\/\?isotope=iode131_benin"/.test(fh.text) && !/iode131_0_fixation/.test(fh.text) && /href="\/\?isotope=iode131_0_fixation"/.test(fc.text) && !/iode131_benin/.test(fc.text) && /href="\/\?isotope=psma_177lu"/.test(fl2.text) && !/fiche-calcul|id="fiche-calc"/.test(fh.text + fc.text + fl2.text) && /professionnels de santé/.test(fh.text));
   const pub = cookie; cookie = '';
-  t('sans session : aperçu et liste en 404', (await req('GET', '/auth/fiches/iode-131')).status === 404 && (await req('GET', '/auth/fiches')).status === 404);
+  t('sans session : aperçu et liste en 404', (await req('GET', '/auth/fiches/iode-131-hyperthyroidie')).status === 404 && (await req('GET', '/auth/fiches')).status === 404);
   cookie = pub;
   const sec = await req('GET', '/auth/securite');
   t('onglet Connexion : état activé, formulaire de remplacement', sec.status === 200 && /activée/.test(sec.text) && /name="password2"/.test(sec.text));
