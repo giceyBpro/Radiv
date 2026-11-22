@@ -22,11 +22,11 @@ return [
                 "L'hyperthyroïdie est un fonctionnement trop actif de la thyroïde (maladie de Basedow, nodule « toxique », goitre multinodulaire toxique). L'iode 131 réduit l'activité de la glande : le rayonnement agit sur une très courte distance autour du produit, ce qui épargne en grande partie les organes voisins. Il est proposé notamment lorsque les médicaments ne suffisent pas ou ne peuvent pas être poursuivis.",
             ]],
             ['h' => "Comment se passe le traitement ?", 'level' => 2, 'p' => [
-                "Le traitement consiste le plus souvent en <strong>une prise unique par la bouche</strong> (gélule). Il se fait <strong>sans nuit d'hospitalisation</strong> : vous rentrez chez vous le jour même avec des consignes précises.",
+                "Le traitement consiste le plus souvent en <strong>une prise unique par la bouche</strong> (gélule). Selon l'activité administrée et l'organisation du service, il se fait le plus souvent <strong>sans nuit d'hospitalisation</strong> : vous rentrez chez vous le jour même avec des consignes précises.",
                 "L'effet est <strong>progressif</strong> : il n'apparaît qu'au bout de plusieurs semaines, avec un suivi par prises de sang. Si l'hyperthyroïdie persiste, le traitement peut être renouvelé plusieurs mois plus tard. Après le traitement, la thyroïde peut devenir insuffisante ; un traitement par hormone thyroïdienne est alors prescrit, ce qui est fréquent et bien maîtrisé.",
             ]],
             ['h' => "Avant le traitement", 'level' => 3, 'p' => [
-                "Selon votre situation, l'équipe peut vous demander de suivre un <strong>régime pauvre en iode</strong>.",
+                "Dans certains cas, l'équipe vous indique que certains médicaments (notamment les antithyroïdiens) doivent être arrêtés quelque temps avant la prise. Elle peut aussi, selon votre situation, vous demander de suivre un <strong>régime pauvre en iode</strong>.",
                 "<strong>Examens avec produit de contraste iodé</strong> : ne réalisez pas d'examen avec injection de produit de contraste iodé (certains scanners, par exemple) avant le traitement, sans en avoir parlé à l'équipe : l'iode du produit de contraste empêche la thyroïde de fixer l'iode radioactif et réduit l'efficacité du traitement. Signalez aussi tout médicament ou produit contenant de l'iode.",
             ]],
             ['h' => "Après la prise, à la maison", 'level' => 2, 'p' => [
@@ -62,7 +62,7 @@ return [
         ],
         'review' => [
             "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (maladie de Basedow, goitre multinodulaire toxique, nodules autonomes), effet après plusieurs semaines, traitement renouvelable, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés (le RCP indique 6 à 8 semaines pour les produits hydrosolubles), grossesse, contraception, allaitement.",
-            "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même, sans nuit d'hospitalisation ; « les contacts brefs restent possibles ».",
+            "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même, le plus souvent sans nuit d'hospitalisation (une hospitalisation reste possible selon l'activité) ; « les contacts brefs restent possibles ».",
             "Les durées (restriction de contact, contraception, contacts mère-enfant) du RCP ne sont volontairement pas reprises : elles sont données par l'équipe (calcul RadIV).",
             "Calculateur : renvoi vers l'accueil avec l'isotope « Iode-131-Bénin » présélectionné. Délai après produit de contraste iodé : sans chiffre dans la fiche (RCP : 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
             "Le RCP vérifié concerne la gélule Curiumpharma ; d'autres présentations d'iode 131 peuvent avoir des textes légèrement différents.",
