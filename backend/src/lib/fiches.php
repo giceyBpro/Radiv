@@ -29,6 +29,24 @@ function get(string $slug): ?array
 
 function published(array $fiche): bool { return ($fiche['status'] ?? 'draft') === 'published'; }
 
+// Fiches publiées (les brouillons ne sont jamais exposés publiquement).
+function published_list(): array
+{
+    return array_values(array_filter(all(), static fn (array $f): bool => published($f)));
+}
+
+// Liste des fiches publiées pour la page /informations : section vide (rien) tant qu'aucune fiche n'est publiée.
+function index_html(): string
+{
+    $list = published_list();
+    if (!$list) return '';
+    $out = "<h2>Fiches par traitement</h2>\n<ul class=\"fiches\">\n";
+    foreach ($list as $fiche) {
+        $out .= '<li><a href="/informations/' . esc((string) $fiche['slug']) . '">' . esc((string) $fiche['h1']) . '</a><small>' . esc((string) $fiche['description']) . "</small></li>\n";
+    }
+    return $out . "</ul>\n";
+}
+
 function esc(string $text): string { return Contact\escape_html($text); }
 
 // Contenu (HTML) d'une fiche : introduction, sections, questions fréquentes. Les textes des données sont du HTML simple écrit par
