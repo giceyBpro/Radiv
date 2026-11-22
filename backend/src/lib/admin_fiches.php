@@ -35,7 +35,7 @@ function do_fiche_preview(string $slug): bool
     $html = Fiches\page_html($fiche, true);
     http_response_code(200);
     header('Content-Type: text/html; charset=utf-8');
-    header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'");
+    header("Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'");
     header('Referrer-Policy: same-origin');
     header('Cache-Control: no-store');
     header('X-Robots-Tag: noindex, nofollow');

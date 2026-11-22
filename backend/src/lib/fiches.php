@@ -46,6 +46,11 @@ function body_html(array $fiche): string
         $out .= "<h2>Questions fréquentes</h2>\n";
         foreach ($fiche['faq'] as $qa) $out .= '<h3>' . esc((string) $qa['q']) . "</h3>\n<p>" . $qa['a'] . "</p>\n";
     }
+    if (!empty($fiche['calc'])) {
+        $out .= "<h2 id=\"calcul\">Estimer la durée de restriction</h2>\n"
+            . '<p class="notice"><strong>Les consignes de votre équipe font foi.</strong> Ce calculateur donne une estimation à partir des valeurs que vous saisissez (par exemple le débit de dose mesuré à votre sortie). L\'équipe de médecine nucléaire peut vous donner des consignes différentes, adaptées à votre situation particulière : ce sont celles-ci qui doivent être appliquées.</p>' . "\n"
+            . '<div id="fiche-calc" data-isotopes="' . esc((string) json_encode($fiche['calc'], JSON_UNESCAPED_UNICODE)) . '"><noscript><p>Le calculateur nécessite JavaScript. Suivez les consignes de votre équipe.</p></noscript></div>' . "\n";
+    }
     if (!empty($fiche['links'])) {
         $out .= "<h2>Pour aller plus loin</h2>\n<ul>";
         foreach ($fiche['links'] as $link) {
@@ -90,6 +95,11 @@ a{color:var(--link)}.links{margin-bottom:14px;font-size:.95rem}
 .draft{background:#fff4d6;border:1px solid #e6c36a;border-radius:8px;padding:10px 14px;margin:0 0 16px}
 .review{background:#f3f6fb;border:1px solid #c4d6f2;border-radius:10px;padding:4px 16px 8px;margin-top:28px}
 .small{color:#555;font-size:.9rem;margin-top:22px}
+.notice{background:#fff4d6;border:1px solid #e6c36a;border-radius:8px;padding:10px 14px}
+.fc-form label{display:block;font-weight:700;margin:12px 0 4px}.fc-form input,.fc-form select{width:100%;max-width:420px;padding:8px;font:inherit;border:1px solid #b9c2c9;border-radius:6px;box-sizing:border-box}
+.fc-form small{display:block;color:#555;margin-top:2px}.fc-form button{margin-top:14px;padding:9px 18px;font:inherit;font-weight:700;border:0;border-radius:8px;background:#1637b8;color:#fff;cursor:pointer}
+.fc-table{width:100%;border-collapse:collapse;margin-top:10px}.fc-table th,.fc-table td{border:1px solid #d9e0e6;padding:8px;text-align:left;vertical-align:top}.fc-table small{display:block;color:#555}
+.fc-days{white-space:nowrap;font-weight:700}.fc-error{color:#a32222;font-weight:700}.fc-warn{background:#fff4d6;border:1px solid #e6c36a;border-radius:8px;padding:10px 14px;margin-top:12px}
 @media (max-width:560px){body{padding:10px}.page{padding:16px}}
 </style>
 </head>
@@ -99,6 +109,7 @@ a{color:var(--link)}.links{margin-bottom:14px;font-size:.95rem}
 <h1>{$h1}</h1>
 HTML
         . body_html($fiche)
-        . '<p class="small">Ces informations sont générales et <strong>indicatives</strong> : la décision finale et les consignes personnalisées appartiennent à l\'équipe de médecine nucléaire qui suit le patient. En cas de doute, contactez-la. <a href="/legal">Mentions légales</a> · <a href="/contact">Contact</a></p>'
+        . (empty($fiche['calc']) ? '' : '<script src="/fiche-calcul.js?v=' . (is_file(rtrim(Config\web_root(), '/') . '/fiche-calcul.js') ? dechex((int) filemtime(rtrim(Config\web_root(), '/') . '/fiche-calcul.js')) : '0') . '"></script>' . "\n")
+        . '<p class="small">Ces informations sont générales et <strong>indicatives</strong> : l\'équipe de médecine nucléaire peut donner des consignes différentes, adaptées au contexte particulier d\'un patient : <strong>ce sont les consignes de l\'équipe qui sont à appliquer</strong>. En cas de doute, contactez-la. <a href="/legal">Mentions légales</a> · <a href="/contact">Contact</a></p>'
         . $review . "\n</main>\n</body>\n</html>\n";
 }
