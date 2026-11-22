@@ -126,6 +126,6 @@ a{color:var(--link)}.links{margin-bottom:14px;font-size:.95rem}
 <h1>{$h1}</h1>
 HTML
         . body_html($fiche)
-        . '<p class="small">Ces informations sont générales et <strong>indicatives</strong> : l\'équipe de médecine nucléaire peut donner des consignes différentes, adaptées au contexte particulier d\'un patient : <strong>ce sont les consignes de l\'équipe qui sont à appliquer</strong>. En cas de doute, contactez-la. <a href="/legal">Mentions légales</a> · <a href="/contact">Contact</a></p>'
+        . '<p class="small">Ces informations sont générales et <strong>indicatives</strong> : l\'équipe de médecine nucléaire peut donner des consignes différentes, adaptées au contexte particulier d\'un patient : <strong>ce sont les consignes de l\'équipe qui sont à appliquer</strong>. En cas de doute, contactez-la. <a href="/legal">Mentions légales</a></p>'
         . $review . "\n</main>\n</body>\n</html>\n";
 }
