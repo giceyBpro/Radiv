@@ -70,4 +70,59 @@ return [
             "Aucune durée de restriction n'est chiffrée dans la fiche : souhaitez-vous afficher des exemples tirés du calculateur ?",
         ],
     ],
+    [
+        'slug' => 'lutetium-177-psma',
+        'status' => 'draft',
+        'title' => "Lutétium 177 PSMA (Pluvicto) : consignes pour le patient et l'entourage après un traitement",
+        'h1' => "Traitement par lutétium 177 PSMA (Pluvicto) : ce qu'il faut savoir pour le patient et l'entourage",
+        'description' => "Traitement par lutétium 177 PSMA (Pluvicto) d'un cancer de la prostate métastatique : déroulement, effets à connaître, consignes de radioprotection pour l'entourage, contraception et lien vers le RCP.",
+        'lead' => "Le lutétium 177 PSMA (nom commercial <strong>Pluvicto</strong>) est un médicament de radiothérapie interne utilisé dans certains cancers de la prostate. Il associe une molécule qui reconnaît une protéine présente à la surface des cellules du cancer de la prostate (le <strong>PSMA</strong>) à un atome radioactif, le <strong>lutétium 177</strong> : le rayonnement est ainsi délivré directement au contact des cellules visées.",
+        'blocks' => [
+            ['h' => "Pour quelle situation ce traitement est-il proposé ?", 'level' => 2, 'p' => [
+                "Selon le résumé des caractéristiques du produit (RCP), Pluvicto est indiqué, en association avec une suppression androgénique, chez l'adulte atteint d'un <strong>cancer de la prostate métastatique, résistant à la castration, progressif, « PSMA positif »</strong>, déjà traité par une hormonothérapie inhibitrice de la voie des androgènes et par une chimiothérapie à base de taxane. Avant le traitement, une <strong>imagerie spécifique du PSMA</strong> (TEP-PSMA) vérifie que les lésions fixent bien le produit.",
+            ]],
+            ['h' => "Comment se passe le traitement ?", 'level' => 2, 'p' => [
+                "Le médicament est administré par <strong>injection dans une veine</strong>, dans un service de médecine nucléaire. Le schéma recommandé est <strong>une injection environ toutes les 6 semaines, jusqu'à 6 injections au plus</strong>, sauf aggravation de la maladie ou mauvaise tolérance ; votre équipe adapte ce schéma à votre situation.",
+                "Des <strong>prises de sang</strong> (cellules du sang, reins, foie) sont faites avant et pendant le traitement. Il est conseillé de <strong>boire davantage</strong> et d'<strong>uriner aussi souvent que possible</strong> : cela réduit l'exposition de la vessie au rayonnement.",
+            ]],
+            ['h' => "Effets à connaître", 'level' => 3, 'p' => [
+                "Les effets les plus fréquents sont la <strong>fatigue</strong>, la <strong>sécheresse de la bouche</strong>, les <strong>nausées</strong>, la <strong>baisse des globules rouges (anémie)</strong>, la baisse de l'appétit et la constipation. Le traitement peut aussi faire baisser les autres cellules du sang et peser sur le fonctionnement des reins, d'où la surveillance régulière. Signalez à votre équipe toute fatigue inhabituelle, pâleur, essoufflement ou signe d'infection.",
+            ]],
+            ['h' => "Après l'injection, à la maison", 'level' => 2, 'p' => [
+                "Avant votre sortie, l'équipe de médecine nucléaire vous explique les précautions à suivre. À titre indicatif, le RCP mentionne, après chaque administration, des recommandations générales que les équipes peuvent adapter selon la réglementation et leurs procédures :",
+            ], 'ul' => [
+                "limiter les contacts proches (à moins d'un mètre) avec les autres personnes pendant <strong>2 jours</strong>, et avec les <strong>enfants</strong> et les <strong>femmes enceintes</strong> pendant <strong>7 jours</strong> ;",
+                "ne pas avoir d'activité sexuelle pendant <strong>7 jours</strong> ;",
+                "dormir dans une pièce séparée de celle des autres personnes pendant <strong>3 jours</strong>, des enfants pendant <strong>7 jours</strong>, des femmes enceintes pendant <strong>15 jours</strong>.",
+            ]],
+            ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+            ]],
+            ['h' => "Contraception, fertilité et déplacements", 'level' => 2, 'p' => [], 'ul' => [
+                "<strong>Contraception</strong> : le RCP conseille de <strong>ne pas concevoir d'enfant et d'utiliser un préservatif</strong> pendant le traitement et pendant <strong>14 semaines après la dernière injection</strong>. Prévenez immédiatement votre équipe si une grossesse survient pendant cette période.",
+                "<strong>Fertilité</strong> : le traitement peut provoquer une infertilité. Si vous souhaitez avoir des enfants plus tard, parlez-en à l'équipe <strong>avant de commencer</strong> : une conservation du sperme peut être envisagée.",
+                "<strong>Déplacements</strong> : pendant un certain temps, les portiques de détection (aéroports, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. Gardez sur vous le document remis par le service.",
+                "<strong>Gestes d'hygiène</strong> : l'équipe vous remet des consignes pratiques pour le quotidien (hydratation, hygiène, linge, déchets), à suivre en plus des durées ci-dessus.",
+            ]],
+        ],
+        'faq' => [
+            ['q' => "Combien de séances de lutétium 177 PSMA faut-il ?", 'a' => "Le schéma recommandé est une injection environ toutes les 6 semaines, jusqu'à 6 injections au plus, selon l'évolution de la maladie et la tolérance. Votre équipe décide au cas par cas."],
+            ['q' => "Puis-je prendre mes petits-enfants dans mes bras après l'injection ?", 'a' => "Les recommandations du RCP prévoient de limiter les contacts proches avec les enfants pendant 7 jours après chaque injection. Suivez les consignes de votre équipe, qui peut les adapter."],
+            ['q' => "Les consignes sont-elles les mêmes à chaque injection ?", 'a' => "Elles s'appliquent après chaque administration. L'équipe de médecine nucléaire peut les adapter, notamment en fonction de la mesure du rayonnement à votre sortie."],
+            ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
+        ],
+        'links' => [
+            ['label' => "Résumé des caractéristiques du produit (RCP) de Pluvicto en français (PDF, Agence européenne des médicaments)", 'url' => 'https://www.ema.europa.eu/fr/documents/product-information/pluvicto-epar-product-information_fr.pdf'],
+            ['label' => "Fiche européenne de Pluvicto (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/pluvicto'],
+        ],
+        'review' => [
+            "Les durées du paragraphe « Après l'injection » (2, 7, 3, 7 et 15 jours) et la contraception (14 semaines) sont reprises du RCP français (rubriques 4.2 et 4.6, version consultée sur le site de l'EMA). Le RCP les présente comme des recommandations « pouvant être envisagées » selon les procédures nationales : confirmer qu'elles correspondent aux consignes de votre service, ou adapter.",
+            "Indication (rubrique 4.1) : reprise du libellé du RCP actuel ; elle peut évoluer (le texte renvoie au RCP pour la version à jour).",
+            "Les deux liens (PDF du RCP et fiche EMA) ont été ouverts avec succès. Ajouter, si vous le souhaitez, la fiche de la base de données publique des médicaments (ANSM), dont l'adresse exacte n'a pas été vérifiée.",
+            "Effets indésirables : seuls les plus fréquents du RCP sont cités (fatigue, sécheresse buccale, nausées, anémie, baisse d'appétit, constipation) ; faut-il en citer d'autres ?",
+            "« Environ 6,6 jours » : demi-vie physique du lutétium 177 (RCP : 6,647 jours) ; ne pas la confondre avec les durées de restriction.",
+            "Le RCP mentionne dans le guide patient l'utilisation des toilettes, la douche, la lessive et l'élimination des déchets ; la fiche les évoque sans les détailler (conformément à votre souhait de ne pas détailler certaines consignes).",
+            "Les durées de restriction personnalisées (calculateur) ne figurent pas ici : souhaitez-vous des exemples chiffrés ?",
+        ],
+    ],
 ];
