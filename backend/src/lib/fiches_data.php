@@ -93,26 +93,25 @@ return [
                 "Les effets les plus fréquents sont la <strong>fatigue</strong>, la <strong>sécheresse de la bouche</strong>, les <strong>nausées</strong>, la <strong>baisse des globules rouges (anémie)</strong>, la baisse de l'appétit et la constipation. Le traitement peut aussi faire baisser les autres cellules du sang et peser sur le fonctionnement des reins, d'où la surveillance régulière. Signalez à votre équipe toute fatigue inhabituelle, pâleur, essoufflement ou signe d'infection.",
             ]],
             ['h' => "Après l'injection, à la maison", 'level' => 2, 'p' => [
-                "Avant votre sortie, l'équipe de médecine nucléaire vous explique les précautions à suivre. À titre indicatif, le RCP mentionne, après chaque administration, des recommandations générales que les équipes peuvent adapter selon la réglementation et leurs procédures :",
+                "Après l'injection, votre corps émet pendant quelques jours un faible rayonnement et élimine le produit, surtout par les urines. Avant votre sortie, l'équipe de médecine nucléaire vous explique les précautions à suivre et vous indique <strong>une durée de restriction de contact</strong>. Cette durée est <strong>calculée pour vous</strong> à partir de la mesure du rayonnement à votre sortie et de la situation de votre entourage ; elle n'est donc pas la même pour tous, ni forcément d'une injection à l'autre.",
             ], 'ul' => [
-                "limiter les contacts proches (à moins d'un mètre) avec les autres personnes pendant <strong>2 jours</strong>, et avec les <strong>enfants</strong> et les <strong>femmes enceintes</strong> pendant <strong>7 jours</strong> ;",
-                "ne pas avoir d'activité sexuelle pendant <strong>7 jours</strong> ;",
-                "dormir dans une pièce séparée de celle des autres personnes pendant <strong>3 jours</strong>, des enfants pendant <strong>7 jours</strong>, des femmes enceintes pendant <strong>15 jours</strong>.",
+                "garder de la distance avec les autres personnes, surtout les <strong>enfants</strong> et les <strong>femmes enceintes</strong>, pour qui les durées sont plus longues ;",
+                "limiter les contacts rapprochés prolongés pendant la durée indiquée, et dormir séparément si l'équipe vous le demande ;",
+                "suivre les consignes de l'équipe concernant la vie intime et les gestes d'hygiène du quotidien.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
                 "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
-            ['h' => "Contraception, fertilité et déplacements", 'level' => 2, 'p' => [], 'ul' => [
-                "<strong>Contraception</strong> : le RCP conseille de <strong>ne pas concevoir d'enfant et d'utiliser un préservatif</strong> pendant le traitement et pendant <strong>14 semaines après la dernière injection</strong>. Prévenez immédiatement votre équipe si une grossesse survient pendant cette période.",
-                "<strong>Fertilité</strong> : le traitement peut provoquer une infertilité. Si vous souhaitez avoir des enfants plus tard, parlez-en à l'équipe <strong>avant de commencer</strong> : une conservation du sperme peut être envisagée.",
-                "<strong>Déplacements</strong> : pendant un certain temps, les portiques de détection (aéroports, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. Gardez sur vous le document remis par le service.",
-                "<strong>Gestes d'hygiène</strong> : l'équipe vous remet des consignes pratiques pour le quotidien (hydratation, hygiène, linge, déchets), à suivre en plus des durées ci-dessus.",
+            ['h' => "Fertilité, vie intime et déplacements", 'level' => 2, 'p' => [], 'ul' => [
+                "<strong>Fertilité et contraception</strong> : ce traitement peut avoir un effet sur la fertilité et sur un éventuel enfant à naître. Si vous avez un projet d'enfant, parlez-en à l'équipe <strong>avant de commencer</strong> ; elle vous précise les mesures à prendre, y compris pour la contraception, pendant le traitement et après.",
+                "<strong>Vie intime</strong> : l'équipe vous donne les consignes qui vous concernent. N'hésitez pas à lui poser vos questions, elles sont courantes.",
+                "<strong>Détections de radioactivité</strong> : pendant un certain temps, les portiques de détection (aéroports, déchetteries, bâtiments sécurisés) peuvent signaler une radioactivité résiduelle. N'hésitez pas à demander à l'équipe une attestation si besoin.",
             ]],
         ],
         'faq' => [
             ['q' => "Combien de séances de lutétium 177 PSMA faut-il ?", 'a' => "Le schéma recommandé est une injection environ toutes les 6 semaines, jusqu'à 6 injections au plus, selon l'évolution de la maladie et la tolérance. Votre équipe décide au cas par cas."],
-            ['q' => "Puis-je prendre mes petits-enfants dans mes bras après l'injection ?", 'a' => "Les recommandations du RCP prévoient de limiter les contacts proches avec les enfants pendant 7 jours après chaque injection. Suivez les consignes de votre équipe, qui peut les adapter."],
-            ['q' => "Les consignes sont-elles les mêmes à chaque injection ?", 'a' => "Elles s'appliquent après chaque administration. L'équipe de médecine nucléaire peut les adapter, notamment en fonction de la mesure du rayonnement à votre sortie."],
+            ['q' => "Puis-je prendre mes petits-enfants dans mes bras après l'injection ?", 'a' => "Les contacts rapprochés avec les enfants sont limités plus longtemps qu'avec les adultes : la durée vous est indiquée par l'équipe après chaque injection. Suivez ses consignes."],
+            ['q' => "Les consignes sont-elles les mêmes à chaque injection ?", 'a' => "Pas forcément : elles s'appliquent après chaque injection, et la durée est recalculée par l'équipe de médecine nucléaire à partir de la mesure du rayonnement à votre sortie."],
             ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
         ],
         'links' => [
@@ -120,13 +119,11 @@ return [
             ['label' => "Fiche européenne de Pluvicto (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/pluvicto'],
         ],
         'review' => [
-            "Les durées du paragraphe « Après l'injection » (2, 7, 3, 7 et 15 jours) et la contraception (14 semaines) sont reprises du RCP français (rubriques 4.2 et 4.6, version consultée sur le site de l'EMA). Le RCP les présente comme des recommandations « pouvant être envisagées » selon les procédures nationales : confirmer qu'elles correspondent aux consignes de votre service, ou adapter.",
-            "Indication (rubrique 4.1) : reprise du libellé du RCP actuel ; elle peut évoluer (le texte renvoie au RCP pour la version à jour).",
-            "Les deux liens (PDF du RCP et fiche EMA) ont été ouverts avec succès. Ajouter, si vous le souhaitez, la fiche de la base de données publique des médicaments (ANSM), dont l'adresse exacte n'a pas été vérifiée.",
+            "Les durées de restriction (contacts, sommeil, vie intime) et les durées de contraception du RCP ne sont volontairement pas reprises : elles sont calculées par RadIV / données par l'équipe. La fiche renvoie aux consignes de l'équipe.",
+            "Contenu vérifié avec le RCP français de l'EMA : indication (rubrique 4.1), schéma (6 injections au plus, environ toutes les 6 semaines), hydratation et mictions fréquentes, effets les plus fréquents, demi-vie du lutétium 177 (6,647 jours).",
+            "Les deux liens (PDF du RCP et fiche EMA) ont été ouverts avec succès. La fiche de la base de données publique des médicaments n'a pas été ajoutée : voulez-vous que je la cherche ?",
+            "Fertilité, vie intime, contraception : formulation volontairement vague, avec renvoi à l'équipe.",
             "Effets indésirables : seuls les plus fréquents du RCP sont cités (fatigue, sécheresse buccale, nausées, anémie, baisse d'appétit, constipation) ; faut-il en citer d'autres ?",
-            "« Environ 6,6 jours » : demi-vie physique du lutétium 177 (RCP : 6,647 jours) ; ne pas la confondre avec les durées de restriction.",
-            "Le RCP mentionne dans le guide patient l'utilisation des toilettes, la douche, la lessive et l'élimination des déchets ; la fiche les évoque sans les détailler (conformément à votre souhait de ne pas détailler certaines consignes).",
-            "Les durées de restriction personnalisées (calculateur) ne figurent pas ici : souhaitez-vous des exemples chiffrés ?",
         ],
     ],
 ];
