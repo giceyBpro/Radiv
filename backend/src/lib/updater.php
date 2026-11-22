@@ -27,7 +27,7 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 // dossier du backend (voir dest()). Même liste blanche que install.php et update.php.
 const FRONTEND_FILES = [
     'index.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
-    'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
+    'mentions-legales.html', 'informations.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'og-image.png', 'robots.txt',
 ];
 

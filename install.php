@@ -34,7 +34,7 @@ const DEFAULT_REPO = 'giceyBpro/Radiv';
 // dossier du backend. downloads/, vendor/ et backend/ sont traités par préfixe dans allowed().
 $FRONTEND_FILES = array(
     'index.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
-    'mentions-legales.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
+    'mentions-legales.html', 'informations.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'og-image.png', 'robots.txt',
 );
 $REQUIRED_FILES = array(
@@ -890,6 +890,9 @@ function htaccess_blocks($siteUrl, $backendUrlPath)
     // site (canonique absolue, Open Graph, données structurées). « mentions-legales.html » est aussi la cible de l'ancienne règle /legal.
     $seo = '# /seo (accueil, mentions légales et plan du site par l\'API PHP) v1';
     $blocks[$seo] = $seo . "\nRewriteEngine On\nRewriteRule ^(index\\.html)?$ api/index.php [L]\nRewriteRule ^mentions-legales\\.html$ api/index.php [L]\nRewriteRule ^sitemap\\.xml$ api/index.php [L]\n";
+    // Page « Informations » (patients et entourage) et ses futures fiches (/informations/<produit>) : servies par l'API PHP comme l'accueil.
+    $info = '# /informations (pages d\'information par l\'API PHP) v1';
+    $blocks[$info] = $info . "\nRewriteEngine On\nRewriteRule ^informations(\\.html|/.*)?$ api/index.php [L]\n";
     // Compression et cache navigateur (vitesse de chargement) ; sans effet si les modules Apache correspondants manquent.
     $perf = '# Compression et cache v1';
     $blocks[$perf] = $perf . "\n<IfModule mod_deflate.c>\nAddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json application/xml image/svg+xml\n</IfModule>\n"

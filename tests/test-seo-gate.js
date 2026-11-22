@@ -8,13 +8,20 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-'));
   // Comme le .htaccess installé : l'accueil passe par la façade PHP (dev-router ne route que /api, /auth, /health).
   const router = path.join(data, 'router.php');
-  fs.writeFileSync(router, `<?php $p = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH); if ($p === '/') { putenv('RADIV_BACKEND=${ROOT}/backend'); require '${ROOT}/public/api/index.php'; return true; } return require '${ROOT}/tests/dev-router.php';`);
+  fs.writeFileSync(router, `<?php $p = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH); if ($p === '/' || $p === '/informations' || $p === '/informations.html' || $p === '/sitemap.xml') { putenv('RADIV_BACKEND=${ROOT}/backend'); require '${ROOT}/public/api/index.php'; return true; } return require '${ROOT}/tests/dev-router.php';`);
   const srv = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'public'), router], { env: { ...process.env, DATA_DIR: data, SITE_PUBLIC_URL: BASE }, stdio: 'ignore' });
   await new Promise((r) => setTimeout(r, 1200));
   let res = await fetch(`${BASE}/`); let html = await res.text();
   t('en service : 200 et vrai contenu', res.status === 200 && /<main class="page">/.test(html));
   t('en service : aucun portail de maintenance dans le HTML brut', !/MAINTENANCE-GATE|rivGate|maintenanceNotice/.test(html));
   t('en service : balises de référencement présentes', /rel="canonical"/.test(html) && /application\/ld\+json/.test(html));
+  res = await fetch(`${BASE}/informations`); html = await res.text();
+  t('page Informations : 200, titre propre, canonique, indexable', res.status === 200 && /<title>Après une radiothérapie interne/.test(html) && /rel="canonical" href="[^"]+\/informations"/.test(html) && !/noindex/.test(html));
+  t('page Informations : contenu public, lien vers le calculateur, pas de calculateur', /Et le risque de contamination/.test(html) && /href="\/"/.test(html) && !/id="resultsBody"/.test(html));
+  const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
+  t('plan du site : accueil, informations et mentions légales', /<loc>[^<]+\/informations<\/loc>/.test(sm) && /<loc>[^<]+\/legal<\/loc>/.test(sm));
+  res = await fetch(`${BASE}/`); html = await res.text();
+  t('accueil : bandeau vers /informations, plus de texte de présentation', /class="audience-banner[^"]*"[^>]*>[^<]*patient[^<]*<a href="\/informations"/.test(html) && !/id="apropos"/.test(html));
   fs.mkdirSync(path.join(data, 'var'), { recursive: true });
   fs.writeFileSync(path.join(data, 'var/maintenance.json'), JSON.stringify({ mode: 'site', since: '2026-01-01T00:00:00Z', by: 'test' }));
   res = await fetch(`${BASE}/`); html = await res.text();
