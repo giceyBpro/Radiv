@@ -45,7 +45,7 @@ return [
                 "<strong>Suivi</strong> : des consultations et des prises de sang sont programmées pour vérifier l'efficacité du traitement.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et, en plus, le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et, en plus, le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/patient\">Informations pour le patient et l'entourage</a>.",
             ]],
         ],
         'faq' => [
@@ -101,7 +101,7 @@ return [
                 "<strong>Suivi</strong> : une image est réalisée quelques jours après la prise, puis des consultations et des examens sont programmés pour vérifier l'efficacité du traitement.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et, en plus, le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et, en plus, le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/patient\">Informations pour le patient et l'entourage</a>.",
             ]],
         ],
         'faq' => [
@@ -150,7 +150,7 @@ return [
                 "suivre les consignes de l'équipe concernant la vie intime et les gestes d'hygiène du quotidien.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et, en plus, le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et, en plus, le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/patient\">Informations pour le patient et l'entourage</a>.",
             ]],
             ['h' => "Contraception, vie intime et déplacements", 'level' => 2, 'p' => [], 'ul' => [
                 "<strong>Contraception</strong> : ce traitement peut avoir un effet sur un éventuel enfant à naître. L'équipe vous précise, avant le début du traitement, les mesures à prendre pour la contraception pendant le traitement et après.",
@@ -210,7 +210,7 @@ return [
                 "suivre les consignes de l'équipe concernant les gestes d'hygiène du quotidien.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et, en plus, le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et, en plus, le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/patient\">Informations pour le patient et l'entourage</a>.",
             ]],
             ['h' => "Grossesse, contraception et déplacements", 'level' => 2, 'p' => [], 'ul' => [
                 "<strong>Grossesse et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse, et l'allaitement est à éviter ; si le traitement est nécessaire pendant l'allaitement, l'enfant doit être sevré. Parlez-en à l'équipe avant de commencer.",

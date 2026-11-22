@@ -18,7 +18,7 @@ function do_fiches(): bool
         . '<div class="tablewrap"><table><thead><tr><th>Fiche</th><th>Adresse prévue</th><th>État</th><th></th></tr></thead><tbody>';
     foreach (Fiches\all() as $fiche) {
         $slug = (string) $fiche['slug'];
-        $out .= '<tr><td>' . h($fiche['h1']) . '</td><td class="nowrap"><code>/informations/' . h($slug) . '</code></td><td>'
+        $out .= '<tr><td>' . h($fiche['h1']) . '</td><td class="nowrap"><code>/patient/' . h($slug) . '</code></td><td>'
             . (Fiches\published($fiche) ? '<span class="badge good">publiée</span>' : '<span class="badge warn">brouillon</span>') . '</td>'
             . '<td><a class="btn secondary" href="/auth/fiches/' . h($slug) . '">Ouvrir l\'aperçu</a></td></tr>';
     }

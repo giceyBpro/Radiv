@@ -27,13 +27,14 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 // dossier du backend (voir dest()). Même liste blanche que install.php et update.php.
 const FRONTEND_FILES = [
     'index.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
-    'mentions-legales.html', 'informations.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
+    'mentions-legales.html', 'patient.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'og-image.png', 'robots.txt',
 ];
 
 // Fichiers retirés du dépôt, à supprimer des sites existants lors de la prochaine mise à jour (sauvegardés d'abord),
 // même s'ils ne figurent pas dans le manifeste. Chemins du dépôt (« public/... »).
 const RETIRED_FILES = [
+    'public/informations.html',                                    // devenue public/patient.html (adresse /patient)
     'public/fiche-calcul.js',                                      // calculateur intégré aux fiches, abandonné (renvoi vers le calculateur)
     'public/v1.html',                                              // ancienne version de la page d'accueil, supprimée
     'core/web/index.html', 'core/web/config.js',                   // page minimale, passée du moteur à demo/web/

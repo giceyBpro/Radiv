@@ -1,7 +1,7 @@
 <?php
 // Fiches d'information par radiopharmaceutique (grand public) : données dans fiches_data.php, rendu HTML ici. Tant qu'une fiche est au
 // statut « draft », elle n'est visible que dans l'administration (/auth/fiches, aperçu avec ses points de relecture) : aucune route
-// publique ne la sert. La publication (route /informations/<slug>, plan du site) viendra ensuite, avec le même rendu.
+// publique ne la sert. La publication (route /patient/<slug>, plan du site) viendra ensuite, avec le même rendu.
 declare(strict_types=1);
 
 namespace Radiv\Fiches;
@@ -35,14 +35,14 @@ function published_list(): array
     return array_values(array_filter(all(), static fn (array $f): bool => published($f)));
 }
 
-// Liste des fiches publiées pour la page /informations : section vide (rien) tant qu'aucune fiche n'est publiée.
+// Liste des fiches publiées pour la page /patient : section vide (rien) tant qu'aucune fiche n'est publiée.
 function index_html(): string
 {
     $list = published_list();
     if (!$list) return '';
     $out = "<section class=\"bloc\">\n<h2>Fiches par traitement</h2>\n<ul class=\"fiches\">\n";
     foreach ($list as $fiche) {
-        $out .= '<li><a href="/informations/' . esc((string) $fiche['slug']) . '">' . esc((string) $fiche['h1']) . '</a><small>' . esc((string) $fiche['description']) . "</small></li>\n";
+        $out .= '<li><a href="/patient/' . esc((string) $fiche['slug']) . '">' . esc((string) $fiche['h1']) . '</a><small>' . esc((string) $fiche['description']) . "</small></li>\n";
     }
     return $out . "</ul>\n</section>\n";
 }
@@ -82,7 +82,7 @@ function body_html(array $fiche): string
     return $out;
 }
 
-// Page complète d'une fiche (même présentation que /informations). $preview : bandeau « brouillon » et points de relecture, noindex.
+// Page complète d'une fiche (même présentation que /patient). $preview : bandeau « brouillon » et points de relecture, noindex.
 function page_html(array $fiche, bool $preview): string
 {
     $title = esc((string) $fiche['title']);
@@ -123,7 +123,7 @@ a{color:var(--link)}a:focus-visible{outline:3px solid #1637b8;outline-offset:2px
 </head>
 <body>
 <main class="page">
-{$banner}<div class="links"><a href="/informations">← Informations pour le patient et l'entourage</a></div>
+{$banner}<div class="links"><a href="/patient">← Informations pour le patient et l'entourage</a></div>
 <h1>{$h1}</h1>
 HTML
         . body_html($fiche)

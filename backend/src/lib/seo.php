@@ -15,7 +15,7 @@ use Radiv\Updater;
 // Pages indexables : adresse publique => [fichier HTML de la racine web, priorité du plan du site, fréquence]
 const PAGES = [
     '/' => ['index.html', '1.0', 'monthly'],
-    '/informations' => ['informations.html', '0.8', 'monthly', 'Informations pour le patient et l\'entourage après une radiothérapie interne vectorisée (RIV)'],
+    '/patient' => ['patient.html', '0.8', 'monthly', 'Informations pour le patient et l\'entourage après une radiothérapie interne vectorisée (RIV)'],
     '/legal' => ['mentions-legales.html', '0.3', 'yearly', 'Mentions légales, conditions d\'utilisation et données personnelles'],
 ];
 
@@ -24,7 +24,7 @@ function page_for_path(string $path): ?string
 {
     return match (rtrim($path, '/') === '' ? '/' : rtrim($path, '/')) {
         '/', '/index.html' => '/',
-        '/informations', '/informations.html' => '/informations',
+        '/patient', '/patient.html' => '/patient',
         '/legal', '/mentions-legales.html' => '/legal',
         default => null,
     };
@@ -72,10 +72,10 @@ function render(string $publicPath): ?string
     return $html;
 }
 
-// Fiche publiée (statut « published » dans fiches_data.php) demandée à /informations/<slug>, sinon null : un brouillon n'est jamais servi.
+// Fiche publiée (statut « published » dans fiches_data.php) demandée à /patient/<slug>, sinon null : un brouillon n'est jamais servi.
 function fiche_for_path(string $path): ?array
 {
-    if (preg_match('#^/informations/([a-z0-9-]{1,60})/?$#', $path, $m) !== 1) return null;
+    if (preg_match('#^/patient/([a-z0-9-]{1,60})/?$#', $path, $m) !== 1) return null;
     $fiche = \Radiv\Fiches\get($m[1]);
     return ($fiche !== null && \Radiv\Fiches\published($fiche)) ? $fiche : null;
 }
@@ -86,7 +86,7 @@ function render_fiche(array $fiche): string
     $html = \Radiv\Fiches\page_html($fiche, false);
     $site = Config\site_public_url();
     if ($site === '' || preg_match('#^https?://[^/\s]+$#', $site) !== 1) return $html;
-    $url = $site . '/informations/' . $fiche['slug'];
+    $url = $site . '/patient/' . $fiche['slug'];
     $name = Config\site_name();
     $graph = [
         ['@type' => 'WebPage', '@id' => $url . '#page', 'url' => $url, 'name' => (string) $fiche['h1'], 'description' => (string) $fiche['description'], 'inLanguage' => 'fr',
@@ -149,7 +149,7 @@ function sitemap(): ?string
             . '    <changefreq>' . $freq . '</changefreq>' . "\n" . '    <priority>' . $priority . '</priority>' . "\n" . '  </url>' . "\n";
     }
     foreach (\Radiv\Fiches\published_list() as $fiche) {
-        $out .= '  <url>' . "\n" . '    <loc>' . esc($site . '/informations/' . $fiche['slug']) . '</loc>' . "\n"
+        $out .= '  <url>' . "\n" . '    <loc>' . esc($site . '/patient/' . $fiche['slug']) . '</loc>' . "\n"
             . '    <changefreq>monthly</changefreq>' . "\n" . '    <priority>0.7</priority>' . "\n" . '  </url>' . "\n";
     }
     return $out . '</urlset>' . "\n";
@@ -183,6 +183,13 @@ function handle(string $method, string $path): bool
     if ($method !== 'GET' && $method !== 'HEAD') return false;
     try {
         if ($path === '/sitemap.xml') return send('application/xml; charset=utf-8', sitemap(), $method === 'HEAD');
+        // Ancienne adresse /informations (devenue /patient) : redirection permanente, fiches comprises.
+        if (preg_match('#^/informations(?:\.html)?(/[a-z0-9/-]*)?$#', $path, $old) === 1) {
+            http_response_code(301);
+            header('Location: /patient' . ($old[1] ?? ''));
+            header('Cache-Control: public, max-age=3600');
+            return true;
+        }
         $fiche = fiche_for_path($path);
         if ($fiche !== null) return send('text/html; charset=utf-8', render_fiche($fiche), $method === 'HEAD');
         $page = page_for_path($path);
