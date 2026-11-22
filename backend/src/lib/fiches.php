@@ -40,11 +40,11 @@ function index_html(): string
 {
     $list = published_list();
     if (!$list) return '';
-    $out = "<h2>Fiches par traitement</h2>\n<ul class=\"fiches\">\n";
+    $out = "<section class=\"bloc\">\n<h2>Fiches par traitement</h2>\n<ul class=\"fiches\">\n";
     foreach ($list as $fiche) {
         $out .= '<li><a href="/informations/' . esc((string) $fiche['slug']) . '">' . esc((string) $fiche['h1']) . '</a><small>' . esc((string) $fiche['description']) . "</small></li>\n";
     }
-    return $out . "</ul>\n";
+    return $out . "</ul>\n</section>\n";
 }
 
 function esc(string $text): string { return Contact\escape_html($text); }
