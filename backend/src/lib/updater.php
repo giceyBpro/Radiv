@@ -26,7 +26,7 @@ const MAX_TOTAL_BYTES = 52428800;      // 50 Mo au total (protection contre les 
 // Les chemins de ce fichier sont ceux du DÉPÔT : « public/... » est copié dans la racine web, « backend/... » dans le
 // dossier du backend (voir dest()). Même liste blanche que install.php et update.php.
 const FRONTEND_FILES = [
-    'index.html', 'app.js', 'fiche-calcul.js', 'print.html', 'explain.html', 'contact.html',
+    'index.html', 'app.js', 'print.html', 'explain.html', 'contact.html',
     'mentions-legales.html', 'informations.html', 'api-fonctionnement.html', 'test-api.html', 'xplore.html',
     'favicon.ico', 'og-image.png', 'robots.txt',
 ];
@@ -34,6 +34,7 @@ const FRONTEND_FILES = [
 // Fichiers retirés du dépôt, à supprimer des sites existants lors de la prochaine mise à jour (sauvegardés d'abord),
 // même s'ils ne figurent pas dans le manifeste. Chemins du dépôt (« public/... »).
 const RETIRED_FILES = [
+    'public/fiche-calcul.js',                                      // calculateur intégré aux fiches, abandonné (renvoi vers le calculateur)
     'public/v1.html',                                              // ancienne version de la page d'accueil, supprimée
     'core/web/index.html', 'core/web/config.js',                   // page minimale, passée du moteur à demo/web/
 ];

@@ -816,7 +816,10 @@
         }
         renderCalculationModeSelector();
         renderSourceForMode();
-        populateIsotopes(config.default_isotope_code || isotopes[0]?.api_code);
+        // Lien depuis une fiche d'information : /?isotope=<code> présélectionne le radiopharmaceutique (ignoré si le code est inconnu).
+        const requestedIsotope = new URLSearchParams(window.location.search).get('isotope');
+        const requested = isotopes.some((iso) => iso.api_code === requestedIsotope) ? requestedIsotope : null;
+        populateIsotopes(requested || config.default_isotope_code || isotopes[0]?.api_code);
         syncUiForSelectedIsotope();
         bindEvents();
       } catch (error) {

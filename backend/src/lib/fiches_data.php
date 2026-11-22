@@ -64,10 +64,8 @@ return [
             ['q' => "La durée donnée est-elle la même pour tout le monde ?", 'a' => "Non : elle dépend du produit, de la mesure du rayonnement à votre sortie et de la situation des personnes qui vous entourent. C'est l'équipe de médecine nucléaire qui la détermine."],
         ],
         'calc' => [
-            ['code' => 'iode131_benin', 'label' => "Hyperthyroïdie (affection bénigne)"],
-            ['code' => 'iode131_0_fixation', 'label' => "Cancer de la thyroïde (fixation 0 %)"],
-            ['code' => 'iode131_5_fixation', 'label' => "Cancer de la thyroïde (fixation 5 %)"],
-            ['code' => 'iode131_25_fixation', 'label' => "Cancer de la thyroïde (fixation 25 %)"],
+            ['code' => 'iode131_benin', 'label' => "hyperthyroïdie (affection bénigne)"],
+            ['code' => 'iode131_0_fixation', 'label' => "cancer de la thyroïde"],
         ],
         'links' => [
             ['label' => "Résumé des caractéristiques du produit (RCP) de l'iodure (131I) de sodium pour thérapie (gélule), base de données publique des médicaments", 'url' => 'https://base-donnees-publique.medicaments.gouv.fr/medicament/67041506/extrait'],
@@ -76,7 +74,7 @@ return [
             "Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (hyperthyroïdie : maladie de Basedow, goitre multinodulaire toxique, nodules autonomes ; carcinome thyroïdien vésiculaire/papillaire), effet de l'hyperthyroïdie après plusieurs semaines, traitement renouvelable, hydratation et mictions fréquentes, bonbons ou boissons acides pour les glandes salivaires, produits de contraste iodés (le RCP indique un délai de 6 à 8 semaines pour les produits hydrosolubles), arrêt puis reprise de l'hormone thyroïdienne, grossesse (contre-indication), contraception, allaitement, contacts mère-enfant, fertilité.",
             "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même et absence d'hospitalisation pour l'hyperthyroïdie ; séjour de quelques jours en chambre protégée pour le cancer ; stimulation par injections (rhTSH) ; « les contacts brefs restent possibles ».",
             "Les durées (restriction de contact, contraception, contacts mère-enfant) du RCP ne sont volontairement pas reprises : elles sont données par l'équipe (calcul RadIV). La fiche renvoie aux consignes de l'équipe.",
-            "Calculateur intégré (hyperthyroïdie : activité administrée et fixation ; cancer : fixation 0, 5 ou 25 %) : un patient connaît-il ces données ? Les libellés « fixation 0/5/25 % » sont-ils compréhensibles pour le public, ou faut-il restreindre le calculateur ? Délai après produit de contraste iodé : la fiche dit « avant le traitement, sans en avoir parlé à l'équipe » sans chiffre (le RCP indique 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
+            "Calculateur : la fiche renvoie vers l'accueil avec l'isotope présélectionné (hyperthyroïdie : « Iode-131-Bénin » ; cancer : « Iode-131-0 % fixation »). Délai après produit de contraste iodé : la fiche dit « avant le traitement, sans en avoir parlé à l'équipe » sans chiffre (le RCP indique 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
             "Le RCP vérifié concerne la gélule Curiumpharma ; d'autres présentations d'iode 131 peuvent avoir des textes légèrement différents.",
         ],
     ],
@@ -120,7 +118,7 @@ return [
             ['q' => "Les consignes sont-elles les mêmes à chaque injection ?", 'a' => "Pas forcément : elles s'appliquent après chaque injection, et la durée est recalculée par l'équipe de médecine nucléaire à partir de la mesure du rayonnement à votre sortie."],
             ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
         ],
-        'calc' => [['code' => 'psma_177lu', 'label' => "Lutétium 177 PSMA (Pluvicto)"]],
+        'calc' => [['code' => 'psma_177lu', 'label' => "lutétium 177 PSMA (Pluvicto)"]],
         'links' => [
             ['label' => "Résumé des caractéristiques du produit (RCP) de Pluvicto en français (PDF, Agence européenne des médicaments)", 'url' => 'https://www.ema.europa.eu/fr/documents/product-information/pluvicto-epar-product-information_fr.pdf'],
             ['label' => "Fiche européenne de Pluvicto (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/pluvicto'],
@@ -181,7 +179,7 @@ return [
             ['q' => "Les consignes sont-elles les mêmes à chaque perfusion ?", 'a' => "Pas forcément : elles s'appliquent après chaque perfusion, et la durée est recalculée par l'équipe de médecine nucléaire à partir de la mesure du rayonnement à votre sortie."],
             ['q' => "Puis-je reprendre le travail ?", 'a' => "Cela dépend des consignes qui vous sont indiquées et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
         ],
-        'calc' => [['code' => 'lutetium177_net', 'label' => "Lutétium 177 DOTATATE (Lutathera)"]],
+        'calc' => [['code' => 'lutetium177_net', 'label' => "lutétium 177 DOTATATE (Lutathera)"]],
         'links' => [
             ['label' => "Résumé des caractéristiques du produit (RCP) de Lutathera en français (PDF, Agence européenne des médicaments)", 'url' => 'https://www.ema.europa.eu/fr/documents/product-information/lutathera-epar-product-information_fr.pdf'],
             ['label' => "Fiche européenne de Lutathera (EMA), avec notice et RCP dans toutes les langues", 'url' => 'https://www.ema.europa.eu/fr/medicines/human/EPAR/lutathera'],
