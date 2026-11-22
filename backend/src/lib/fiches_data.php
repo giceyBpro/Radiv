@@ -22,11 +22,11 @@ return [
                 "L'hyperthyroïdie est un fonctionnement trop actif de la thyroïde (maladie de Basedow, nodule « toxique », goitre multinodulaire toxique). L'iode 131 réduit l'activité de la glande : le rayonnement agit sur une très courte distance autour du produit, ce qui épargne en grande partie les organes voisins. Il est proposé notamment lorsque les médicaments ne suffisent pas ou ne peuvent pas être poursuivis.",
             ]],
             ['h' => "Comment se passe le traitement ?", 'level' => 2, 'p' => [
-                "Le traitement consiste le plus souvent en <strong>une prise unique par la bouche</strong> (gélule). Selon l'activité administrée et l'organisation du service, il se fait le plus souvent <strong>sans hospitalisation</strong> : vous rentrez chez vous le jour même avec des consignes précises.",
+                "Le traitement consiste le plus souvent en <strong>une prise unique par la bouche</strong> (gélule). Il se fait <strong>sans nuit d'hospitalisation</strong> : vous rentrez chez vous le jour même avec des consignes précises.",
                 "L'effet est <strong>progressif</strong> : il n'apparaît qu'au bout de plusieurs semaines, avec un suivi par prises de sang. Si l'hyperthyroïdie persiste, le traitement peut être renouvelé plusieurs mois plus tard. Après le traitement, la thyroïde peut devenir insuffisante ; un traitement par hormone thyroïdienne est alors prescrit, ce qui est fréquent et bien maîtrisé.",
             ]],
             ['h' => "Avant le traitement", 'level' => 3, 'p' => [
-                "L'équipe vous indique si certains médicaments (notamment les antithyroïdiens) doivent être arrêtés quelque temps avant la prise, puis repris. Elle peut aussi, selon votre situation, vous demander de suivre un <strong>régime pauvre en iode</strong>.",
+                "Selon votre situation, l'équipe peut vous demander de suivre un <strong>régime pauvre en iode</strong>.",
                 "<strong>Examens avec produit de contraste iodé</strong> : ne réalisez pas d'examen avec injection de produit de contraste iodé (certains scanners, par exemple) avant le traitement, sans en avoir parlé à l'équipe : l'iode du produit de contraste empêche la thyroïde de fixer l'iode radioactif et réduit l'efficacité du traitement. Signalez aussi tout médicament ou produit contenant de l'iode.",
             ]],
             ['h' => "Après la prise, à la maison", 'level' => 2, 'p' => [
@@ -45,7 +45,7 @@ return [
                 "<strong>Suivi</strong> : des consultations et des prises de sang sont programmées pour vérifier l'efficacité du traitement.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et, en plus, le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
         ],
         'faq' => [
@@ -61,8 +61,8 @@ return [
             ['label' => "Résumé des caractéristiques du produit (RCP) de l'iodure (131I) de sodium pour thérapie (gélule), base de données publique des médicaments", 'url' => 'https://base-donnees-publique.medicaments.gouv.fr/medicament/67041506/extrait'],
         ],
         'review' => [
-            "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (maladie de Basedow, goitre multinodulaire toxique, nodules autonomes), effet après plusieurs semaines, traitement renouvelable, arrêt des antithyroïdiens avant la prise, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés (le RCP indique 6 à 8 semaines pour les produits hydrosolubles), grossesse, contraception, allaitement.",
-            "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même, sans hospitalisation ; « les contacts brefs restent possibles ».",
+            "Fiche issue de la séparation de la fiche « iode 131 » (hyperthyroïdie / cancer). Vérifié avec le RCP de l'iodure (131I) de sodium pour thérapie, gélule (Curiumpharma, base de données publique des médicaments) : indications (maladie de Basedow, goitre multinodulaire toxique, nodules autonomes), effet après plusieurs semaines, traitement renouvelable, régime pauvre en iode recommandé (ici « selon votre situation »), produits de contraste iodés (le RCP indique 6 à 8 semaines pour les produits hydrosolubles), grossesse, contraception, allaitement.",
+            "Non repris du RCP, donc à confirmer selon votre pratique : retour à domicile le jour même, sans nuit d'hospitalisation ; « les contacts brefs restent possibles ».",
             "Les durées (restriction de contact, contraception, contacts mère-enfant) du RCP ne sont volontairement pas reprises : elles sont données par l'équipe (calcul RadIV).",
             "Calculateur : renvoi vers l'accueil avec l'isotope « Iode-131-Bénin » présélectionné. Délai après produit de contraste iodé : sans chiffre dans la fiche (RCP : 6 à 8 semaines pour les produits hydrosolubles) : à laisser tel quel ou à préciser ?",
             "Le RCP vérifié concerne la gélule Curiumpharma ; d'autres présentations d'iode 131 peuvent avoir des textes légèrement différents.",
@@ -80,7 +80,7 @@ return [
                 "Après l'ablation de la thyroïde pour un cancer dit « différencié » (papillaire ou folliculaire), l'iode 131 détruit les petits fragments de tissu thyroïdien qui peuvent rester. Il permet aussi de rechercher, par une image réalisée quelques jours plus tard, d'éventuelles cellules thyroïdiennes ailleurs dans le corps.",
             ]],
             ['h' => "Préparation du traitement", 'level' => 2, 'p' => [
-                "Le traitement est <strong>préparé</strong> par l'équipe : pour que la thyroïde (ou les cellules restantes) capte bien l'iode, l'hormone thyroïdienne est arrêtée temporairement, ou remplacée par des injections qui stimulent la glande ; elle est reprise peu après le traitement. Selon votre situation, l'équipe peut aussi vous demander de suivre un <strong>régime pauvre en iode</strong> pendant une période définie.",
+                "Le traitement est <strong>préparé</strong> par l'équipe : pour que la thyroïde (ou les cellules restantes) capte bien l'iode, l'hormone thyroïdienne est arrêtée quelque temps avant la prise, puis reprise après le traitement, ou remplacée par des injections qui stimulent la glande. Selon votre situation, l'équipe peut aussi vous demander de suivre un <strong>régime pauvre en iode</strong> pendant une période définie.",
                 "<strong>Examens avec produit de contraste iodé</strong> : ne réalisez pas d'examen avec injection de produit de contraste iodé (certains scanners, par exemple) avant le traitement, sans en avoir parlé à l'équipe : l'iode du produit de contraste empêche la thyroïde de fixer l'iode radioactif et réduit l'efficacité du traitement. Signalez aussi tout médicament ou produit contenant de l'iode.",
             ]],
             ['h' => "Le séjour dans le service", 'level' => 2, 'p' => [
@@ -102,13 +102,13 @@ return [
                 "<strong>Suivi</strong> : une image est réalisée quelques jours après la prise, puis des consultations et des examens sont programmés pour vérifier l'efficacité du traitement.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car l'iode 131 perd naturellement la moitié de sa radioactivité en <strong>environ huit jours</strong> et, en plus, le corps l'élimine. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
         ],
         'faq' => [
             ['q' => "Pourquoi faut-il rester quelques jours dans une chambre protégée ?", 'a' => "L'activité d'iode administrée pour un cancer est plus élevée que pour une hyperthyroïdie : le séjour permet de protéger l'entourage pendant la période où le rayonnement est le plus important. Vous sortez lorsque la mesure du rayonnement le permet."],
             ['q' => "Puis-je prendre mes enfants dans mes bras après le traitement ?", 'a' => "Les contacts brefs sont en général possibles ; ce sont les contacts rapprochés et prolongés qui sont limités, surtout avec les jeunes enfants. Suivez la durée de restriction donnée par votre équipe."],
-            ['q' => "Quand pourrai-je reprendre le travail ?", 'a' => "Cela dépend de la durée de restriction qui vous est indiquée et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
+            ['q' => "Quand pourrai-je reprendre le travail ?", 'a' => "Cela dépend de la durée de restriction qui vous est indiquée et de la nature de votre travail (contact étroit avec des enfants ou des femmes enceintes, par exemple). Un arrêt maladie n'est pas systématique. Demandez à l'équipe, qui peut vous remettre un document pour votre employeur."],
             ['q' => "La durée donnée est-elle la même pour tout le monde ?", 'a' => "Non : elle dépend du produit, de la mesure du rayonnement à votre sortie et de la situation des personnes qui vous entourent. C'est l'équipe de médecine nucléaire qui la détermine."],
         ],
         'calc' => [
@@ -151,7 +151,7 @@ return [
                 "suivre les consignes de l'équipe concernant la vie intime et les gestes d'hygiène du quotidien.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et, en plus, le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
             ['h' => "Contraception, vie intime et déplacements", 'level' => 2, 'p' => [], 'ul' => [
                 "<strong>Contraception</strong> : ce traitement peut avoir un effet sur un éventuel enfant à naître. L'équipe vous précise, avant le début du traitement, les mesures à prendre pour la contraception pendant le traitement et après.",
@@ -211,7 +211,7 @@ return [
                 "suivre les consignes de l'équipe concernant les gestes d'hygiène du quotidien.",
             ]],
             ['h' => "Pourquoi ces précautions ?", 'level' => 2, 'p' => [
-                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
+                "Les consignes sont des mesures de précaution, pas le signe d'un danger : le rayonnement diminue de jour en jour, car le lutétium 177 perd naturellement la moitié de sa radioactivité en <strong>environ 6,6 jours</strong> et, en plus, le corps l'élimine, surtout par les urines. Pour comprendre la justification de ces consignes et la notion de durée de restriction, consultez la page <a href=\"/informations\">Informations pour le patient et l'entourage</a>.",
             ]],
             ['h' => "Grossesse, contraception et déplacements", 'level' => 2, 'p' => [], 'ul' => [
                 "<strong>Grossesse et allaitement</strong> : le traitement est contre-indiqué en cas de grossesse, et l'allaitement est à éviter ; si le traitement est nécessaire pendant l'allaitement, l'enfant doit être sevré. Parlez-en à l'équipe avant de commencer.",
