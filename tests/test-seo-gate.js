@@ -20,7 +20,7 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   t('page Informations : contenu public, lien vers le calculateur, pas de calculateur', /Et le risque de contamination/.test(html) && /href="\/"/.test(html) && !/id="resultsBody"/.test(html));
   const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
   t('plan du site : accueil, informations et mentions légales', /<loc>[^<]+\/informations<\/loc>/.test(sm) && /<loc>[^<]+\/legal<\/loc>/.test(sm));
-  t('fiche en brouillon : non publiée (/informations/iode-131 répond 404), absente du plan du site', (await fetch(`${BASE}/informations/iode-131`)).status === 404 && !/iode-131/.test(sm));
+  t('fiche en brouillon : non publiée (/informations/iode-131-cancer-thyroide répond 404), absente du plan du site', (await fetch(`${BASE}/informations/iode-131-cancer-thyroide`)).status === 404 && !/iode-131/.test(sm));
   res = await fetch(`${BASE}/`); html = await res.text();
   t('accueil : bandeau vers /informations, plus de texte de présentation', /class="audience-banner[^"]*"[^>]*>[^<]*patient[^<]*<a href="\/informations"/.test(html) && !/id="apropos"/.test(html));
   fs.mkdirSync(path.join(data, 'var'), { recursive: true });
