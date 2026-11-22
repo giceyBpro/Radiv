@@ -23,6 +23,7 @@
     .trap { position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden; }   /* champ piège : invisible pour les humains, rempli par les robots */
     altcha-widget { display:block; margin-top:16px; }
     .privacy { font-size:.9rem; color:#444; margin-top:12px; }
+    .notice { background:#fff4d6; border:1px solid #e6c36a; border-radius:8px; padding:10px 14px; margin:0 0 16px; }
     button:disabled { opacity:.55; cursor:not-allowed; }
   </style>
 </head>
@@ -30,6 +31,7 @@
   <main class="page">
     <div class="links"><a href="/">← Retour à l'accueil</a></div>
     <h1>Formulaire de contact</h1>
+    <p class="notice"><strong>Ne transmettez aucune information personnelle ou médicale</strong> (nom, date de naissance, traitement, résultats d'examens…). <strong>Aucune réponse médicale ne sera apportée par ce formulaire</strong> : pour toute question sur votre santé ou sur vos consignes, adressez-vous à votre équipe de médecine nucléaire ou à votre médecin.</p>
     <form id="contactForm">
       <label for="email">Email</label>
       <input id="email" name="email" type="email" required>

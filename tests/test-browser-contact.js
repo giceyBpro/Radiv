@@ -18,6 +18,7 @@ const t = (n, c, d = '') => { if (c) { pass += 1; console.log(`OK    ${n}`); } e
   t('ouverture de la page : aucun appel hors du site', external.length === 0, external.join(' '));
   t('plus de case d\'accord tierce', (await page.locator('#consentRow').count()) === 0 && !/Google/.test(await page.textContent('body')));
   t('widget ALTCHA présent, champ piège masqué', (await page.locator('altcha-widget').count()) === 1 && (await page.locator('#website').boundingBox()).x < 0);
+  t('avis : aucune information personnelle ou médicale, aucune réponse médicale', /aucune information personnelle ou médicale/i.test(await page.textContent('.notice')) && /Aucune réponse médicale/.test(await page.textContent('.notice')));
   t('information sur le traitement des données + lien', /ne les enregistre pas/.test(await page.textContent('.privacy')) && (await page.locator('.privacy a').getAttribute('href')) === '/legal#donnees');
   await page.fill('#email', 'patient@example.org'); await page.fill('#message', 'Bonjour');
   await page.waitForTimeout(3500); // résolution du défi (délai minimal de 2 s côté serveur)
