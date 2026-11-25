@@ -395,6 +395,37 @@ function email_html(array $run): string
     return $out;
 }
 
+// --- Exécution planifiée (tâche cron, facultative) ------------------------------------------------------------------------------------
+
+function cron_file(): string { return dir() . '/last-cron'; }
+function last_cron(): int { return (int) @file_get_contents(cron_file()); }
+
+// Traite les cas dus l'un après l'autre en respectant le délai minimal, jusqu'à épuisement du budget de temps (secondes) ; s'arrête dès qu'il n'y a plus
+// rien à faire, ou qu'un nouvel essai est programmé plus tard (la tâche suivante, ou la prochaine visite, le reprendra). $sleep / $clock : injection (tests).
+function batch(int $budgetSeconds = 1500, ?callable $sleep = null, ?callable $clock = null, array $opts = []): array
+{
+    $clock ??= 'time';
+    $sleep ??= 'sleep';
+    $start = (int) $clock();
+    if (Config\ensure_private_dir(dir())) @file_put_contents(cron_file(), (string) $start);
+    $log = [];
+    for ($guard = 0; $guard < 400; $guard++) {
+        $now = (int) $clock();
+        if ($now - $start >= $budgetSeconds) { $log[] = 'budget_epuise'; break; }
+        $r = tick(['now' => $now] + $opts);
+        $log[] = $r['status'] . (isset($r['category']) ? ':' . $r['category'] : '') . (isset($r['anomalies']) ? ':' . $r['anomalies'] . '_anomalie(s)' : '');
+        if ($r['status'] === 'attente') {
+            $retryAt = (int) (load_state()['current']['retry_at'] ?? 0);
+            if ($retryAt > $now + ($budgetSeconds - ($now - $start))) break; // nouvel essai trop lointain pour ce passage
+            $sleep(30);
+            continue;
+        }
+        if (!in_array($r['status'], ['cas_execute', 'jour_termine'], true)) break; // désactivé, rien à faire, occupé, nouvel essai programmé, erreur
+        $sleep(MIN_GAP_SECONDS);
+    }
+    return $log;
+}
+
 // --- Déclenchement par la première visite ---------------------------------------------------------------------------------------------
 
 // Appelé en fin de requête (après envoi de la réponse) : ne fait quelque chose que si l'audit est activé, si un cas est dû et si le

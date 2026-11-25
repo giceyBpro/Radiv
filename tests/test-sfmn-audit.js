@@ -20,5 +20,8 @@ t('délai minimal : deux calculs ne se suivent pas à moins de 120 s', out.delai
 t('interrupteur : désactivée, rien ne s\'exécute', out.desactive === 'desactive');
 t('rattrapage : 15 jours manqués, seuls les 7 plus récents sont traités, dans l\'ordre', out.rattrapage.jours.length === 7 && out.rattrapage.jours[0] === '2026-11-19' && out.rattrapage.jours.at(-1) === '2026-11-25', JSON.stringify(out.rattrapage));
 t('avant 1 h du matin : la journée n\'est pas encore due', out.avant_1h === 'rien_a_faire', out.avant_1h);
+t('cron : une journée complète en un passage (4 cas espacés de 120 s), horodatage du dernier passage enregistré', exec(out.cron.log) === 4 && out.cron.log.includes('jour_termine:0_anomalie(s)') && out.cron.attente_totale >= 360 && out.cron.fichier === true && out.cron.jour === '2026-11-25', JSON.stringify(out.cron));
+t('cron : plusieurs jours manqués rattrapés dans la limite du budget de temps (25 min), le reste est laissé aux passages suivants', out.cron_rattrapage.jours >= 2 && out.cron_rattrapage.jours < 4 && out.cron_rattrapage.fin === 'budget_epuise', JSON.stringify(out.cron_rattrapage));
+t('cron : interrupteur coupé → le passage ne fait rien', out.cron_desactive.length === 1 && out.cron_desactive[0] === 'desactive', JSON.stringify(out.cron_desactive));
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);

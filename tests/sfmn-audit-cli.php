@@ -70,4 +70,12 @@ for ($i = 0; $i < 400 && $n < 8; $i++) { $r = A\tick(['now' => $t, 'sfmn' => $sa
 $out['rattrapage'] = ['jours' => $days];
 $before_hour = (int) (new DateTimeImmutable('2026-11-25 00:30:00', new DateTimeZone('Europe/Paris')))->getTimestamp();
 $reset('2026-11-24'); $out['avant_1h'] = A\tick(['now' => $before_hour, 'sfmn' => $same])['status'];
+// 4. exécution planifiée (cron) : horloge simulée
+$mails = []; $reset(); $clock = $now; $slept = 0;
+$log = A\batch(1500, static function (int $s) use (&$clock, &$slept): void { $clock += $s; $slept += $s; }, static function () use (&$clock): int { return $clock; }, ['sfmn' => $same, 'mailer' => $mailer]);
+$out['cron'] = ['log' => $log, 'attente_totale' => $slept, 'fichier' => A\last_cron() === $now, 'jour' => A\load_run('2026-11-25')['date'] ?? null];
+$reset('2026-11-21'); $clock = $now; $slept = 0; $mails = [];   // 4 jours manqués, budget de 25 minutes : le passage s'arrête quand le budget est épuisé
+$log = A\batch(1500, static function (int $s) use (&$clock, &$slept): void { $clock += $s; $slept += $s; }, static function () use (&$clock): int { return $clock; }, ['sfmn' => $same, 'mailer' => $mailer]);
+$out['cron_rattrapage'] = ['jours' => count(array_filter($log, static fn ($l) => str_starts_with($l, 'jour_termine'))), 'fin' => end($log), 'duree' => $slept];
+A\set_enabled(false, 'test'); $clock = $now + 99999; $out['cron_desactive'] = A\batch(1500, static function (int $s) use (&$clock): void { $clock += $s; }, static function () use (&$clock): int { return $clock; }, ['sfmn' => $same]);
 echo json_encode($out, JSON_UNESCAPED_UNICODE);
