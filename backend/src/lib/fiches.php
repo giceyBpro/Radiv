@@ -35,14 +35,15 @@ function published_list(): array
     return array_values(array_filter(all(), static fn (array $f): bool => published($f)));
 }
 
-// Liste des fiches publiées pour la page /patient : section vide (rien) tant qu'aucune fiche n'est publiée.
+// Liste des fiches publiées, en cartes, tout en haut de la page /patient : rien tant qu'aucune fiche n'est publiée.
 function index_html(): string
 {
     $list = published_list();
     if (!$list) return '';
-    $out = "<section class=\"bloc\">\n<h2>Fiches par traitement</h2>\n<ul class=\"fiches\">\n";
+    $out = "<section class=\"choix\" aria-labelledby=\"choix-titre\">\n<h2 id=\"choix-titre\">Les consignes de votre traitement</h2>\n<p>Choisissez votre traitement pour lire les informations qui le concernent :</p>\n<ul class=\"fiches\">\n";
     foreach ($list as $fiche) {
-        $out .= '<li><a href="/patient/' . esc((string) $fiche['slug']) . '">' . esc((string) $fiche['h1']) . '</a><small>' . esc((string) $fiche['description']) . "</small></li>\n";
+        $label = (string) ($fiche['menu'] ?? $fiche['h1']);
+        $out .= '<li><a class="carte" href="/patient/' . esc((string) $fiche['slug']) . '"><strong>' . esc($label) . '</strong><small>' . esc((string) ($fiche['menu_description'] ?? $fiche['description'])) . "</small></a></li>\n";
     }
     return $out . "</ul>\n</section>\n";
 }

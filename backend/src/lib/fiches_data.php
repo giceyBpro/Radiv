@@ -12,6 +12,8 @@ if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécu
 return [
     [
         'slug' => 'iode-131-hyperthyroidie',
+        'menu' => "Iode 131 : hyperthyroïdie",
+        'menu_description' => "Consignes après un traitement d'une hyperthyroïdie par iode radioactif.",
         'status' => 'published',
         'title' => "Iode 131 et hyperthyroïdie : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement d'une hyperthyroïdie par iode 131 : ce qu'il faut savoir pour le patient et l'entourage",
@@ -69,6 +71,8 @@ return [
     ],
     [
         'slug' => 'iode-131-cancer-thyroide',
+        'menu' => "Iode 131 : cancer de la thyroïde",
+        'menu_description' => "Consignes après un traitement d'un cancer de la thyroïde par iode radioactif.",
         'status' => 'published',
         'title' => "Iode 131 et cancer de la thyroïde : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement d'un cancer de la thyroïde par iode 131 : ce qu'il faut savoir pour le patient et l'entourage",
@@ -126,6 +130,8 @@ return [
     ],
     [
         'slug' => 'lutetium-177-psma',
+        'menu' => "Lutétium 177 PSMA (Pluvicto)",
+        'menu_description' => "Consignes après un traitement d'un cancer de la prostate.",
         'status' => 'draft',
         'title' => "Lutétium 177 PSMA (Pluvicto) : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement par lutétium 177 PSMA (Pluvicto) : ce qu'il faut savoir pour le patient et l'entourage",
@@ -179,6 +185,8 @@ return [
     ],
     [
         'slug' => 'lutetium-177-dotatate',
+        'menu' => "Lutétium 177 DOTATATE (Lutathera)",
+        'menu_description' => "Consignes après un traitement d'une tumeur neuroendocrine.",
         'status' => 'draft',
         'title' => "Lutétium 177 DOTATATE (Lutathera) : consignes pour le patient et l'entourage après un traitement",
         'h1' => "Traitement par lutétium 177 DOTATATE (Lutathera) : ce qu'il faut savoir pour le patient et l'entourage",

@@ -24,14 +24,21 @@
     a:focus-visible { outline:3px solid #1637b8; outline-offset:2px; border-radius:2px; }
     .links { margin-bottom:14px; font-size:.95rem; }
     .notice { margin:0 0 18px; padding:12px 14px; border-radius:10px; background:#fff4d6; border:1px solid #e6c36a; font-size:.95rem; }
-    ul.fiches li { margin:8px 0; } ul.fiches small { display:block; color:#555; }
+    .choix { margin:22px 0; padding:18px 22px 20px; border:2px solid #1637b8; border-radius:14px; background:#f2f6ff; }
+    .choix h2 { margin:0 0 6px; padding:0; border:0; font-size:1.3rem; }
+    .choix p { margin:0 0 12px; }
+    ul.fiches { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+    ul.fiches li { margin:0; }
+    ul.fiches a.carte { display:block; height:100%; box-sizing:border-box; padding:14px 16px; border:1px solid #9db4e8; border-radius:12px; background:#fff; color:#10223f; text-decoration:none; min-height:64px; }
+    ul.fiches a.carte strong { display:block; font-size:1.05rem; color:#1637b8; }
+    ul.fiches a.carte small { display:block; margin-top:4px; color:#444; font-size:.88rem; }
+    ul.fiches a.carte:hover { background:#eaf1ff; border-color:#1637b8; }
     main.page { counter-reset: bloc; }
     .bloc { background:#f6f9fc; border:1px solid #d6e2ee; border-left:6px solid #1637b8; border-radius:12px; padding:16px 22px 18px; margin:26px 0; }
     .bloc h2 { counter-increment: bloc; border:0; padding:0; margin:0 0 12px; display:flex; align-items:center; gap:12px; font-size:1.2rem; line-height:1.3; }
     .bloc h2::before { content: counter(bloc); flex:none; width:1.9em; height:1.9em; border-radius:50%; background:#1637b8; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:.85rem; }
     .bloc > p:last-child { margin-bottom:0; }
     .bloc figure.illus { margin:16px 0 0; }
-    ul.fiches { padding-left:20px; }
     figure.illus { margin:18px 0; text-align:center; } figure.illus img { max-width:100%; height:auto; border-radius:12px; border:1px solid #d9e0e6; }
     @media print { figure.illus a { pointer-events:none; } }
     .pro { margin-top:26px; padding:12px 14px; border-radius:10px; background:#eaf1fc; border:1px solid #c4d6f2; color:#17458a; font-size:.95rem; }
@@ -47,40 +54,41 @@
 
     <p>Cette page propose des informations générales pour mieux comprendre les consignes de radioprotection qui vous ont été remises, ou qui vont vous l'être, après un traitement par radiothérapie interne. Elle ne remplace pas les explications de votre équipe, à qui vous pouvez poser toutes vos questions.</p>
 
-    <section class="bloc">
-      <h2>En bref : après un traitement par radiothérapie interne</h2>
-      <p>Après un traitement par <strong>radiothérapie interne vectorisée (RIV)</strong> &mdash; iode 131 (I-131), lutétium 177 (Lu-177), radium 223 (Ra-223), microsphères chargées d'yttrium 90 ou d'holmium 166 &mdash;, le patient émet pendant un temps un faible rayonnement. Des <strong>consignes de radioprotection</strong> limitent alors l'exposition de son entourage : on parle de <strong>durée de restriction de contact</strong>.</p>
-      <figure class="illus"><a href="/img/riv-patient-entourage-informations.webp" target="_blank" rel="noopener"><img src="/img/riv-patient-entourage-informations.webp" width="1448" height="1086" alt="Illustration : un patient sort du service de médecine nucléaire, entouré de ses proches. Pendant quelques jours, il émet un faible rayonnement ; des consignes simples protègent l'entourage. Ce sont des mesures de précaution, pas le signe d'un danger." decoding="async"></a></figure>
-    </section>
-    <section class="bloc">
-      <h2>Un traitement, pas un examen d'imagerie</h2>
-      <p>Les consignes présentées ici s'appliquent après un <strong>traitement</strong> par radiothérapie interne vectorisée. Elles ne concernent pas les examens d'imagerie courants (radiographie, scanner, IRM), qui n'ont pas de conséquence pour l'entourage. Après un examen de médecine nucléaire à visée diagnostique (scintigraphie, TEP), l'équipe qui l'a réalisé vous donne, si nécessaire, ses propres consignes.</p>
-      <figure class="illus"><a href="/img/consignes-apres-traitement-pas-examen-imagerie.webp" target="_blank" rel="noopener"><img src="/img/consignes-apres-traitement-pas-examen-imagerie.webp" width="1448" height="1086" alt="Schéma : ces consignes s'appliquent après un traitement par radiothérapie interne vectorisée, où le patient peut émettre un faible rayonnement pendant quelques jours, et non après un examen d'imagerie. Les informations concernent les consignes remises après un traitement, pas après un examen diagnostique." loading="lazy" decoding="async"></a></figure>
-    </section>
-
     <!--FICHES-->
 
     <section class="bloc">
+      <h2>En bref : après un traitement par radiothérapie interne</h2>
+      <figure class="illus"><a href="/img/riv-patient-entourage-informations.webp" target="_blank" rel="noopener"><img src="/img/riv-patient-entourage-informations.webp" width="1448" height="1086" alt="Illustration : un patient sort du service de médecine nucléaire, entouré de ses proches. Pendant quelques jours, il émet un faible rayonnement ; des consignes simples protègent l'entourage. Ce sont des mesures de précaution, pas le signe d'un danger." decoding="async"></a></figure>
+      <p>Après un traitement par <strong>radiothérapie interne vectorisée (RIV)</strong> &mdash; iode 131 (I-131), lutétium 177 (Lu-177), radium 223 (Ra-223), microsphères chargées d'yttrium 90 ou d'holmium 166 &mdash;, le patient émet pendant un temps un faible rayonnement. Des <strong>consignes de radioprotection</strong> limitent alors l'exposition de son entourage : on parle de <strong>durée de restriction de contact</strong>.</p>
+    </section>
+    <section class="bloc">
+      <h2>Un traitement, pas un examen d'imagerie</h2>
+      <figure class="illus"><a href="/img/consignes-apres-traitement-pas-examen-imagerie.webp" target="_blank" rel="noopener"><img src="/img/consignes-apres-traitement-pas-examen-imagerie.webp" width="1448" height="1086" alt="Schéma : ces consignes s'appliquent après un traitement par radiothérapie interne vectorisée, où le patient peut émettre un faible rayonnement pendant quelques jours, et non après un examen d'imagerie. Les informations concernent les consignes remises après un traitement, pas après un examen diagnostique." loading="lazy" decoding="async"></a></figure>
+      <p>Les consignes présentées ici s'appliquent après un <strong>traitement</strong> par radiothérapie interne vectorisée. Elles ne concernent pas les examens d'imagerie courants (radiographie, scanner, IRM), qui n'ont pas de conséquence pour l'entourage. Après un examen de médecine nucléaire à visée diagnostique (scintigraphie, TEP), l'équipe qui l'a réalisé vous donne, si nécessaire, ses propres consignes.</p>
+    </section>
+
+
+    <section class="bloc">
       <h2>Pourquoi ces consignes ?</h2>
+      <figure class="illus"><a href="/img/pourquoi-consignes-radioprotection.webp" target="_blank" rel="noopener"><img src="/img/pourquoi-consignes-radioprotection.webp" width="1448" height="1086" alt="Schéma : le traitement agit sur la maladie chez le patient, mais n'apporte aucun bénéfice à l'entourage. Trois moyens de limiter l'exposition : la distance, le temps passé tout près et la protection. Objectif : recevoir le moins de rayonnement possible, sans contrainte excessive." loading="lazy" decoding="async"></a></figure>
       <p>Un traitement par radiothérapie interne agit en déposant un produit radioactif qui détruit les cellules visées. Pendant quelques jours, le corps du patient émet donc un peu de rayonnement vers l'extérieur. Pour le patient, ce rayonnement fait partie du traitement : c'est lui qui agit sur la maladie, et le traitement a été choisi parce que son bénéfice l'emporte sur ses inconvénients. Pour l'entourage, en revanche, il n'apporte aucun bénéfice : c'est pourquoi on cherche à l'éviter autant que possible.</p>
       <p>La règle est de recevoir <strong>le moins de rayonnement possible, sans que cela devienne une contrainte excessive</strong>. On limite la dose reçue par les proches de la même façon que pour tout autre rayonnement : en gardant <strong>de la distance</strong>, en réduisant <strong>le temps passé tout près</strong> du patient et, quand c'est possible, en s'en protégeant. Ces gestes simples suffisent à garder les doses très faibles.</p>
-      <figure class="illus"><a href="/img/pourquoi-consignes-radioprotection.webp" target="_blank" rel="noopener"><img src="/img/pourquoi-consignes-radioprotection.webp" width="1448" height="1086" alt="Schéma : le traitement agit sur la maladie chez le patient, mais n'apporte aucun bénéfice à l'entourage. Trois moyens de limiter l'exposition : la distance, le temps passé tout près et la protection. Objectif : recevoir le moins de rayonnement possible, sans contrainte excessive." loading="lazy" decoding="async"></a></figure>
     </section>
     <section class="bloc">
       <h2>Des mesures de précaution, pas le signe d'un danger</h2>
+      <figure class="illus"><a href="/img/mesures-de-precaution-radioprotection.webp" target="_blank" rel="noopener"><img src="/img/mesures-de-precaution-radioprotection.webp" width="1448" height="1086" alt="Schéma : le produit perd naturellement sa radioactivité et le corps l'élimine ; les doses sont faibles et diminuent avec le temps. Prudence renforcée avec les enfants et les femmes enceintes, plus sensibles au rayonnement. Soutenir le patient reste possible, selon les consignes de l'équipe." loading="lazy" decoding="async"></a></figure>
       <p>Ces consignes sont <strong>des mesures de précaution, pas le signe d'un danger</strong> : les doses concernées sont faibles, et le rayonnement diminue de jour en jour, parce que le produit perd naturellement de sa radioactivité et que le corps l'élimine. On est toutefois plus prudent avec <strong>les enfants et les femmes enceintes</strong>, dont l'organisme est plus sensible au rayonnement, ce qui explique des durées plus longues pour eux.</p>
       <p>Rester proche d'un patient qui a besoin de soutien reste possible, dans le cadre des consignes de l'équipe. Les consignes visent à encadrer ces contacts, pas à isoler la personne.</p>
-      <figure class="illus"><a href="/img/mesures-de-precaution-radioprotection.webp" target="_blank" rel="noopener"><img src="/img/mesures-de-precaution-radioprotection.webp" width="1448" height="1086" alt="Schéma : le produit perd naturellement sa radioactivité et le corps l'élimine ; les doses sont faibles et diminuent avec le temps. Prudence renforcée avec les enfants et les femmes enceintes, plus sensibles au rayonnement. Soutenir le patient reste possible, selon les consignes de l'équipe." loading="lazy" decoding="async"></a></figure>
     </section>
     <section class="bloc">
       <h2>À quoi sert la durée de restriction ?</h2>
-      <p>C'est le nombre de jours pendant lesquels certains contacts rapprochés sont à limiter : dormir dans le même lit, rester près d'un enfant, partager un trajet ou un poste de travail. Elle dépend du radiopharmaceutique, de la façon dont il décroît chez le patient et de la situation de la personne exposée (conjoint, enfant, femme enceinte, collègue, transports en commun).</p>
       <figure class="illus"><a href="/img/duree-de-restriction-contact.webp" target="_blank" rel="noopener"><img src="/img/duree-de-restriction-contact.webp" width="1448" height="1086" alt="Schéma : la durée de restriction est le nombre de jours pendant lesquels certains contacts rapprochés sont à limiter : dormir dans le même lit, rester près d'un enfant, partager un trajet ou un poste de travail, prendre les transports en commun. Elle dépend du traitement et de la personne exposée." loading="lazy" decoding="async"></a></figure>
+      <p>C'est le nombre de jours pendant lesquels certains contacts rapprochés sont à limiter : dormir dans le même lit, rester près d'un enfant, partager un trajet ou un poste de travail. Elle dépend du radiopharmaceutique, de la façon dont il décroît chez le patient et de la situation de la personne exposée (conjoint, enfant, femme enceinte, collègue, transports en commun).</p>
     </section>
     <section class="bloc">
       <h2>Qui détermine ces consignes ?</h2>
-      <p>C'est l'équipe de médecine nucléaire qui suit le patient. Elle part du radiopharmaceutique administré et du débit de dose mesuré à un mètre à la sortie du patient, puis donne des consignes adaptées à sa situation. Les professionnels de santé disposent pour cela d'un calculateur : <a href="/">accéder au calculateur</a>.</p>
       <figure class="illus"><a href="/img/qui-determine-les-consignes.webp" target="_blank" rel="noopener"><img src="/img/qui-determine-les-consignes.webp" width="1448" height="1086" alt="Schéma : les consignes sont déterminées par l'équipe de médecine nucléaire à partir du radiopharmaceutique administré (I-131, Lu-177, Ra-223, Y-90, Ho-166), du débit de dose mesuré à un mètre et de la situation de la personne exposée (conjoint, enfant, femme enceinte, collègue)." loading="lazy" decoding="async"></a></figure>
+      <p>C'est l'équipe de médecine nucléaire qui suit le patient. Elle part du radiopharmaceutique administré et du débit de dose mesuré à un mètre à la sortie du patient, puis donne des consignes adaptées à sa situation. Les professionnels de santé disposent pour cela d'un calculateur : <a href="/">accéder au calculateur</a>.</p>
     </section>
     <section class="bloc">
       <h2>D'où viennent les calculs ?</h2>
