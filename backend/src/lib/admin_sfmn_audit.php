@@ -21,6 +21,8 @@ function sfmn_audit_card(string $csrf): string
         . 'Toute différence est signalée par e-mail (adresse du formulaire de contact). Déclenchée par la première consultation du site après 1 h, un cas à la fois, au moins '
         . SfmnAudit\MIN_GAP_SECONDS . ' s entre deux appels à la SFMN ; les jours manqués sont rattrapés (' . SfmnAudit\MAX_CATCHUP_DAYS . ' au plus).</p>';
     if ($on && $state['enabled_at'] !== '') $out .= '<p class="small">Activée le ' . h($state['enabled_at']) . ' par ' . h($state['enabled_by']) . '.</p>';
+    $cron = SfmnAudit\last_cron();
+    $out .= '<p class="small">Tâche planifiée (facultative) : ' . ($cron > 0 ? 'dernier passage le ' . h(gmdate('Y-m-d H:i', $cron)) . ' UTC.' : 'aucun passage enregistré (la première visite du site après 1 h déclenche alors le travail).') . '</p>';
     $cur = $state['current'] ?? null;
     if (is_array($cur)) {
         $done = count(array_filter($cur['cases'], static fn ($c) => isset($c['category'])));
