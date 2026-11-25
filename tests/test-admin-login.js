@@ -63,6 +63,16 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   rl.forEach((f) => fs.unlinkSync(f)); // remise à zéro pour la suite
   cookie = ''; await login({ code: totp(secret, Date.now() / 1000 + 30) }); // pas suivant : le précédent est déjà consommé
   // Fiches d'information (brouillons) : visibles seulement connecté, jamais publiquement.
+  // Comparaison automatique avec la SFMN : carte de l'onglet Site, interrupteur (désactivée par défaut)
+  const home2 = await req('GET', '/auth'); const csrfS = (home2.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  t('carte « Comparaison automatique avec la SFMN » : désactivée par défaut', /Comparaison automatique avec la SFMN/.test(home2.text) && /badge warn">désactivée/.test(home2.text) && /Aucun rapport/.test(home2.text));
+  await req('POST', '/auth/sfmn-audit', { csrf: csrfS, action: 'enable' });
+  const home3 = await req('GET', '/auth');
+  t('activation depuis l\'administration : carte « activée », bouton « Lancer le prochain cas »', /badge good">activée/.test(home3.text) && /Lancer le prochain cas/.test(home3.text) && (fs.existsSync(path.join(data, 'var/var/sfmn-audit/state.json')) || fs.existsSync(path.join(data, 'var/sfmn-audit/state.json'))));
+  const csrfS2 = (home3.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  await req('POST', '/auth/sfmn-audit', { csrf: csrfS2, action: 'disable' });
+  t('désactivation : carte de nouveau « désactivée »', /badge warn">désactivée/.test((await req('GET', '/auth')).text));
+  t('rapport d\'un jour inexistant : 404', (await req('GET', '/auth/sfmn-audit/2026-01-01')).status === 404);
   const fl = await req('GET', '/auth/fiches');
   const fh = await req('GET', '/auth/fiches/iode-131-hyperthyroidie'); const fc = await req('GET', '/auth/fiches/iode-131-cancer-thyroide'); const fl2 = await req('GET', '/auth/fiches/lutetium-177-psma');
   t('onglet Fiches : les deux fiches de l\'iode publiées, Pluvicto et Lutathera en brouillon', fl.status === 200 && /iode-131-hyperthyroidie[\s\S]{0,400}publiée/.test(fl.text) && /iode-131-cancer-thyroide[\s\S]{0,400}publiée/.test(fl.text) && /lutetium-177-psma[\s\S]{0,400}brouillon/.test(fl.text) && /lutetium-177-dotatate[\s\S]{0,400}brouillon/.test(fl.text));

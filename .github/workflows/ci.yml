@@ -46,6 +46,8 @@ jobs:
         run: node tests/test-seo-gate.js
       - name: Contrôle automatique des mises à jour
         run: node tests/test-update-check.js
+      - name: Comparaison automatique avec la SFMN (SFMN simulée)
+        run: node tests/test-sfmn-audit.js
       - name: Publication des fiches d'information
         run: node tests/test-fiches-publish.js
       - name: Cohérence de la mise en forme de runtime.env
