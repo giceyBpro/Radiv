@@ -36,6 +36,8 @@ require __DIR__ . '/lib/admin_login.php';
 require __DIR__ . '/lib/admin_security.php';
 require __DIR__ . '/lib/fiches.php';
 require __DIR__ . '/lib/admin_fiches.php';
+require __DIR__ . '/lib/sfmn_audit.php';
+require __DIR__ . '/lib/admin_sfmn_audit.php';
 require __DIR__ . '/lib/updater.php';
 require __DIR__ . '/lib/core_lab.php';
 require __DIR__ . '/lib/isotope_labels.php';
@@ -77,6 +79,12 @@ $path = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_P
 if ($method === 'OPTIONS') {
     http_response_code(204);
     exit;
+}
+
+// Comparaison automatique avec la SFMN (désactivée par défaut, interrupteur dans /auth) : déclenchée par la première consultation du site,
+// APRÈS l'envoi de la réponse au visiteur (voir SfmnAudit\maybe_tick) ; jamais sur l'administration ni sur les écritures.
+if ($method === 'GET' && !str_starts_with($path, '/auth') && ($path === '/api/config' || $path === '/api/public-config' || Seo\page_for_path($path) !== null)) {
+    register_shutdown_function('Radiv\\SfmnAudit\\maybe_tick');
 }
 
 try {

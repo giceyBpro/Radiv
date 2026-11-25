@@ -66,6 +66,7 @@ const ROUTES = [
     'POST /auth/moteur/retablir' => 'core_restore',
     'POST /auth/moteur/desepingler' => 'core_unpin',
     'POST /auth/maintenance' => 'maintenance',
+    'POST /auth/sfmn-audit' => 'sfmn_audit',
     'POST /auth/xplore' => 'xplore',
     'POST /auth/update' => 'update',
     'POST /auth/rollback' => 'rollback',
@@ -100,6 +101,10 @@ function handle(string $method, string $path): bool
     // Aperçu d'une fiche d'information : GET /auth/fiches/<slug>, réservé aux sessions ouvertes.
     if ($method === 'GET' && preg_match('#^/auth/fiches/([a-z0-9-]{1,60})$#', $path, $m)) {
         return Config\admin_site_enabled() && Session\transport_ok() && do_fiche_preview($m[1]);
+    }
+    // Rapport d'une journée de la comparaison avec la SFMN : GET /auth/sfmn-audit/<aaaa-mm-jj>, réservé aux sessions ouvertes.
+    if ($method === 'GET' && preg_match('#^/auth/sfmn-audit/(\d{4}-\d{2}-\d{2})$#', $path, $m)) {
+        return Config\admin_site_enabled() && Session\transport_ok() && do_sfmn_audit_detail($m[1]);
     }
     $action = ROUTES["{$method} {$path}"] ?? null;
     if ($action === null || !Config\admin_site_enabled()) return false;
@@ -260,6 +265,7 @@ function do_site(): bool
 
     $out .= config_card();
     $out .= maintenance_card($csrf);
+    $out .= sfmn_audit_card($csrf);
     $out .= xplore_card($csrf);
 
     $disk = Disk\usage();
