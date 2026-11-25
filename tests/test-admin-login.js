@@ -63,23 +63,25 @@ const php = (code) => execFileSync('php', ['-r', `define('RADIV_ENTRY',1); requi
   rl.forEach((f) => fs.unlinkSync(f)); // remise à zéro pour la suite
   cookie = ''; await login({ code: totp(secret, Date.now() / 1000 + 30) }); // pas suivant : le précédent est déjà consommé
   // Fiches d'information (brouillons) : visibles seulement connecté, jamais publiquement.
-  // Comparaison automatique avec la SFMN : carte de l'onglet Site, interrupteur (désactivée par défaut)
-  const home2 = await req('GET', '/auth'); const csrfS = (home2.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
-  t('carte « Comparaison automatique avec la SFMN » : désactivée par défaut', /Comparaison automatique avec la SFMN/.test(home2.text) && /badge warn">désactivée/.test(home2.text) && /Aucun rapport/.test(home2.text));
+  // Comparaison automatique avec la SFMN : onglet dédié (à côté de « Test SFMN »), interrupteur (désactivée par défaut), bouton de lancement manuel
+  const siteHome = await req('GET', '/auth');
+  t('onglet « Comparaison SFMN » dans la navigation, la carte n\'est plus dans l\'onglet Site', /href="\/auth\/comparaison-sfmn"[^>]*>Comparaison SFMN/.test(siteHome.text) && !/Comparaison automatique avec la SFMN/.test(siteHome.text));
+  const home2 = await req('GET', '/auth/comparaison-sfmn'); const csrfS = (home2.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+  t('page : désactivée par défaut, bouton de lancement des requêtes du jour, aucun rapport', home2.status === 200 && /badge warn">désactivée/.test(home2.text) && /Lancer maintenant les requêtes d'aujourd'hui/.test(home2.text) && /Aucun rapport/.test(home2.text));
   await req('POST', '/auth/sfmn-audit', { csrf: csrfS, action: 'enable' });
-  const home3 = await req('GET', '/auth');
-  t('activation depuis l\'administration : carte « activée », bouton « Lancer le prochain cas »', /badge good">activée/.test(home3.text) && /Lancer le prochain cas/.test(home3.text) && (fs.existsSync(path.join(data, 'var/var/sfmn-audit/state.json')) || fs.existsSync(path.join(data, 'var/sfmn-audit/state.json'))));
+  const home3 = await req('GET', '/auth/comparaison-sfmn');
+  t('activation depuis l\'administration : « activée », état enregistré', /badge good">activée/.test(home3.text) && (fs.existsSync(path.join(data, 'var/var/sfmn-audit/state.json')) || fs.existsSync(path.join(data, 'var/sfmn-audit/state.json'))));
   const csrfS2 = (home3.text.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
   await req('POST', '/auth/sfmn-audit', { csrf: csrfS2, action: 'disable' });
-  t('désactivation : carte de nouveau « désactivée »', /badge warn">désactivée/.test((await req('GET', '/auth')).text));
-  t('rapport d\'un jour inexistant : 404', (await req('GET', '/auth/sfmn-audit/2026-01-01')).status === 404);
+  t('désactivation : de nouveau « désactivée »', /badge warn">désactivée/.test((await req('GET', '/auth/comparaison-sfmn')).text));
+  t('rapport d\'un jour inexistant : 404 ; sans session : page en 404', (await req('GET', '/auth/sfmn-audit/2026-01-01')).status === 404);
   const fl = await req('GET', '/auth/fiches');
   const fh = await req('GET', '/auth/fiches/iode-131-hyperthyroidie'); const fc = await req('GET', '/auth/fiches/iode-131-cancer-thyroide'); const fl2 = await req('GET', '/auth/fiches/lutetium-177-psma');
   t('onglet Fiches : les deux fiches de l\'iode publiées, Pluvicto et Lutathera en brouillon', fl.status === 200 && /iode-131-hyperthyroidie[\s\S]{0,400}publiée/.test(fl.text) && /iode-131-cancer-thyroide[\s\S]{0,400}publiée/.test(fl.text) && /lutetium-177-psma[\s\S]{0,400}brouillon/.test(fl.text) && /lutetium-177-dotatate[\s\S]{0,400}brouillon/.test(fl.text));
   t('aperçus : bandeau adapté (publiée / brouillon), points de relecture, noindex ; chaque fiche traite sa maladie', fh.status === 200 && fc.status === 200 && /Aperçu administrateur : fiche publiée/.test(fh.text) && /Aperçu administrateur : fiche publiée/.test(fc.text) && !/BROUILLON/.test(fh.text + fc.text) && /BROUILLON/.test(fl2.text) && /Points à vérifier/.test(fc.text) && /noindex/.test(fh.text) && /hyperthyroïdie/.test(fh.text) && !/Si vous êtes traité pour un cancer/.test(fh.text) && /cancer de la thyroïde/.test(fc.text) && !/maladie de Basedow, nodule/.test(fc.text));
   t('fiches : renvoi vers le calculateur avec l\'isotope présélectionné (hyperthyroïdie : bénin ; cancer : néoplasie 0 %), pas de calcul dans la page', /href="\/\?isotope=iode131_benin"/.test(fh.text) && !/iode131_0_fixation/.test(fh.text) && /href="\/\?isotope=iode131_0_fixation"/.test(fc.text) && !/iode131_benin/.test(fc.text) && /href="\/\?isotope=psma_177lu"/.test(fl2.text) && !/fiche-calcul|id="fiche-calc"/.test(fh.text + fc.text + fl2.text) && /professionnels de santé/.test(fh.text));
   const pub = cookie; cookie = '';
-  t('sans session : aperçu et liste en 404', (await req('GET', '/auth/fiches/iode-131-hyperthyroidie')).status === 404 && (await req('GET', '/auth/fiches')).status === 404);
+  t('sans session : aperçu, liste et comparaison SFMN en 404', (await req('GET', '/auth/fiches/iode-131-hyperthyroidie')).status === 404 && (await req('GET', '/auth/fiches')).status === 404 && (await req('GET', '/auth/comparaison-sfmn')).status === 404);
   cookie = pub;
   const sec = await req('GET', '/auth/securite');
   t('onglet Connexion : état activé, formulaire de remplacement', sec.status === 200 && /activée/.test(sec.text) && /name="password2"/.test(sec.text));

@@ -78,4 +78,22 @@ $reset('2026-11-21'); $clock = $now; $slept = 0; $mails = [];   // 4 jours manqu
 $log = A\batch(1500, static function (int $s) use (&$clock, &$slept): void { $clock += $s; $slept += $s; }, static function () use (&$clock): int { return $clock; }, ['sfmn' => $same, 'mailer' => $mailer]);
 $out['cron_rattrapage'] = ['jours' => count(array_filter($log, static fn ($l) => str_starts_with($l, 'jour_termine'))), 'fin' => end($log), 'duree' => $slept];
 A\set_enabled(false, 'test'); $clock = $now + 99999; $out['cron_desactive'] = A\batch(1500, static function (int $s) use (&$clock): void { $clock += $s; }, static function () use (&$clock): int { return $clock; }, ['sfmn' => $same]);
+// 5. lancement manuel depuis l'administration
+$mails = []; $reset(); $clock = $now; $slept = 0;
+$sl = static function (int $x) use (&$clock, &$slept): void { $clock += $x; $slept += $x; }; $ck = static function () use (&$clock): int { return $clock; };
+$out['manuel'] = ['plan1' => A\manual_plan($now)['mode']];
+$r = A\manual_run($sl, $ck, ['sfmn' => $same, 'mailer' => $mailer]); $out['manuel'] += ['log1' => $r['log'], 'pause' => $slept];
+$out['manuel']['plan2'] = A\manual_plan($clock)['mode'];
+$r = A\manual_run($sl, $ck, ['sfmn' => $same, 'mailer' => $mailer]); $st = A\load_state();
+$out['manuel'] += ['log2' => $r['log'], 'date_demain' => $st['current']['date'] ?? null, 'cas_faits_demain' => count(array_filter($st['current']['cases'] ?? [], static fn ($c) => isset($c['category']))), 'plan3' => A\manual_plan($clock)['mode']];
+$r = A\manual_run($sl, $ck, ['sfmn' => $same, 'mailer' => $mailer]); $out['manuel']['log3'] = $r['log'];
+$out['manuel']['visite_avant_1h'] = A\tick(['now' => $clock + 600, 'sfmn' => $same])['status'];            // demain pas encore dû : les visites n'y touchent pas
+$tom = (int) (new DateTimeImmutable('2026-11-26 02:00:00', new DateTimeZone('Europe/Paris')))->getTimestamp(); $t = $tom; $logTom = [];
+for ($i = 0; $i < 12; $i++) { $r = A\tick(['now' => $t, 'sfmn' => $same, 'mailer' => $mailer]); $logTom[] = $r['status']; if ($r['status'] === 'jour_termine') break; $t += 130; }
+$out['manuel']['demain_apres_1h'] = $logTom;
+// essai avant activation, et avant 1 h du matin
+$reset(); A\set_enabled(false, 'test'); $pre = (int) (new DateTimeImmutable('2026-11-25 00:30:00', new DateTimeZone('Europe/Paris')))->getTimestamp(); $clock = $pre;
+$s2 = A\load_state(); $s2['last_day_done'] = '2026-11-24'; A\save_state($s2);
+$r = A\manual_run($sl, $ck, ['sfmn' => $same, 'mailer' => $mailer]); $out['manuel']['desactive_avant_1h'] = [$r['plan'], $r['log'][0] ?? null];
+$mails = []; $reset(); $clock = $now; $r = A\manual_run($sl, $ck, ['sfmn' => $net, 'mailer' => $mailer]); $out['manuel']['indisponible'] = $r['log']; // une SFMN indisponible n'est pas martelée
 echo json_encode($out, JSON_UNESCAPED_UNICODE);

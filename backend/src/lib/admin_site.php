@@ -66,6 +66,7 @@ const ROUTES = [
     'POST /auth/moteur/retablir' => 'core_restore',
     'POST /auth/moteur/desepingler' => 'core_unpin',
     'POST /auth/maintenance' => 'maintenance',
+    'GET /auth/comparaison-sfmn' => 'sfmn_audit_page',
     'POST /auth/sfmn-audit' => 'sfmn_audit',
     'POST /auth/xplore' => 'xplore',
     'POST /auth/update' => 'update',
@@ -265,7 +266,6 @@ function do_site(): bool
 
     $out .= config_card();
     $out .= maintenance_card($csrf);
-    $out .= sfmn_audit_card($csrf);
     $out .= xplore_card($csrf);
 
     $disk = Disk\usage();
@@ -671,7 +671,7 @@ function tabs_html(string $active): string
     $tabs .= $tab('fournisseurs', '/auth/fournisseurs', 'Fournisseurs');
     $tabs .= $tab('moteur', '/auth/moteur', 'Moteur');
     $tabs .= $tab('minisite', '/auth/minisite', 'Mini-site');
-    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN') . $tab('fiches', '/auth/fiches', 'Fiches') . $tab('connexion', '/auth/securite', 'Connexion');
+    return $tabs . $tab('sfmn', '/auth/test-sfmn', 'Test SFMN') . $tab('comparaison', '/auth/comparaison-sfmn', 'Comparaison SFMN') . $tab('fiches', '/auth/fiches', 'Fiches') . $tab('connexion', '/auth/securite', 'Connexion');
 }
 
 // Page complète de l'administration : en-tête, onglets, contenu. $active : 'site' ou 'mesures'.
