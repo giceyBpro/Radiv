@@ -27,7 +27,8 @@ use Radiv\Contact;
 use Radiv\Sfmn;
 
 const CASES_PER_DAY = 4;
-const MIN_GAP_SECONDS = 120;       // délai minimal entre deux appels à la SFMN
+const MIN_GAP_SECONDS = 120;       // délai minimal entre deux appels à la SFMN (déclenchement automatique)
+const MANUAL_GAP_SECONDS = 10;     // pause entre deux appels à la SFMN lors d'un lancement manuel depuis l'administration
 const START_HOUR = 1;              // le travail d'un jour peut commencer à partir de 1 h (Europe/Paris)
 const MAX_CATCHUP_DAYS = 7;        // jours manqués rattrapés au plus (les plus anciens sont ignorés et signalés)
 const UNAVAILABLE_RETRIES = 3;     // nouveaux essais d'un cas dont la SFMN était indisponible
@@ -199,16 +200,16 @@ function run_case(array $payload, ?callable $engineFn = null, ?callable $sfmnFn 
 
 // --- Déroulement quotidien, un cas à la fois ------------------------------------------------------------------------------------------
 
-function pending_dates(array &$state, int $now): array
+function pending_dates(array &$state, int $now, bool $force = false): array
 {
     $today = local_date($now);
-    $last = (string) ($state['last_day_done'] ?? $today);
+    $last = (string) ($state['last_day_done'] ?? local_date($now - 86400));
     $dates = [];
     for ($d = new \DateTimeImmutable($last, tz()); ; ) {
         $d = $d->modify('+1 day');
         $date = $d->format('Y-m-d');
         if ($date > $today) break;
-        if ($now >= start_of($date)) $dates[] = $date;
+        if ($now >= start_of($date) || ($force && $date === $today)) $dates[] = $date; // lancement manuel : aujourd'hui, même avant 1 h
         if (count($dates) > 400) break;
     }
     if (count($dates) > MAX_CATCHUP_DAYS) { // trop de jours manqués : seuls les plus récents sont rattrapés
@@ -233,8 +234,12 @@ function tick(array $opts = []): array
         $force = !empty($opts['force']);
         if (!$force && $now - (int) $state['last_request_at'] < MIN_GAP_SECONDS) return ['status' => 'attente'];
 
+        // Journée de demain démarrée en avance (lancement manuel) : ses autres cas attendent demain 1 h.
+        if (is_array($state['current']) && !$force && $now < start_of((string) $state['current']['date'])) { return ['status' => 'rien_a_faire']; }
+
         if (!is_array($state['current'])) {
-            $dates = pending_dates($state, $now);
+            $dates = pending_dates($state, $now, $force);
+            if (!$dates && !empty($opts['ahead'])) $dates = [(new \DateTimeImmutable('@' . $now))->setTimezone(tz())->modify('+1 day')->format('Y-m-d')]; // première requête de demain
             if (!$dates) { save_state($state); return ['status' => 'rien_a_faire']; }
             $isotope = next_isotope($state);
             $seed = $dates[0] . '-' . bin2hex(random_bytes(4));
@@ -393,6 +398,43 @@ function email_html(array $run): string
     if (!empty($run['skipped_days'])) $out .= '<p style="color:#8a5a00">Jours non rattrapés (site resté sans visite) : ' . esc(implode(', ', $run['skipped_days'])) . '.</p>';
     $out .= $link . '<p style="color:#555;font-size:.85em">Outil SFMN interrogé : ' . esc((string) $run['sfmn_url']) . '</p></div>';
     return $out;
+}
+
+// --- Lancement manuel depuis l'administration -------------------------------------------------------------------------------------------
+
+// Ce que fera le bouton « Lancer » : 'today' (requêtes du jour pas encore lancées), 'resume_today' (journée entamée : on la termine),
+// 'tomorrow' (aujourd'hui est fait : première requête planifiée demain, lancée maintenant), 'tomorrow_started' (déjà fait : rien à lancer).
+function manual_plan(?int $now = null): array
+{
+    $now ??= time();
+    $today = local_date($now);
+    $state = load_state();
+    $cur = $state['current'] ?? null;
+    if (is_array($cur) && (string) $cur['date'] === $today) return ['mode' => 'resume_today', 'date' => $today, 'isotope' => (string) $cur['isotope']];
+    if (is_array($cur) && (string) $cur['date'] > $today) return ['mode' => 'tomorrow_started', 'date' => (string) $cur['date'], 'isotope' => (string) $cur['isotope']];
+    if ((string) ($state['last_day_done'] ?? '') >= $today) return ['mode' => 'tomorrow', 'date' => local_date($now + 86400), 'isotope' => ''];
+    return ['mode' => 'today', 'date' => $today, 'isotope' => ''];
+}
+
+// Exécute le plan ci-dessus, même si l'audit est désactivé (essai avant activation) et sans attendre 1 h : les requêtes du jour une par une
+// (MANUAL_GAP_SECONDS entre deux appels, budget 280 s), ou la seule première requête de demain. $sleep / $clock : injection (tests).
+function manual_run(?callable $sleep = null, ?callable $clock = null, array $opts = []): array
+{
+    $clock ??= 'time';
+    $sleep ??= 'sleep';
+    $start = (int) $clock();
+    $plan = manual_plan($start)['mode'];
+    if ($plan === 'tomorrow_started') return ['plan' => $plan, 'log' => ['deja_demarree']];
+    $log = [];
+    for ($i = 0; $i < 40; $i++) {
+        if ((int) $clock() - $start > 280) { $log[] = 'budget_epuise'; break; }
+        $r = tick(['now' => (int) $clock(), 'force' => true, 'even_if_disabled' => true, 'ahead' => $plan === 'tomorrow'] + $opts);
+        $log[] = $r['status'] . (isset($r['category']) ? ':' . $r['category'] : '') . (isset($r['anomalies']) ? ':' . $r['anomalies'] . '_anomalie(s)' : '');
+        if ($r['status'] !== 'cas_execute') break;      // jour terminé, nouvel essai programmé (on ne martèle pas une SFMN indisponible), erreur, occupé…
+        if ($plan === 'tomorrow') break;                // seule la première requête de demain
+        $sleep(MANUAL_GAP_SECONDS);
+    }
+    return ['plan' => $plan, 'log' => $log];
 }
 
 // --- Exécution planifiée (tâche cron, facultative) ------------------------------------------------------------------------------------

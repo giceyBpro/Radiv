@@ -7,6 +7,7 @@ namespace Radiv\AdminSite;
 
 if (!defined('RADIV_ENTRY')) { http_response_code(404); exit; } // jamais exécutable hors de l'API
 
+use Radiv\Config;
 use Radiv\Http;
 use Radiv\Session;
 use Radiv\SfmnAudit;
@@ -29,10 +30,18 @@ function sfmn_audit_card(string $csrf): string
         $out .= '<p class="small">Journée en cours : ' . h($cur['date']) . ' · ' . h($cur['isotope']) . ' · ' . $done . '/' . count($cur['cases']) . ' cas calculés'
             . ((int) ($cur['retry_at'] ?? 0) > time() ? ' · nouvel essai programmé' : '') . '.</p>';
     }
+    $plan = SfmnAudit\manual_plan();
+    $labels = ['today' => 'Lancer maintenant les requêtes d\'aujourd\'hui', 'resume_today' => 'Terminer maintenant les requêtes d\'aujourd\'hui',
+        'tomorrow' => 'Lancer maintenant la première requête de demain'];
+    $explain = ['today' => 'Les requêtes du jour n\'ont pas encore été lancées : les 4 cas du jour sont calculés l\'un après l\'autre (' . SfmnAudit\MANUAL_GAP_SECONDS . ' s entre deux appels à la SFMN), en arrière-plan.',
+        'resume_today' => 'La journée est entamée : les cas restants sont calculés l\'un après l\'autre, en arrière-plan.',
+        'tomorrow' => 'Les requêtes d\'aujourd\'hui sont faites : le bouton lance dès maintenant la première requête planifiée demain (isotope du lendemain) ; les autres cas suivront demain, comme d\'habitude.',
+        'tomorrow_started' => 'La journée de demain (' . h($plan['date']) . ', ' . h($plan['isotope']) . ') est déjà démarrée : ses autres cas suivront demain.'];
+    $out .= '<p class="small" style="margin-top:10px">' . $explain[$plan['mode']] . ' Fonctionne même si la comparaison est désactivée (essai avant activation).</p>';
     $out .= '<div style="display:flex;gap:10px;flex-wrap:wrap"><form method="post" action="/auth/sfmn-audit" style="margin:0"><input type="hidden" name="csrf" value="' . $csrf . '">'
-        . '<input type="hidden" name="action" value="' . ($on ? 'disable' : 'enable') . '"><button type="submit"' . ($on ? ' class="secondary"' : '') . '>' . ($on ? 'Désactiver' : 'Activer') . '</button></form>'
-        . ($on ? '<form method="post" action="/auth/sfmn-audit" style="margin:0"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="action" value="run">'
-            . '<button type="submit" class="secondary">Lancer le prochain cas maintenant</button></form>' : '') . '</div>';
+        . '<input type="hidden" name="action" value="' . ($on ? 'disable' : 'enable') . '"><button type="submit"' . ($on ? ' class="secondary"' : '') . '>' . ($on ? 'Désactiver la comparaison automatique' : 'Activer la comparaison automatique') . '</button></form>'
+        . (isset($labels[$plan['mode']]) ? '<form method="post" action="/auth/sfmn-audit" style="margin:0"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="action" value="run">'
+            . '<button type="submit">' . $labels[$plan['mode']] . '</button></form>' : '') . '</div>';
     $runs = SfmnAudit\recent_runs(14);
     if ($runs) {
         $out .= '<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Jour</th><th>Radiopharmaceutique</th><th>Résultat</th><th></th></tr></thead><tbody>';
@@ -51,6 +60,16 @@ function sfmn_audit_card(string $csrf): string
     return $out . '</section>';
 }
 
+// Onglet « Comparaison SFMN » : carte de la comparaison automatique, à côté de la page de test manuel.
+function do_sfmn_audit_page(): bool
+{
+    if (Session\admin() === null) return false;
+    $flash = Session\flash_take();
+    $out = $flash ? '<p class="msg ' . (!empty($flash['ok']) ? 'ok' : 'ko') . '">' . h($flash['message']) . '</p>' : '';
+    page('comparaison', 'Comparaison automatique avec la SFMN', $out . sfmn_audit_card(h(Session\csrf_token())));
+    return true;
+}
+
 function do_sfmn_audit(): bool
 {
     $action = (string) ($_POST['action'] ?? '');
@@ -62,15 +81,33 @@ function do_sfmn_audit(): bool
         error_log('[ADMIN] Comparaison SFMN ' . ($action === 'enable' ? 'activée' : 'désactivée') . ' par ' . $admin['email']);
         Session\flash_set(['ok' => $ok, 'message' => $ok ? ($action === 'enable' ? 'Comparaison automatique activée.' : 'Comparaison automatique désactivée.') : 'Enregistrement impossible (dossier de données).']);
     } elseif ($action === 'run') {
-        @set_time_limit(120);
-        $r = SfmnAudit\tick(['force' => true]);
-        $texts = ['cas_execute' => 'Cas ' . ($r['index'] ?? '') . ' calculé (' . ($r['isotope'] ?? '') . ') : ' . ($r['category'] ?? ''), 'jour_termine' => 'Journée terminée : ' . ($r['anomalies'] ?? 0) . ' anomalie(s).',
-            'rien_a_faire' => 'Rien à faire pour le moment (la journée est déjà traitée).', 'nouvel_essai_programme' => 'SFMN indisponible : nouvel essai programmé.', 'occupe' => 'Un calcul est déjà en cours.', 'desactive' => 'La comparaison est désactivée.'];
-        Session\flash_set(['ok' => in_array($r['status'], ['cas_execute', 'jour_termine', 'rien_a_faire'], true), 'message' => $texts[$r['status']] ?? $r['status']]);
+        if (!Store\rate_limit_hit('adminsfmnaudit-run', Http\client_ip(), 5)) return false;
+        $plan = SfmnAudit\manual_plan();
+        if ($plan['mode'] === 'tomorrow_started') {
+            Session\flash_set(['ok' => true, 'message' => 'La journée de demain est déjà démarrée.']);
+        } elseif (function_exists('fastcgi_finish_request')) {
+            // La page revient tout de suite ; le travail (plusieurs appels espacés) continue en arrière-plan. La session est libérée avant :
+            // sinon elle resterait verrouillée et l'administration attendrait la fin du travail.
+            Session\flash_set(['ok' => true, 'message' => 'Lancé en arrière-plan (' . ['today' => 'requêtes du jour', 'resume_today' => 'requêtes restantes du jour', 'tomorrow' => 'première requête de demain'][$plan['mode']] . ') : actualisez cette page dans une minute pour voir le résultat.']);
+            Http\redirect(Config\site_public_url() . '/auth/comparaison-sfmn', 303);
+            session_write_close();
+            fastcgi_finish_request();
+            ignore_user_abort(true);
+            @set_time_limit(320);
+            try { SfmnAudit\manual_run(); } catch (\Throwable $e) { error_log('[SFMN-AUDIT] lancement manuel : ' . $e->getMessage()); }
+            return true;
+        } else {
+            // Sans fastcgi_finish_request : un seul cas, pour ne pas dépasser la durée d'exécution du serveur.
+            @set_time_limit(120);
+            $r = SfmnAudit\tick(['force' => true, 'even_if_disabled' => true, 'ahead' => $plan['mode'] === 'tomorrow']);
+            $texts = ['cas_execute' => 'Cas ' . ($r['index'] ?? '') . ' calculé (' . ($r['isotope'] ?? '') . ') : ' . ($r['category'] ?? ''), 'jour_termine' => 'Journée terminée : ' . ($r['anomalies'] ?? 0) . ' anomalie(s).',
+                'rien_a_faire' => 'Rien à faire pour le moment.', 'nouvel_essai_programme' => 'SFMN indisponible : nouvel essai programmé.', 'occupe' => 'Un calcul est déjà en cours.'];
+            Session\flash_set(['ok' => in_array($r['status'], ['cas_execute', 'jour_termine', 'rien_a_faire'], true), 'message' => $texts[$r['status']] ?? $r['status']]);
+        }
     } else {
         return false;
     }
-    Http\redirect(home_url(), 303);
+    Http\redirect(Config\site_public_url() . '/auth/comparaison-sfmn', 303);
     return true;
 }
 
@@ -95,6 +132,6 @@ function do_sfmn_audit_detail(string $date): bool
         $out .= '<tr><td>' . h(SfmnAudit\payload_text($case['payload'])) . '</td><td>' . ($cat === 'ok' ? '<span class="badge good">concordant</span>' : '<span class="badge bad">' . h(SfmnAudit\CATEGORIES[$cat] ?? $cat) . '</span>')
             . '</td><td class="small">' . $detail . '</td></tr>';
     }
-    page('site', 'Comparaison SFMN', $out . '</tbody></table></div><p><a href="/auth">← Retour</a></p></section>');
+    page('comparaison', 'Comparaison SFMN', $out . '</tbody></table></div><p><a href="/auth/comparaison-sfmn">← Retour</a></p></section>');
     return true;
 }

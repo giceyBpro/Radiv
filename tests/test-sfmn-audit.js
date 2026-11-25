@@ -23,5 +23,12 @@ t('avant 1 h du matin : la journée n\'est pas encore due', out.avant_1h === 'ri
 t('cron : une journée complète en un passage (4 cas espacés de 120 s), horodatage du dernier passage enregistré', exec(out.cron.log) === 4 && out.cron.log.includes('jour_termine:0_anomalie(s)') && out.cron.attente_totale >= 360 && out.cron.fichier === true && out.cron.jour === '2026-11-25', JSON.stringify(out.cron));
 t('cron : plusieurs jours manqués rattrapés dans la limite du budget de temps (25 min), le reste est laissé aux passages suivants', out.cron_rattrapage.jours >= 2 && out.cron_rattrapage.jours < 4 && out.cron_rattrapage.fin === 'budget_epuise', JSON.stringify(out.cron_rattrapage));
 t('cron : interrupteur coupé → le passage ne fait rien', out.cron_desactive.length === 1 && out.cron_desactive[0] === 'desactive', JSON.stringify(out.cron_desactive));
+const m = out.manuel;
+t('lancement manuel, journée non lancée : plan « today », 4 cas puis fin de journée, 10 s entre deux appels', m.plan1 === 'today' && exec(m.log1) === 4 && m.log1.at(-1).startsWith('jour_termine') && m.pause === 40, JSON.stringify(m.log1));
+t('lancement manuel, journée faite : plan « tomorrow », une seule requête (celle de demain)', m.plan2 === 'tomorrow' && m.log2.length === 1 && m.log2[0].startsWith('cas_execute') && m.date_demain === '2026-11-26' && m.cas_faits_demain === 1, JSON.stringify(m));
+t('lancement manuel, demain déjà démarré : rien à lancer', m.plan3 === 'tomorrow_started' && m.log3[0] === 'deja_demarree');
+t('les visites ne touchent pas à la journée de demain avant 1 h, puis la terminent (3 cas restants)', m.visite_avant_1h === 'rien_a_faire' && exec(m.demain_apres_1h.map((x) => (x === 'cas_execute' ? 'cas_execute' : x))) === 3 && m.demain_apres_1h.at(-1) === 'jour_termine', JSON.stringify(m.demain_apres_1h));
+t('essai manuel possible avant activation et avant 1 h du matin', m.desactive_avant_1h[0] === 'today' && m.desactive_avant_1h[1].startsWith('cas_execute'), JSON.stringify(m.desactive_avant_1h));
+t('SFMN indisponible : le lancement manuel ne la martèle pas (un nouvel essai est programmé)', m.indisponible.length === 5 && m.indisponible.at(-1) === 'nouvel_essai_programme', JSON.stringify(m.indisponible));
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`\n${pass} réussis, ${fail} échec(s)`); process.exit(fail ? 1 : 0);
