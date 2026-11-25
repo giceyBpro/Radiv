@@ -20,16 +20,16 @@ const start = async (tmp) => {
   let srv = await start(tmp);
   let idx = await (await fetch(`${BASE}/patient`)).text();
   t('page /patient : avis « calculateur destiné aux professionnels de santé » en haut, consignes de l\'équipe', /class="notice"[^>]*>[\s\S]{0,200}professionnels de santé[\s\S]{0,300}consignes données par votre équipe/.test(idx));
-  t('fiches publiées listées (iode : hyperthyroïdie, cancer) ; brouillons (lutétium) ni listés ni liés', /Fiches par traitement/.test(idx) && /href="\/patient\/iode-131-hyperthyroidie"/.test(idx) && /href="\/patient\/iode-131-cancer-thyroide"/.test(idx) && !/lutetium-177/.test(idx) && !/<!--FICHES-->/.test(idx));
+  t('fiches publiées listées (iode : hyperthyroïdie, cancer) ; brouillons (lutétium) ni listés ni liés', /Les consignes de votre traitement/.test(idx) && /href="\/patient\/iode-131-hyperthyroidie"/.test(idx) && /href="\/patient\/iode-131-cancer-thyroide"/.test(idx) && !/lutetium-177/.test(idx) && !/<!--FICHES-->/.test(idx) && idx.indexOf('Les consignes de votre traitement') < idx.indexOf('<section class="bloc">'));
   t('brouillon : /patient/lutetium-177-psma répond 404', (await fetch(`${BASE}/patient/lutetium-177-psma`)).status === 404);
   srv.kill(); await new Promise((r) => setTimeout(r, 300));
   // 2. On publie en plus la fiche « Pluvicto » (Lutathera reste en brouillon)
-  const published = original.replace("'slug' => 'lutetium-177-psma',\n        'status' => 'draft',", "'slug' => 'lutetium-177-psma',\n        'status' => 'published',");
+  const published = original.replace(/('slug' => 'lutetium-177-psma',[\s\S]*?'status' => )'draft'/, "$1'published'");
   t('(préparation) statut de la fiche Pluvicto passé à « published »', published !== original);
   fs.writeFileSync(dataFile, published);
   srv = await start(tmp);
   idx = await (await fetch(`${BASE}/patient`)).text();
-  t('trois fiches publiées listées sur /patient avec leur lien', /Fiches par traitement/.test(idx) && /href="\/patient\/lutetium-177-psma"/.test(idx) && /href="\/patient\/iode-131-hyperthyroidie"/.test(idx) && /href="\/patient\/iode-131-cancer-thyroide"/.test(idx));
+  t('trois fiches publiées listées sur /patient avec leur lien', /Les consignes de votre traitement/.test(idx) && /href="\/patient\/lutetium-177-psma"/.test(idx) && /href="\/patient\/iode-131-hyperthyroidie"/.test(idx) && /href="\/patient\/iode-131-cancer-thyroide"/.test(idx));
   t('fiche en brouillon (Lutathera) : ni listée ni liée', !/lutetium-177-dotatate/.test(idx));
   const fr = await fetch(`${BASE}/patient/lutetium-177-psma`); const html = await fr.text();
   t('fiche publiée : 200, indexable, canonique absolue, FAQ structurée', fr.status === 200 && !/noindex/.test(html) && /rel="canonical" href="[^"]+\/patient\/lutetium-177-psma"/.test(html) && /FAQPage/.test(html));
